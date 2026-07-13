@@ -29,7 +29,7 @@ export class CategoriesController {
 
   @Get()
   getAll(@Query() query: CategoryQueryDto) {
-    return this.categoriesService.getAll(query);
+    return this.categoriesService.findAll(query);
   }
 
   @Get(':id')
@@ -37,7 +37,7 @@ export class CategoriesController {
     @Param('id', ParseIntPipe)
     id: number,
   ) {
-    return this.categoriesService.getById(id);
+    return this.categoriesService.findOne(id);
   }
 
   @Post()
@@ -64,6 +64,6 @@ export class CategoriesController {
     @Param('id', ParseIntPipe)
     id: number,
   ) {
-    return this.categoriesService.delete(id);
+    return this.categoriesService.remove(id);
   }
 }

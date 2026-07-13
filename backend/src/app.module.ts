@@ -5,6 +5,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { CategoriesModule } from './categories/categories.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { HealthModule } from './health/health.module';
+import { UploadsModule } from './uploads/uploads.module';
 import appConfig from '@/config/app.config';
 
 @Module({
@@ -16,7 +17,8 @@ import appConfig from '@/config/app.config';
     PrismaModule,
     CategoriesModule,
     LoggerModule,
-    HealthModule
+    HealthModule,
+    UploadsModule
   ],
 })
 export class AppModule { }
