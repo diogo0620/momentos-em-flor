@@ -6,6 +6,8 @@ import { CategoriesModule } from './categories/categories.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { HealthModule } from './health/health.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 import appConfig from '@/config/app.config';
 
 @Module({
@@ -18,7 +20,9 @@ import appConfig from '@/config/app.config';
     CategoriesModule,
     LoggerModule,
     HealthModule,
-    UploadsModule
+    UploadsModule,
+    UsersModule,
+    AuthModule
   ],
 })
 export class AppModule { }
