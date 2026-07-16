@@ -1,16 +1,55 @@
+import { generateSlug } from '@/common/utils/slug';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { DEFAULT_CATEGORIES } from '@/categories/constants/category.seed';
 
 const prisma = new PrismaClient();
 
 async function main() {
 
-  for (const name of DEFAULT_CATEGORIES) {
+  const categories = [
+    {
+      name: 'Bouquets',
+      slug: 'bouquets',
+      description: 'Beautiful flower bouquets.',
+    },
+    {
+      name: 'Roses',
+      slug: 'roses',
+      description: 'Fresh roses.',
+    },
+    {
+      name: 'Wedding',
+      slug: 'wedding',
+      description: 'Wedding flower arrangements.',
+    },
+    {
+      name: 'Birthday',
+      slug: 'birthday',
+      description: 'Birthday flowers.',
+    },
+    {
+      name: 'Funeral',
+      slug: 'funeral',
+      description: 'Funeral flowers.',
+    },
+    {
+      name: 'Plants',
+      slug: 'plants',
+      description: 'Indoor and outdoor plants.',
+    },
+  ];
+
+  for (const category of categories) {
+    const slug = generateSlug(category.name)
     await prisma.category.upsert({
-      where: { name },
-      update: {},
-      create: { name },
+      where: {
+        slug,
+      },
+      update: category,
+      create: {
+        ...category,
+        slug,
+      }
     });
   }
 
@@ -18,6 +57,27 @@ async function main() {
     'Admin123!',
     10,
   );
+
+  const address = await prisma.address.create({
+    data: {
+      label: 'Loja',
+
+      notes: 'Entrada principal',
+      street: 'Rua Exemplo, 10',
+
+      postalCode: '4700-000',
+
+      city: 'Braga',
+
+      district: 'Braga',
+
+      country: 'Portugal',
+
+      latitude: 41.545449,
+
+      longitude: -8.426507,
+    },
+  });
 
   await prisma.florist.upsert({
     where: {
@@ -41,19 +101,7 @@ async function main() {
 
       deliveryRadiusKm: 20,
 
-      street: 'Rua Exemplo, 10',
-
-      postalCode: '4700-000',
-
-      city: 'Braga',
-
-      district: 'Braga',
-
-      country: 'Portugal',
-
-      latitude: 41.545449,
-
-      longitude: -8.426507,
+      addressId: address.id,
     },
   });
 

@@ -1,7 +1,31 @@
+import { EntityName } from '@/common/constants/entities';
+import { CrudMessages } from '@/common/messages/crud-messages';
+
 export const CATEGORY_MESSAGES = {
-  CREATED: 'Category created successfully.',
-  UPDATED: 'Category updated successfully.',
-  DELETED: 'Category deleted successfully.',
-  NOT_FOUND: 'Category not found.',
-  ALREADY_EXISTS: 'Category already exists.',
-} as const;
+
+    CREATED:
+        CrudMessages.created(
+            EntityName.CATEGORY,
+        ),
+
+    UPDATED:
+        CrudMessages.updated(
+            EntityName.CATEGORY,
+        ),
+
+    DELETED:
+        CrudMessages.deleted(
+            EntityName.CATEGORY,
+        ),
+
+    NOT_FOUND:
+        CrudMessages.notFound(
+            EntityName.CATEGORY,
+        ),
+
+    ALREADY_EXISTS:
+        CrudMessages.alreadyExists(
+            EntityName.CATEGORY,
+        ),
+
+};

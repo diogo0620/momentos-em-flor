@@ -8,11 +8,22 @@ datasource db {
 }
 
 model Category {
-  id        Int      @id @default(autoincrement())
-  name String @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+
+  name        String   @unique
+  slug        String   @unique
+
+  description String?
+
+  active      Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([active])
+  @@index([deletedAt])
 }
+
 
 model Florist {
   id               Int      @id @default(autoincrement())
@@ -33,25 +44,17 @@ model Florist {
 
   deliveryRadiusKm Decimal  @db.Decimal(5,2)
 
-  street           String
-  street2          String?
+  addressId        Int      @unique
+  address          Address  @relation(fields: [addressId], references: [id])
 
-  postalCode       String
-  city             String
-  district         String
-  country          String
-
-  latitude         Decimal  @db.Decimal(9,6)
-  longitude        Decimal  @db.Decimal(9,6)
+  users            User[]
 
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-
-  users User[]
+  @@index([deletedAt])
 
   @@index([active])
   @@index([acceptingOrders])
-  @@index([postalCode])
 }
 
 enum UserRole {
@@ -88,4 +91,67 @@ model User {
 
   @@index([role])
   @@index([active])
+}
+
+model Address {
+  id          Int      @id @default(autoincrement())
+
+  label       String?
+
+  street      String
+  street2     String?
+
+  postalCode  String
+  city        String
+  district    String
+  country     String
+
+  latitude    Decimal  @db.Decimal(9,6)
+  longitude   Decimal  @db.Decimal(9,6)
+
+  notes       String?
+
+  florist     Florist?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([deletedAt])
+
+  @@index([postalCode])
+  @@index([city])
+}
+
+enum FileProvider {
+  LOCAL
+  S3
+  AZURE
+  CLOUDINARY
+}
+
+model File {
+  id Int @id @default(autoincrement())
+
+  originalName String
+
+  storedName String
+
+  extension String
+
+  mimeType String
+
+  size Int
+
+  path String
+
+  checksum String? @unique
+
+  width Int?
+
+  height Int?
+
+  altText String?
+
+  provider FileProvider
+
+  uploadedAt DateTime @default(now())
 }

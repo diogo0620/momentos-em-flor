@@ -15,10 +15,10 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { CategoryQueryDto } from './query/category-query.dto';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { CategoryQueryDto } from './query/category-query.dto';
 
 @ApiTags('Categories')
 @Controller('categories')
@@ -28,12 +28,19 @@ export class CategoriesController {
   ) { }
 
   @Get()
-  getAll(@Query() query: CategoryQueryDto) {
+  @ApiOperation({ summary: 'Get all categories' })
+  @ApiResponse({ status: 200 })
+  findAll(
+    @Query()
+    query: CategoryQueryDto,
+  ) {
     return this.categoriesService.findAll(query);
   }
 
   @Get(':id')
-  getById(
+  @ApiOperation({ summary: 'Get category by id' })
+  @ApiResponse({ status: 200 })
+  findOne(
     @Param('id', ParseIntPipe)
     id: number,
   ) {
@@ -41,6 +48,8 @@ export class CategoriesController {
   }
 
   @Post()
+  @ApiOperation({ summary: 'Create category' })
+  @ApiResponse({ status: 201 })
   create(
     @Body()
     dto: CreateCategoryDto,
@@ -49,6 +58,8 @@ export class CategoriesController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update category' })
+  @ApiResponse({ status: 200 })
   update(
     @Param('id', ParseIntPipe)
     id: number,
@@ -60,7 +71,9 @@ export class CategoriesController {
   }
 
   @Delete(':id')
-  delete(
+  @ApiOperation({ summary: 'Delete category' })
+  @ApiResponse({ status: 200 })
+  remove(
     @Param('id', ParseIntPipe)
     id: number,
   ) {
