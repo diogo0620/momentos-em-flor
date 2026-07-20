@@ -8,6 +8,7 @@ import { HealthModule } from './health/health.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { ProductsModule } from './products/products.module';
 import appConfig from '@/config/app.config';
 
 @Module({
@@ -22,7 +23,8 @@ import appConfig from '@/config/app.config';
     HealthModule,
     UploadsModule,
     UsersModule,
-    AuthModule
+    AuthModule,
+    ProductsModule
   ],
 })
 export class AppModule { }

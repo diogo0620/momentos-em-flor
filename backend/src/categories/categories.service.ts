@@ -27,6 +27,7 @@ export class CategoriesService {
 
   async findAll(query: CategoryQueryDto) {
     const where = {
+      deletedAt: null,
       ...(query.search && {
         OR: [
           {
@@ -81,7 +82,7 @@ export class CategoriesService {
     const category =
       await this.prisma.category.findUnique({
         where: {
-            slug
+          slug
         },
       });
 
@@ -99,17 +100,12 @@ export class CategoriesService {
   async create(dto: CreateCategoryDto) {
     const slug = this.buildSlug(dto.name);
 
+
     const exists =
       await this.prisma.category.findFirst({
         where: {
-          OR: [
-            {
-              name: dto.name,
-            },
-            {
-              slug,
-            },
-          ],
+          deletedAt: null,
+          slug,
         },
       });
 
@@ -146,6 +142,7 @@ export class CategoriesService {
     const exists =
       await this.prisma.category.findFirst({
         where: {
+          deletedAt: null,
           id: {
             not: id,
           },
@@ -196,9 +193,13 @@ export class CategoriesService {
   async remove(id: number) {
     await this.getCategoryOrThrow(id);
 
-    await this.prisma.category.delete({
+    await this.prisma.category.update({
       where: {
         id,
+      },
+      data: {
+        active: false,
+        deletedAt: new Date(),
       },
     });
 
@@ -214,7 +215,8 @@ export class CategoriesService {
     const category =
       await this.prisma.category.findFirst({
         where: {
-          id
+          id,
+          deletedAt: null,
         },
       });
 
