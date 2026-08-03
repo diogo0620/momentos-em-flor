@@ -79,12 +79,12 @@ export class CategoriesService {
   }
 
   async findBySlug(slug: string) {
-    const category =
-      await this.prisma.category.findUnique({
-        where: {
-          slug
-        },
-      });
+    const category = await this.prisma.category.findFirst({
+      where: {
+        slug,
+        deletedAt: null,
+      },
+    });
 
     if (!category) {
       Exceptions.notFound(

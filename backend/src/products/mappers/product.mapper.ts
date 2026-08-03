@@ -1,14 +1,32 @@
 import { Injectable } from '@nestjs/common';
-import { Product } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
-import { Mapper } from '@/common/mappers/mapper.interface';
+import { BaseMapper } from '@/common/mappers/base.mapper';
 
 import { ProductResponseDto } from '../dto/product-response';
+import { CategoryMapper } from '@/categories/mappers/category.mapper';
+
+type ProductWithCategory =
+    Prisma.ProductGetPayload<{
+        include: {
+            category: true;
+        };
+    }>;
 
 @Injectable()
 export class ProductMapper
-    implements Mapper<Product, ProductResponseDto> {
-    toResponse(product: Product): ProductResponseDto {
+    extends BaseMapper<
+        ProductWithCategory,
+        ProductResponseDto
+    > {
+
+        constructor(
+    private readonly categoryMapper: CategoryMapper,
+){
+    super();
+}
+
+    toResponse(product: ProductWithCategory): ProductResponseDto {
         return {
             id: product.id,
             name: product.name,
@@ -18,18 +36,10 @@ export class ProductMapper
 
             pricingType: product.pricingType,
             basePrice: product.basePrice.toNumber(),
-            categoryId: product.categoryId,
+            category: this.categoryMapper.toResponse(product.category),
 
             createdAt: product.createdAt,
             updatedAt: product.updatedAt,
         };
-    }
-
-    toResponses(
-        products: Product[],
-    ): ProductResponseDto[] {
-        return products.map(product =>
-            this.toResponse(product),
-        );
     }
 }

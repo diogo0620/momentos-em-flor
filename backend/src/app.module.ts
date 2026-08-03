@@ -9,6 +9,7 @@ import { UploadsModule } from './uploads/uploads.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { ProductsModule } from './products/products.module';
+import { FloristsModule } from './florists/florists.module';
 import appConfig from '@/config/app.config';
 
 @Module({
@@ -24,7 +25,8 @@ import appConfig from '@/config/app.config';
     UploadsModule,
     UsersModule,
     AuthModule,
-    ProductsModule
+    ProductsModule,
+    FloristsModule
   ],
 })
 export class AppModule { }

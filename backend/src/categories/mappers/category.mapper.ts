@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { Category } from '@prisma/client';
 
-import { Mapper } from '@/common/mappers/mapper.interface';
 
 import { CategoryResponseDto } from '../dto/category-response.dto';
+import { BaseMapper } from '@/common/mappers/base.mapper';
 
 @Injectable()
 export class CategoryMapper
-  implements Mapper<Category, CategoryResponseDto>
+  extends BaseMapper<Category, CategoryResponseDto>
 {
   toResponse(category: Category): CategoryResponseDto {
     return {
@@ -21,11 +21,4 @@ export class CategoryMapper
     };
   }
 
-  toResponses(
-    categories: Category[],
-  ): CategoryResponseDto[] {
-    return categories.map(category =>
-      this.toResponse(category),
-    );
-  }
 }

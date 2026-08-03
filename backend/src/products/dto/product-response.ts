@@ -1,3 +1,4 @@
+import { CategoryResponseDto } from '@/categories/dto/category-response.dto';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ProductPricingType } from '@prisma/client';
 
@@ -39,9 +40,9 @@ export class ProductResponseDto {
   basePrice: number;
 
   @ApiProperty({
-    example: 1,
+    type: CategoryResponseDto,
   })
-  categoryId: number;
+  category: CategoryResponseDto;
 
   @ApiProperty({
     example: '2026-07-20T17:00:00.000Z',

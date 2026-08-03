@@ -50,6 +50,9 @@ export class ProductsService {
         const products = await this.prisma.product.findMany({
             where,
             orderBy,
+            include: {
+                category: true,
+            },
             ...getPagination(query.page, query.pageSize),
         });
 
@@ -76,11 +79,13 @@ export class ProductsService {
     }
 
     async create(createProductDto: CreateProductDto): Promise<ProductResponseDto> {
-        const category = await this.prisma.category.findUnique({
-            where: {
-                id: createProductDto.categoryId,
-            },
-        });
+        const category =
+            await this.prisma.category.findFirst({
+                where: {
+                    id: createProductDto.categoryId,
+                    deletedAt: null,
+                },
+            });
         if (!category) {
             Exceptions.notFound(CATEGORY_MESSAGES.NOT_FOUND);
         }
@@ -102,6 +107,10 @@ export class ProductsService {
             data: {
                 ...createProductDto,
                 slug,
+
+            },
+            include: {
+                category: true,
             },
         });
 
@@ -161,6 +170,9 @@ export class ProductsService {
                     ...dto,
                     ...(slug && { slug }),
                 },
+                include: {
+                    category: true,
+                },
             });
 
         return ApiResponse.success(
@@ -196,6 +208,9 @@ export class ProductsService {
                 where: {
                     id,
                     deletedAt: null,
+                },
+                include: {
+                    category: true,
                 },
             });
 

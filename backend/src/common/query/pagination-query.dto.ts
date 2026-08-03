@@ -24,9 +24,8 @@ export class PaginationQueryDto {
 
 
   @ApiPropertyOptional({
-    default: DEFAULT_PAGE_SIZE,
+    default: DEFAULT_PAGE,
     minimum: 1,
-    maximum: MAX_PAGE_SIZE,
   })
   @IsOptional()
   @Type(() => Number)
