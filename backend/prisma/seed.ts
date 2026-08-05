@@ -3,6 +3,8 @@ import {
   ProductPricingType,
 } from '@prisma/client';
 
+import * as bcrypt from 'bcrypt';
+
 const prisma = new PrismaClient();
 
 async function main() {
@@ -103,6 +105,18 @@ async function main() {
       addressId: address.id,
     },
   });
+
+  const passwordHash = await bcrypt.hash('Admin123!', 10);
+  await prisma.user.create({
+  data: {
+    firstName: 'Diogo',
+    lastName: 'Silva',
+    email: 'admin@momentosemflor.pt',
+    passwordHash,
+    role: 'SYSTEM_ADMIN',
+    floristId: null,
+  },
+});
 
   console.log('✅ Database seeded successfully.');
 }

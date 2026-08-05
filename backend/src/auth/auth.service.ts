@@ -8,6 +8,9 @@ import * as bcrypt from 'bcrypt';
 import { UsersService } from '@/users/users.service';
 
 import { LoginDto } from './dto/login.dto';
+import { Exceptions } from '@/common/exceptions/exceptions';
+import { AUTH_MESSAGES } from './constants/auth.messages';
+import { LoginResponseDto } from './dto/login-response.dto';
 
 @Injectable()
 export class AuthService {
@@ -16,11 +19,11 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto) : Promise<LoginResponseDto>{
     const user = await this.usersService.findByEmail(dto.email);
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials.');
+      Exceptions.unauthorized(AUTH_MESSAGES.INVALID_CREDENTIALS);
     }
 
     const validPassword = await bcrypt.compare(
@@ -29,11 +32,11 @@ export class AuthService {
     );
 
     if (!validPassword) {
-      throw new UnauthorizedException('Invalid credentials.');
+      Exceptions.unauthorized(AUTH_MESSAGES.INVALID_CREDENTIALS);
     }
 
     if (!user.active) {
-      throw new UnauthorizedException('User is inactive.');
+      Exceptions.unauthorized(AUTH_MESSAGES.USER_INACTIVE);
     }
 
     const payload = {
