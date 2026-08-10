@@ -40,6 +40,16 @@ export class UsersService {
     });
   }
 
+  async me(
+    id: number,
+  ) {
+    const user = await this.getUserOrThrow(id);
+
+    return ApiResponse.success(
+      this.userMapper.toResponse(user),
+    );
+  }
+
   async findAll(
     query: UserQueryDto,
   ) {

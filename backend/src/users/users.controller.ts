@@ -54,6 +54,16 @@ export class UsersController {
         return this.usersService.findAll(query);
     }
 
+    @Get('me')
+    me(
+        @CurrentUser()
+        user: AuthenticatedUser,
+    ) {
+        return this.usersService.me(
+            user.id,
+        );
+    }
+
     @Get(':id')
     @Roles(UserRole.SYSTEM_ADMIN)
     findOne(

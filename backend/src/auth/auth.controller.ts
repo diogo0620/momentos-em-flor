@@ -18,19 +18,6 @@ export class AuthController {
     private readonly authService: AuthService,
   ) { }
 
-  @Get('me')
-  @UseGuards(
-    JwtAuthGuard,
-    RolesGuard,
-  )
-  @Roles(UserRole.SYSTEM_ADMIN)
-  @ApiBearerAuth('JWT')
-  me(
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return user;
-  }
-
   @Post('login')
   @ApiOkResponse({
     type: LoginResponseDto,

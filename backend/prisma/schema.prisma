@@ -111,11 +111,13 @@ model Florist {
 
   users User[]
 
-  products FloristProduct[]
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  deletedAt                DateTime?
+  orderOffers              OrderOffer[]
+  floristCompensationRules FloristCompensationRule[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  assignedOrders Order[] @relation("OrderAssignedFlorist")
 
   @@index([active])
   @@index([acceptingOrders])
@@ -148,6 +150,7 @@ model User {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
+  orders    Order[]
 
   @@index([role])
   @@index([active])
@@ -201,48 +204,236 @@ model Product {
 
   sortOrder Int @default(0)
 
-  floristProducts FloristProduct[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  deletedAt                DateTime?
+  orderItems               OrderItem[]
+  floristCompensationRules FloristCompensationRule[]
 
   @@index([active])
   @@index([deletedAt])
   @@index([categoryId])
 }
 
-model FloristProduct {
+enum OrderStatus {
+  CREATED
+  WAITING_FOR_FLORISTS
+  ASSIGNED
+  IN_PRODUCTION
+  READY_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum DeliveryTimeSlot {
+  MORNING
+  AFTERNOON
+  EVENING
+}
+
+enum Occasion {
+  BIRTHDAY
+  ANNIVERSARY
+  LOVE
+  WEDDING
+  FUNERAL
+  NEW_BABY
+  MOTHERS_DAY
+  FATHERS_DAY
+  CHRISTMAS
+  OTHER
+}
+
+model Order {
   id Int @id @default(autoincrement())
 
-  floristId Int
-  florist   Florist @relation(fields: [floristId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  // Identification
+  orderNumber String @unique
 
+  // Customer
+  customerId Int
+  customer   User @relation(fields: [customerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  assignedFloristId Int?
+  assignedFlorist   Florist? @relation("OrderAssignedFlorist", fields: [assignedFloristId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  customerFirstName String
+  customerLastName  String
+  customerEmail     String
+  customerPhone     String?
+
+  // Recipient
+  recipientFirstName String
+  recipientLastName  String?
+  recipientPhone     String?
+
+  occasion Occasion?
+
+  // Delivery
+  deliveryDate         DateTime
+  deliveryTimeSlot     DeliveryTimeSlot
+  deliveryInstructions String?
+
+  // Delivery Address (Snapshot)
+  deliveryStreet  String
+  deliveryStreet2 String?
+
+  deliveryPostalCode  String
+  deliveryCity        String
+  deliveryDistrict    String
+  deliveryCountryCode String @db.Char(2)
+
+  deliveryLatitude  Decimal @db.Decimal(9, 6)
+  deliveryLongitude Decimal @db.Decimal(9, 6)
+
+  // Card
+  cardMessage String?
+
+  // Internal notes
+  notes String?
+
+  // Financials
+  subtotal    Decimal @db.Decimal(10, 2)
+  deliveryFee Decimal @db.Decimal(10, 2)
+  discount    Decimal @db.Decimal(10, 2)
+  total       Decimal @db.Decimal(10, 2)
+
+  // Workflow
+  status OrderStatus @default(CREATED)
+
+  // Relations
+  items  OrderItem[]
+  offers OrderOffer[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([customerId])
+  @@index([status])
+  @@index([deliveryDate])
+  @@index([deletedAt])
+}
+
+model OrderItem {
+  id Int @id @default(autoincrement())
+
+  // Order
+  orderId Int
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  // Product reference
   productId Int
   product   Product @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-  enabled Boolean @default(true)
+  // Product snapshot
+  productName        String
+  productDescription String?
 
-  marginType PricingMarginType
+  orderOfferItems OrderOfferItem[]
 
-  pricingValue Decimal? @db.Decimal(10, 2)
+  quantity Int
 
-  fixedPrice Decimal? @db.Decimal(10, 2)
-
-  priority Int @default(0)
-
-  minimumQuantity Int?
-  maximumQuantity Int?
-  quantityStep    Int?
+  unitPrice Decimal @db.Decimal(10, 2)
+  lineTotal Decimal @db.Decimal(10, 2)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([orderId])
+  @@index([productId])
+}
+
+enum OrderOfferStatus {
+  PENDING
+  VIEWED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+model OrderOffer {
+  id Int @id @default(autoincrement())
+
+  // Order
+  orderId Int
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  // Florist
+  floristId Int
+  florist   Florist @relation(fields: [floristId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  // Snapshot
+  compensationAmount Decimal @db.Decimal(10, 2)
+
+  orderOfferItems OrderOfferItem[]
+
+  // Workflow
+  status OrderOfferStatus @default(PENDING)
+
+  viewedAt   DateTime?
+  acceptedAt DateTime?
+  declinedAt DateTime?
+  expiresAt  DateTime
+
+  declineReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orderId, floristId])
+  @@index([orderId])
+  @@index([floristId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model OrderOfferItem {
+  id Int @id @default(autoincrement())
+
+  orderOfferId Int
+  orderOffer   OrderOffer @relation(fields: [orderOfferId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  orderItemId Int
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  // Snapshot
+  productId   Int
+  productName String
+
+  quantity Int
+
+  unitCompensation  Decimal @db.Decimal(10, 2)
+  totalCompensation Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+
+  @@unique([orderOfferId, orderItemId])
+  @@index([orderOfferId])
+  @@index([orderItemId])
+  @@index([productId])
+}
+
+model FloristCompensationRule {
+  id Int @id @default(autoincrement())
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  floristId Int?
+  florist   Florist? @relation(fields: [floristId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  compensationAmount Decimal @db.Decimal(10, 2)
+
+  active Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  @@unique([floristId, productId])
-  @@index([floristId])
+  @@unique([productId, floristId])
   @@index([productId])
-  @@index([enabled])
+  @@index([floristId])
+  @@index([active])
   @@index([deletedAt])
 }

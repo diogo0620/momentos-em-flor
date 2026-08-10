@@ -11,6 +11,9 @@ import { AuthModule } from './auth/auth.module';
 import { ProductsModule } from './products/products.module';
 import { FloristsModule } from './florists/florists.module';
 import appConfig from '@/config/app.config';
+import { FloristCompensationRulesModule } from './florist-compensation-rules/florist-compensation-rules.module';
+import { OrdersModule } from './orders/orders.module';
+import { OrderOffersModule } from './order-offers/order-offers.module';
 
 @Module({
   imports: [
@@ -26,7 +29,10 @@ import appConfig from '@/config/app.config';
     UsersModule,
     AuthModule,
     ProductsModule,
-    FloristsModule
+    FloristsModule,
+    FloristCompensationRulesModule,
+    OrdersModule,
+    OrderOffersModule,
   ],
 })
 export class AppModule { }

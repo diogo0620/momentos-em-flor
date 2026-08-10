@@ -4,4 +4,7 @@ export enum EntityName {
   USER = 'User',
   FLORIST = 'Florist',
   ADDRESS = 'Address',
+  FLORIST_COMPENSATION_RULE = 'Florist compensation rule',
+  ORDER = 'Order',
+  ORDER_OFFER = 'Order offer',
 }
