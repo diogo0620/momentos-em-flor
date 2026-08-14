@@ -1,5 +1,6 @@
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminTopbar from "@/components/admin/AdminTopbar";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 export default function AdminLayout({
     children,
@@ -7,37 +8,41 @@ export default function AdminLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="flex h-screen bg-[#F5F7F2]">
+        <ProtectedRoute
+            allowedRoles={["SYSTEM_ADMIN"]}
+        >
+            <div className="flex h-screen bg-[#F5F7F2]">
 
-            {/* SIDEBAR */}
+                {/* SIDEBAR */}
 
-            <AdminSidebar />
+                <AdminSidebar />
 
-            {/* CONTENT */}
+                {/* CONTENT */}
 
-            <div className="flex flex-1 flex-col overflow-hidden">
+                <div className="flex flex-1 flex-col overflow-hidden">
 
-                {/* TOPBAR */}
+                    {/* TOPBAR */}
 
-                <AdminTopbar />
+                    <AdminTopbar />
 
-                {/* PAGE */}
+                    {/* PAGE */}
 
-                <main
-                    className="
-                        flex-1
-                        overflow-y-auto
-                        px-10
-                        py-8
-                    "
-                >
-                    <div className="mx-auto max-w-7xl">
-                        {children}
-                    </div>
-                </main>
+                    <main
+                        className="
+                            flex-1
+                            overflow-y-auto
+                            px-10
+                            py-8
+                        "
+                    >
+                        <div className="mx-auto max-w-7xl">
+                            {children}
+                        </div>
+                    </main>
+
+                </div>
 
             </div>
-
-        </div>
+        </ProtectedRoute>
     );
 }

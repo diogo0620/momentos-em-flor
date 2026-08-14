@@ -1,291 +1,438 @@
 "use client";
 
-import { useMemo, useState } from "react";
-
+import { useEffect, useState } from "react";
 import Link from "next/link";
-
 import {
     Eye,
     Package,
 } from "lucide-react";
 
-import { orders } from "@/data/orders";
-
+import PageHeader from "@/components/admin/common/PageHeader";
 import SearchInput from "@/components/admin/common/SearchInput";
 import FilterBar from "@/components/admin/common/FilterBar";
-import PageHeader from "@/components/admin/common/PageHeader";
-import StatusBadge from "@/components/admin/common/StatusBadge";
-import MetricCard from "@/components/admin/common/MetricCard";
-import EmptyState from "@/components/admin/common/EmptyState";
-import SectionCard from "@/components/admin/common/SectionCard";
+import DataTable from "@/components/admin/DataTable";
 
-export default function OrdersPage() {
+import {
+    getOrders,
+} from "@/lib/api/orders";
+
+import type {
+    Order,
+    Pagination,
+} from "@/types/order";
+
+function getStatusLabel(
+    status: Order["status"],
+) {
+    switch (status) {
+        case "PENDING":
+            return "Pendente";
+
+        case "PROCESSING":
+            return "Em processamento";
+
+        case "ACCEPTED":
+            return "Aceite";
+
+        case "PREPARING":
+            return "Em preparação";
+
+        case "OUT_FOR_DELIVERY":
+            return "Em entrega";
+
+        case "DELIVERED":
+            return "Entregue";
+
+        case "CANCELLED":
+            return "Cancelada";
+
+        default:
+            return status;
+    }
+}
+
+function getStatusClass(
+    status: Order["status"],
+) {
+    switch (status) {
+        case "DELIVERED":
+            return "bg-green-100 text-green-700";
+
+        case "CANCELLED":
+            return "bg-red-100 text-red-700";
+
+        case "ACCEPTED":
+        case "PREPARING":
+        case "OUT_FOR_DELIVERY":
+            return "bg-blue-100 text-blue-700";
+
+        case "PROCESSING":
+            return "bg-yellow-100 text-yellow-700";
+
+        case "PENDING":
+        default:
+            return "bg-gray-100 text-gray-600";
+    }
+}
+
+export default function AdminOrdersPage() {
+    const [orders, setOrders] =
+        useState<Order[]>([]);
+
+    const [pagination, setPagination] =
+        useState<Pagination>({
+            page: 1,
+            pageSize: 20,
+            total: 0,
+            pages: 1,
+        });
+
     const [search, setSearch] =
         useState("");
 
-    const [status, setStatus] =
-        useState("all");
+    const [loading, setLoading] =
+        useState(true);
 
-    const filteredOrders =
-        useMemo(() => {
-            let result = [...orders];
+    const [error, setError] =
+        useState<string | null>(null);
 
-            if (search) {
-                result = result.filter(
-                    (order) =>
-                        order.customerName
-                            .toLowerCase()
-                            .includes(
-                                search.toLowerCase()
-                            ) ||
-                        order.product
-                            .toLowerCase()
-                            .includes(
-                                search.toLowerCase()
-                            )
-                );
-            }
+    async function loadOrders(
+        page = pagination.page,
+        currentSearch = search,
+    ) {
+        try {
+            setLoading(true);
+            setError(null);
 
-            if (status !== "all") {
-                result = result.filter(
-                    (order) =>
-                        order.status ===
-                        status
-                );
-            }
+            const response =
+                await getOrders({
+                    page,
+                    pageSize: 20,
+                    search:
+                        currentSearch ||
+                        undefined,
+                    sort: "createdAt",
+                    order: "desc",
+                });
 
-            return result;
-        }, [search, status]);
+            setOrders(response.data);
+            setPagination(
+                response.pagination,
+            );
+        } catch (err) {
+            console.error(err);
 
-    const pending =
-        orders.filter(
-            (o) => o.status === "PENDING"
-        ).length;
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Não foi possível carregar as encomendas.",
+            );
+        } finally {
+            setLoading(false);
+        }
+    }
 
-    const assigned =
-        orders.filter(
-            (o) => o.status === "ASSIGNED"
-        ).length;
-
-    const delivered =
-        orders.filter(
-            (o) => o.status === "DELIVERED"
-        ).length;
+    useEffect(() => {
+        loadOrders(1, search);
+    }, [search]);
 
     return (
-        <div className="space-y-8">
+        <div>
 
             <PageHeader
                 title="Encomendas"
-                subtitle="Consulte e acompanhe todas as encomendas."
+                subtitle="Gerir as encomendas da Momentos em Flor."
             />
 
-            <FilterBar>
+            <div className="mt-8">
 
-                <SearchInput
-                    value={search}
-                    onChange={setSearch}
-                    placeholder="Pesquisar encomendas..."
-                />
+                <FilterBar>
 
-                <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+                    <SearchInput
+                        value={search}
+                        onChange={setSearch}
+                        placeholder="Pesquisar por encomenda, cliente..."
+                    />
 
-                    <p className="text-sm text-gray-500">
-                        A mostrar{" "}
-                        <span className="font-semibold text-[#2F3B2A]">
-                            {filteredOrders.length}
-                        </span>{" "}
-                        de{" "}
-                        <span className="font-semibold text-[#2F3B2A]">
-                            {orders.length}
-                        </span>{" "}
-                        encomendas
-                    </p>
+                </FilterBar>
 
-                    <select
-                        value={status}
-                        onChange={(e) =>
-                            setStatus(
-                                e.target.value
-                            )
-                        }
-                        className="
-                            rounded-xl
-                            border
-                            border-gray-200
-                            bg-white
-                            px-5
-                            py-3
-                        "
-                    >
-                        <option value="all">
-                            Todos os estados
-                        </option>
+            </div>
 
-                        <option value="PENDING">
-                            Pendentes
-                        </option>
-
-                        <option value="ASSIGNED">
-                            Atribuídas
-                        </option>
-
-                        <option value="DELIVERED">
-                            Entregues
-                        </option>
-
-                    </select>
-
+            {error && (
+                <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+                    {error}
                 </div>
+            )}
 
-            </FilterBar>
+            <div className="mt-8">
 
-            <SectionCard>
+                <DataTable>
 
-                {filteredOrders.length > 0 && (
+                    <div className="overflow-x-auto">
 
-                    <>
+                        <table className="w-full">
 
-                        <div
-                            className="
-                                grid
-                                grid-cols-[100px_2fr_2fr_160px_120px_60px]
-                                border-b
-                                bg-[#F8F9F5]
-                                px-6
-                                py-4
-                                text-sm
-                                font-semibold
-                                text-gray-500
-                            "
-                        >
+                            <thead>
+                                <tr className="border-b border-gray-100 text-left text-sm text-gray-500">
 
-                            <div>Nº</div>
-                            <div>Cliente</div>
-                            <div>Produto</div>
-                            <div>Estado</div>
-                            <div>Total</div>
-                            <div></div>
+                                    <th className="px-6 py-4 font-medium">
+                                        Encomenda
+                                    </th>
 
-                        </div>
+                                    <th className="px-6 py-4 font-medium">
+                                        Cliente
+                                    </th>
 
-                        {filteredOrders.map(
-                            (order) => (
+                                    <th className="px-6 py-4 font-medium">
+                                        Entrega
+                                    </th>
 
-                                <div
-                                    key={order.id}
-                                    className="
-        grid
-        grid-cols-[100px_2fr_2fr_160px_120px_60px]
-        items-center
-        border-b
-        border-gray-100
-        px-6
-        py-5
-        transition
-        hover:bg-[#F8F9F5]
-    "
-                                >
+                                    <th className="px-6 py-4 font-medium">
+                                        Total
+                                    </th>
 
-                                    <div className="font-semibold">
-                                        #{order.id}
-                                    </div>
+                                    <th className="px-6 py-4 font-medium">
+                                        Estado
+                                    </th>
 
-                                    <div>
-                                        {order.customerName}
-                                    </div>
+                                    <th className="px-6 py-4 text-right font-medium">
+                                        Ações
+                                    </th>
 
-                                    <div>
-                                        {order.product}
-                                    </div>
+                                </tr>
+                            </thead>
 
-                                    <div>
+                            <tbody>
 
-                                        <StatusBadge
-                                            status={order.status}
-                                        />
-
-                                    </div>
-
-                                    <div className="font-semibold">
-                                        {order.total.toFixed(
-                                            2
-                                        )} €
-                                    </div>
-
-                                    <div className="flex justify-end">
-
-                                        <Link
-                                            href={`/admin/orders/${order.id}`}
-                                            className="
-        flex
-        h-10
-        w-10
-        items-center
-        justify-center
-        rounded-full
-        transition-all
-        duration-200
-        hover:bg-[#D6DEC8]
-        hover:scale-110
-    "
+                                {loading ? (
+                                    <tr>
+                                        <td
+                                            colSpan={6}
+                                            className="px-6 py-16 text-center text-gray-500"
                                         >
-                                            <Eye size={18} />
-                                        </Link>
+                                            A carregar encomendas...
+                                        </td>
+                                    </tr>
+                                ) : orders.length === 0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan={6}
+                                            className="px-6 py-16 text-center"
+                                        >
+                                            <Package
+                                                size={36}
+                                                className="mx-auto text-gray-300"
+                                            />
 
-                                    </div>
+                                            <p className="mt-4 font-medium text-gray-600">
+                                                Nenhuma encomenda encontrada
+                                            </p>
+
+                                            <p className="mt-1 text-sm text-gray-400">
+                                                Tente alterar os critérios de pesquisa.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    orders.map(
+                                        (order) => (
+                                            <tr
+                                                key={order.id}
+                                                className="border-b border-gray-50 transition hover:bg-[#F9FAF7]"
+                                            >
+
+                                                <td className="px-6 py-5">
+
+                                                    <Link
+                                                        href={`/admin/orders/${order.id}`}
+                                                        className="font-semibold text-[#2F3B2A] transition hover:text-[#55624A]"
+                                                    >
+                                                        {order.orderNumber}
+                                                    </Link>
+
+                                                    <p className="mt-1 text-xs text-gray-400">
+                                                        #{order.id}
+                                                    </p>
+
+                                                </td>
+
+                                                <td className="px-6 py-5">
+
+                                                    <p className="font-medium text-gray-800">
+                                                        {order.customerFirstName}{" "}
+                                                        {order.customerLastName}
+                                                    </p>
+
+                                                    <p className="mt-1 text-sm text-gray-400">
+                                                        {order.customerEmail}
+                                                    </p>
+
+                                                </td>
+
+                                                <td className="px-6 py-5">
+
+                                                    <p className="font-medium text-gray-700">
+                                                        {order.recipientFirstName}{" "}
+                                                        {order.recipientLastName ?? ""}
+                                                    </p>
+
+                                                    <p className="mt-1 text-sm text-gray-400">
+                                                        {order.deliveryCity}
+                                                    </p>
+
+                                                </td>
+
+                                                <td className="px-6 py-5">
+
+                                                    <span className="font-semibold text-[#2F3B2A]">
+                                                        {order.total.toFixed(
+                                                            2,
+                                                        )}{" "}
+                                                        €
+                                                    </span>
+
+                                                </td>
+
+                                                <td className="px-6 py-5">
+
+                                                    <span
+                                                        className={`
+                                                            inline-flex
+                                                            rounded-full
+                                                            px-3
+                                                            py-1
+                                                            text-xs
+                                                            font-medium
+                                                            ${getStatusClass(
+                                                                order.status,
+                                                            )}
+                                                        `}
+                                                    >
+                                                        {getStatusLabel(
+                                                            order.status,
+                                                        )}
+                                                    </span>
+
+                                                </td>
+
+                                                <td className="px-6 py-5 text-right">
+
+                                                    <Link
+                                                        href={`/admin/orders/${order.id}`}
+                                                        className="
+                                                            inline-flex
+                                                            h-10
+                                                            w-10
+                                                            items-center
+                                                            justify-center
+                                                            rounded-full
+                                                            text-gray-500
+                                                            transition
+                                                            hover:bg-[#F3F5EE]
+                                                            hover:text-[#55624A]
+                                                        "
+                                                        title="Ver encomenda"
+                                                    >
+                                                        <Eye
+                                                            size={18}
+                                                        />
+                                                    </Link>
+
+                                                </td>
+
+                                            </tr>
+                                        ),
+                                    )
+                                )}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                    {/* PAGINATION */}
+
+                    {!loading &&
+                        pagination.pages > 1 && (
+                            <div className="flex items-center justify-between border-t border-gray-100 px-6 py-4">
+
+                                <p className="text-sm text-gray-500">
+                                    {pagination.total}{" "}
+                                    encomendas
+                                </p>
+
+                                <div className="flex items-center gap-2">
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pagination.page <=
+                                            1
+                                        }
+                                        onClick={() =>
+                                            loadOrders(
+                                                pagination.page -
+                                                    1,
+                                            )
+                                        }
+                                        className="
+                                            rounded-xl
+                                            border
+                                            border-gray-200
+                                            px-4
+                                            py-2
+                                            text-sm
+                                            transition
+                                            hover:bg-[#F5F7F2]
+                                            disabled:cursor-not-allowed
+                                            disabled:opacity-40
+                                        "
+                                    >
+                                        Anterior
+                                    </button>
+
+                                    <span className="px-3 text-sm text-gray-500">
+                                        Página{" "}
+                                        {pagination.page}{" "}
+                                        de{" "}
+                                        {pagination.pages}
+                                    </span>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pagination.page >=
+                                            pagination.pages
+                                        }
+                                        onClick={() =>
+                                            loadOrders(
+                                                pagination.page +
+                                                    1,
+                                            )
+                                        }
+                                        className="
+                                            rounded-xl
+                                            border
+                                            border-gray-200
+                                            px-4
+                                            py-2
+                                            text-sm
+                                            transition
+                                            hover:bg-[#F5F7F2]
+                                            disabled:cursor-not-allowed
+                                            disabled:opacity-40
+                                        "
+                                    >
+                                        Seguinte
+                                    </button>
 
                                 </div>
 
-                            )
+                            </div>
                         )}
-                    </>
 
-                )}
-
-                {filteredOrders.length === 0 && (
-
-                    <EmptyState
-                        title="Nenhuma encomenda encontrada"
-                        description="Experimente alterar os filtros ou a pesquisa."
-                    />
-
-                )}
-
-            </SectionCard>
-
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-
-                <MetricCard
-                    title="Total"
-                    value={orders.length}
-                    subtitle="Encomendas registadas"
-                    icon={Package}
-                />
-
-                <MetricCard
-                    title="Pendentes"
-                    value={pending}
-                    subtitle="Por atribuir"
-                    icon={Package}
-                    color="#D97706"
-                />
-
-                <MetricCard
-                    title="Atribuídas"
-                    value={assigned}
-                    subtitle="Em preparação"
-                    icon={Package}
-                    color="#2563EB"
-                />
-
-                <MetricCard
-                    title="Entregues"
-                    value={delivered}
-                    subtitle="Concluídas"
-                    icon={Package}
-                    color="#16A34A"
-                />
+                </DataTable>
 
             </div>
 

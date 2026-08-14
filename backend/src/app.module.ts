@@ -14,6 +14,8 @@ import appConfig from '@/config/app.config';
 import { FloristCompensationRulesModule } from './florist-compensation-rules/florist-compensation-rules.module';
 import { OrdersModule } from './orders/orders.module';
 import { OrderOffersModule } from './order-offers/order-offers.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { OrderOffersModule } from './order-offers/order-offers.module';
       isGlobal: true,
       load: [appConfig],
     }),
+    EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
     PrismaModule,
     CategoriesModule,
     LoggerModule,

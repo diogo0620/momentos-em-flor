@@ -11,6 +11,8 @@ import { join } from 'path';
 
 import { AppModule } from './app.module';
 
+import cookieParser from 'cookie-parser';
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(
     AppModule,
@@ -50,6 +52,8 @@ async function bootstrap() {
 
 
   SwaggerModule.setup('api/docs', app, document);
+
+  app.use(cookieParser());
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('app.port')!;

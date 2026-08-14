@@ -23,7 +23,9 @@ import { UserRole } from '@prisma/client';
 
 import type { AuthenticatedUser } from '@/auth/interfaces/authenticated-user.interface';
 import { UpdateOrderDto } from './dto/update-order.dto';
-import { OrderDistributionService } from './services/order-distribution.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { OrderCreatedEvent } from '@/events/order/order-created.event';
+import { OrderCreateResponseDto } from './dto/order-create-response.dto';
 
 
 
@@ -32,7 +34,7 @@ export class OrdersService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly mapper: OrderMapper,
-        private readonly distributionService: OrderDistributionService
+        private readonly eventEmitter: EventEmitter2,
     ) { }
 
     async findAll(
@@ -41,7 +43,17 @@ export class OrdersService {
     ) {
         if (
             user.role !== UserRole.SYSTEM_ADMIN &&
-            user.role !== UserRole.CUSTOMER
+            user.role !== UserRole.CUSTOMER &&
+            user.role !== UserRole.FLORIST
+        ) {
+            Exceptions.forbidden(
+                ORDER_MESSAGES.FORBIDDEN,
+            );
+        }
+
+        if (
+            user.role === UserRole.FLORIST &&
+            !user.floristId
         ) {
             Exceptions.forbidden(
                 ORDER_MESSAGES.FORBIDDEN,
@@ -53,6 +65,14 @@ export class OrdersService {
 
             ...(user.role === UserRole.CUSTOMER && {
                 customerId: user.id,
+            }),
+
+            ...(user.role === UserRole.FLORIST && {
+                offers: {
+                    some: {
+                        floristId: user.floristId!,
+                    },
+                },
             }),
 
             ...(query.status && {
@@ -105,9 +125,6 @@ export class OrdersService {
         const orders =
             await this.prisma.order.findMany({
                 where,
-                include: {
-                    items: true,
-                },
                 orderBy,
                 ...getPagination(
                     query.page,
@@ -121,7 +138,7 @@ export class OrdersService {
             });
 
         return ApiResponse.paginated(
-            this.mapper.toResponses(orders),
+            this.mapper.toListResponses(orders),
             getPaginationResponse(
                 query.page,
                 query.pageSize,
@@ -163,6 +180,23 @@ export class OrdersService {
                             florist: true,
                         },
                     },
+                    statusHistory: {
+                        orderBy: {
+                            createdAt: 'asc',
+                        },
+
+                        include: {
+                            changedByUser: {
+                                select: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    email: true,
+                                    role: true,
+                                },
+                            },
+                        },
+                    },
                 },
             });
 
@@ -179,24 +213,94 @@ export class OrdersService {
 
 
     async create(
-        customerId: number,
+        user: AuthenticatedUser | null,
         dto: CreateOrderDto,
     ) {
-        const customer =
-            await this.prisma.user.findFirst({
-                where: {
-                    id: customerId,
-                    deletedAt: null,
-                    active: true,
-                },
-            });
+        let customerId: number | null = null;
 
-        if (!customer) {
-            Exceptions.notFound(
-                ORDER_MESSAGES.CUSTOMER_NOT_FOUND,
-            );
+        let customerFirstName: string;
+        let customerLastName: string | null;
+        let customerEmail: string | null;
+        let customerPhone: string | null;
+
+        /*
+         * Authenticated CUSTOMER
+         */
+        if (
+            user &&
+            user.role === UserRole.CUSTOMER
+        ) {
+            const customer =
+                await this.prisma.user.findFirst({
+                    where: {
+                        id: user.id,
+                        role: UserRole.CUSTOMER,
+                        deletedAt: null,
+                        active: true,
+                    },
+                });
+
+            if (!customer) {
+                Exceptions.notFound(
+                    ORDER_MESSAGES.CUSTOMER_NOT_FOUND,
+                );
+            }
+
+            customerId = customer.id;
+
+            customerFirstName =
+                customer.firstName;
+
+            customerLastName =
+                customer.lastName;
+
+            customerEmail =
+                customer.email;
+
+            customerPhone =
+                customer.phone;
         }
 
+        /*
+         * Guest / Admin
+         */
+        else {
+            if (
+                !dto.customerEmail?.trim() &&
+                !dto.customerPhone?.trim()
+            ) {
+                Exceptions.badRequest(
+                    ORDER_MESSAGES.CUSTOMER_CONTACT_REQUIRED,
+                );
+            }
+
+            if (
+                !dto.customerFirstName?.trim()
+            ) {
+                Exceptions.badRequest(
+                    ORDER_MESSAGES.CUSTOMER_FIRST_NAME_REQUIRED,
+                );
+            }
+
+            customerFirstName =
+                dto.customerFirstName.trim();
+
+            customerLastName =
+                dto.customerLastName?.trim() ||
+                null;
+
+            customerEmail =
+                dto.customerEmail?.trim() ||
+                null;
+
+            customerPhone =
+                dto.customerPhone?.trim() ||
+                null;
+        }
+
+        /*
+         * Validate items
+         */
         if (dto.items.length === 0) {
             Exceptions.badRequest(
                 ORDER_MESSAGES.EMPTY_ORDER,
@@ -208,13 +312,17 @@ export class OrdersService {
         );
 
         if (
-            new Set(productIds).size !== productIds.length
+            new Set(productIds).size !==
+            productIds.length
         ) {
             Exceptions.badRequest(
                 ORDER_MESSAGES.DUPLICATE_PRODUCTS,
             );
         }
 
+        /*
+         * Validate products
+         */
         const products =
             await this.prisma.product.findMany({
                 where: {
@@ -226,7 +334,10 @@ export class OrdersService {
                 },
             });
 
-        if (products.length !== productIds.length) {
+        if (
+            products.length !==
+            productIds.length
+        ) {
             Exceptions.badRequest(
                 ORDER_MESSAGES.PRODUCT_NOT_AVAILABLE,
             );
@@ -239,28 +350,44 @@ export class OrdersService {
             ]),
         );
 
+        /*
+         * Build order items
+         */
         const items = dto.items.map((item) => {
             const product =
-                productsById.get(item.productId)!;
+                productsById.get(
+                    item.productId,
+                )!;
 
-            const unitPrice = Number(
-                product.basePrice,
-            );
+            const unitPrice =
+                Number(product.basePrice);
 
             const lineTotal =
-                unitPrice * item.quantity;
+                unitPrice *
+                item.quantity;
 
             return {
-                productId: product.id,
-                productName: product.name,
+                productId:
+                    product.id,
+
+                productName:
+                    product.name,
+
                 productDescription:
                     product.description,
-                quantity: item.quantity,
+
+                quantity:
+                    item.quantity,
+
                 unitPrice,
+
                 lineTotal,
             };
         });
 
+        /*
+         * Calculate totals
+         */
         const subtotal = items.reduce(
             (total, item) =>
                 total + item.lineTotal,
@@ -275,9 +402,15 @@ export class OrdersService {
             deliveryFee -
             discount;
 
+        /*
+         * Generate order number
+         */
         const orderNumber =
             await this.generateOrderNumber();
 
+        /*
+         * Create order
+         */
         const order =
             await this.prisma.$transaction(
                 async (tx) => {
@@ -287,19 +420,17 @@ export class OrdersService {
 
                             customerId,
 
-                            customerFirstName:
-                                customer.firstName,
-                            customerLastName:
-                                customer.lastName,
-                            customerEmail:
-                                customer.email,
-                            customerPhone:
-                                customer.phone,
+                            customerFirstName,
+                            customerLastName,
+                            customerEmail,
+                            customerPhone,
 
                             recipientFirstName:
                                 dto.recipientFirstName,
+
                             recipientLastName:
                                 dto.recipientLastName,
+
                             recipientPhone:
                                 dto.recipientPhone,
 
@@ -307,27 +438,38 @@ export class OrdersService {
                                 dto.occasion,
 
                             deliveryDate:
-                                new Date(dto.deliveryDate),
+                                new Date(
+                                    dto.deliveryDate,
+                                ),
+
                             deliveryTimeSlot:
                                 dto.deliveryTimeSlot,
+
                             deliveryInstructions:
                                 dto.deliveryInstructions,
 
                             deliveryStreet:
                                 dto.deliveryStreet,
+
                             deliveryStreet2:
                                 dto.deliveryStreet2,
+
                             deliveryPostalCode:
                                 dto.deliveryPostalCode,
+
                             deliveryCity:
                                 dto.deliveryCity,
+
                             deliveryDistrict:
                                 dto.deliveryDistrict,
+
                             deliveryCountryCode:
-                                dto.deliveryCountryCode.toUpperCase(),
+                                dto.deliveryCountryCode
+                                    .toUpperCase(),
 
                             deliveryLatitude:
                                 dto.deliveryLatitude,
+
                             deliveryLongitude:
                                 dto.deliveryLongitude,
 
@@ -346,48 +488,38 @@ export class OrdersService {
                                 create: items,
                             },
                         },
-
-                        include: {
-                            items: true,
-                        },
                     });
                 },
             );
 
         /*
-         * Distribute the order to eligible florists.
+         * Notify listeners.
+         *
+         * Distribution will be handled
+         * asynchronously by OrderCreatedListener.
          */
-        await this.distributionService.distributeOrder(
-            order.id,
+        this.eventEmitter.emit(
+            'order.created',
+            new OrderCreatedEvent(
+                order.id,
+            ),
         );
 
         /*
-         * Reload the order including the offers
-         * created during distribution.
+         * Return only creation information.
+         *
+         * No items.
+         * No offers.
          */
-        const createdOrder =
-            await this.prisma.order.findUnique({
-                where: {
-                    id: order.id,
-                },
-                include: {
-                    items: true,
-
-                    offers: {
-                        include: {
-                            orderOfferItems: true,
-                            florist: true,
-                        },
-                    },
-                },
-            });
-
         return ApiResponse.success(
-            this.mapper.toResponse(
-                createdOrder,
+            this.mapper.toCreateResponse(
+                order,
             ),
         );
     }
+
+
+
 
     async update(
         id: number,
@@ -520,15 +652,6 @@ export class OrdersService {
             message:
                 ORDER_MESSAGES.DELETED,
         });
-    }
-
-    async findEligibleFloristsForOrder(
-        orderId: number,
-    ) {
-        return this.distributionService
-            .findEligibleFloristsForOrder(
-                orderId,
-            );
     }
 
     private async generateOrderNumber(): Promise<string> {

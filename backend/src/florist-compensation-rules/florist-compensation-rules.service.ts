@@ -104,14 +104,16 @@ export class FloristCompensationRulesService {
     async create(
         dto: CreateFloristCompensationRuleDto,
     ) {
-        /*
-         * Validate product
-         */
         const product =
             await this.prisma.product.findFirst({
                 where: {
                     id: dto.productId,
+                    active: true,
                     deletedAt: null,
+                },
+                select: {
+                    id: true,
+                    basePrice: true,
                 },
             });
 
@@ -121,44 +123,44 @@ export class FloristCompensationRulesService {
             );
         }
 
-        /*
-         * Validate florist when this is
-         * a florist-specific rule.
-         */
-        if (dto.floristId !== undefined) {
-            const florist =
-                await this.prisma.florist.findFirst({
-                    where: {
-                        id: dto.floristId,
-                        deletedAt: null,
-                    },
-                });
-
-            if (!florist) {
-                Exceptions.notFound(
-                    FLORIST_MESSAGES.NOT_FOUND,
-                );
-            }
+        if (
+            dto.compensationAmount >=
+            Number(product.basePrice)
+        ) {
+            Exceptions.badRequest(
+                FLORIST_COMPENSATION_RULE_MESSAGES
+                    .COMPENSATION_MUST_BE_LESS_THAN_PRICE,
+            );
         }
 
-        /*
-         * Check if the rule already exists.
-         *
-         * We cannot rely only on @@unique([productId, floristId])
-         * because PostgreSQL allows multiple NULL values.
-         */
-        const existingRule =
-            await this.prisma.floristCompensationRule.findFirst({
+        const florist =
+            await this.prisma.florist.findFirst({
                 where: {
+                    id: dto.floristId,
+                    active: true,
                     deletedAt: null,
-                    productId: dto.productId,
-                    floristId: dto.floristId ?? null,
                 },
             });
 
-        if (existingRule) {
+        if (!florist) {
+            Exceptions.notFound(
+                FLORIST_MESSAGES.NOT_FOUND,
+            );
+        }
+
+        const exists =
+            await this.prisma.floristCompensationRule.findFirst({
+                where: {
+                    productId: dto.productId,
+                    floristId: dto.floristId,
+                    deletedAt: null,
+                },
+            });
+
+        if (exists) {
             Exceptions.conflict(
-                'A compensation rule already exists for this product and florist.',
+                FLORIST_COMPENSATION_RULE_MESSAGES
+                    .ALREADY_EXISTS,
             );
         }
 
@@ -166,10 +168,13 @@ export class FloristCompensationRulesService {
             await this.prisma.floristCompensationRule.create({
                 data: {
                     productId: dto.productId,
-                    floristId: dto.floristId ?? null,
-                    compensationAmount: dto.compensationAmount,
-                    active: dto.active ?? true,
+                    floristId: dto.floristId,
+                    compensationAmount:
+                        dto.compensationAmount,
+                    active:
+                        dto.active ?? true,
                 },
+
                 include: {
                     product: true,
                     florist: true,
@@ -178,6 +183,7 @@ export class FloristCompensationRulesService {
 
         return ApiResponse.success(
             this.mapper.toResponse(rule),
+            FLORIST_COMPENSATION_RULE_MESSAGES.CREATED,
         );
     }
 
@@ -185,114 +191,94 @@ export class FloristCompensationRulesService {
         id: number,
         dto: UpdateFloristCompensationRuleDto,
     ) {
-        const existingRule =
+        const rule =
             await this.prisma.floristCompensationRule.findFirst({
                 where: {
                     id,
                     deletedAt: null,
                 },
-            });
 
-        if (!existingRule) {
-            Exceptions.notFound(
-                FLORIST_COMPENSATION_RULE_MESSAGES.NOT_FOUND,
-            );
-        }
-
-        const productId =
-            dto.productId ?? existingRule.productId;
-
-        const floristId =
-            dto.floristId !== undefined
-                ? dto.floristId
-                : existingRule.floristId;
-
-        /*
-         * Validate product when changing it.
-         */
-        if (dto.productId !== undefined) {
-            const product =
-                await this.prisma.product.findFirst({
-                    where: {
-                        id: dto.productId,
-                        deletedAt: null,
-                    },
-                });
-
-            if (!product) {
-                Exceptions.notFound(
-                    PRODUCT_MESSAGES.NOT_FOUND,
-                );
-            }
-        }
-
-        /*
-         * Validate florist when changing it.
-         */
-        if (
-            dto.floristId !== undefined &&
-            dto.floristId !== null
-        ) {
-            const florist =
-                await this.prisma.florist.findFirst({
-                    where: {
-                        id: dto.floristId,
-                        deletedAt: null,
-                    },
-                });
-
-            if (!florist) {
-                Exceptions.notFound(
-                    FLORIST_MESSAGES.NOT_FOUND,
-                );
-            }
-        }
-
-        /*
-         * Make sure another active rule does not
-         * already exist for the same product + florist.
-         */
-        const duplicate =
-            await this.prisma.floristCompensationRule.findFirst({
-                where: {
-                    productId,
-                    floristId,
-                    deletedAt: null,
-                    NOT: {
-                        id,
+                include: {
+                    product: {
+                        select: {
+                            id: true,
+                            basePrice: true,
+                        },
                     },
                 },
             });
 
-        if (duplicate) {
-            Exceptions.conflict(
-                FLORIST_COMPENSATION_RULE_MESSAGES.ALREADY_EXISTS,
+        if (!rule) {
+            Exceptions.notFound(
+                FLORIST_COMPENSATION_RULE_MESSAGES
+                    .NOT_FOUND,
             );
         }
 
-        const rule =
+        const newCompensation =
+            dto.compensationAmount ??
+            Number(rule.compensationAmount);
+
+        if (
+            newCompensation >=
+            Number(rule.product.basePrice)
+        ) {
+            Exceptions.badRequest(
+                FLORIST_COMPENSATION_RULE_MESSAGES
+                    .COMPENSATION_MUST_BE_LESS_THAN_PRICE,
+            );
+        }
+
+        if (
+            dto.compensationAmount !== undefined
+        ) {
+            const duplicate =
+                await this.prisma.floristCompensationRule.findFirst({
+                    where: {
+                        id: {
+                            not: id,
+                        },
+
+                        productId:
+                            rule.productId,
+
+                        floristId:
+                            rule.floristId,
+
+                        deletedAt: null,
+                    },
+                });
+
+            if (duplicate) {
+                Exceptions.conflict(
+                    FLORIST_COMPENSATION_RULE_MESSAGES
+                        .ALREADY_EXISTS,
+                );
+            }
+        }
+
+        const updatedRule =
             await this.prisma.floristCompensationRule.update({
                 where: {
                     id,
                 },
+
                 data: {
-                    ...(dto.productId !== undefined && {
-                        productId: dto.productId,
-                    }),
+                    ...(dto.compensationAmount !==
+                        undefined
+                        ? {
+                            compensationAmount:
+                                dto.compensationAmount,
+                        }
+                        : {}),
 
-                    ...(dto.floristId !== undefined && {
-                        floristId: dto.floristId,
-                    }),
-
-                    ...(dto.compensationAmount !== undefined && {
-                        compensationAmount:
-                            dto.compensationAmount,
-                    }),
-
-                    ...(dto.active !== undefined && {
-                        active: dto.active,
-                    }),
+                    ...(dto.active !== undefined
+                        ? {
+                            active: dto.active,
+                        }
+                        : {}),
                 },
+
                 include: {
                     product: true,
                     florist: true,
@@ -300,7 +286,10 @@ export class FloristCompensationRulesService {
             });
 
         return ApiResponse.success(
-            this.mapper.toResponse(rule),
+            this.mapper.toResponse(
+                updatedRule,
+            ),
+            FLORIST_COMPENSATION_RULE_MESSAGES.UPDATED,
         );
     }
 

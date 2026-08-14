@@ -1,7 +1,27 @@
-import { PartialType } from '@nestjs/swagger';
+import {
+  ApiPropertyOptional,
+} from '@nestjs/swagger';
 
-import { CreateFloristCompensationRuleDto } from './create-florist-compensation-rule.dto';
+import {
+  IsBoolean,
+  IsNumber,
+  IsOptional,
+  Min,
+} from 'class-validator';
 
-export class UpdateFloristCompensationRuleDto extends PartialType(
-  CreateFloristCompensationRuleDto,
-) {}
+export class UpdateFloristCompensationRuleDto {
+  @ApiPropertyOptional({
+    example: 35,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  compensationAmount?: number;
+
+  @ApiPropertyOptional({
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+}

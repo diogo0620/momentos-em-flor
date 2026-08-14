@@ -7,6 +7,7 @@ import {
   IsInt,
   IsNumber,
   IsOptional,
+  IsPositive,
   Min,
 } from 'class-validator';
 
@@ -21,14 +22,13 @@ export class CreateFloristCompensationRuleDto {
 
   @ApiPropertyOptional({
     example: 5,
-    nullable: true,
     description:
-      'Florist to which the rule applies. Null means global rule.',
+      'Florist to which the rule applies',
   })
-  @IsOptional()
+  @IsPositive()
   @IsInt()
   @Min(1)
-  floristId?: number;
+  floristId: number;
 
   @ApiProperty({
     example: 30,

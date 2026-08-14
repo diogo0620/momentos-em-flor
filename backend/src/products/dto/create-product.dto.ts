@@ -42,6 +42,13 @@ export class CreateProductDto {
   basePrice: number;
 
   @ApiProperty({
+    example: 35,
+  })
+  @IsNumber()
+  @Min(0)
+  baseFloristCompensation: number;
+
+  @ApiProperty({
     example: 1,
   })
   @IsInt()

@@ -1,10 +1,16 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+    ApiProperty,
+    ApiPropertyOptional,
+} from '@nestjs/swagger';
+
 import {
     DeliveryTimeSlot,
     Occasion,
     OrderOfferStatus,
     OrderStatus,
+    OrderCancellationReason
 } from '@prisma/client';
+import { OrderStatusHistoryResponseDto } from './order-status-history-response.dto';
 
 class OrderItemResponseDto {
     @ApiProperty()
@@ -114,20 +120,20 @@ export class OrderResponseDto {
     @ApiProperty()
     orderNumber: string;
 
-    @ApiProperty()
-    customerId: number;
+    @ApiPropertyOptional()
+    customerId: number | null;
 
     @ApiProperty()
     customerFirstName: string;
 
-    @ApiProperty()
-    customerLastName: string;
+    @ApiPropertyOptional()
+    customerLastName: string | null;
 
-    @ApiProperty()
-    customerEmail: string;
+    @ApiPropertyOptional()
+    customerEmail: string | null;
 
-    @ApiProperty()
-    customerPhone: string;
+    @ApiPropertyOptional()
+    customerPhone: string | null;
 
     @ApiProperty()
     recipientFirstName: string;
@@ -208,9 +214,23 @@ export class OrderResponseDto {
     })
     offers: OrderOfferResponseDto[];
 
+    @ApiProperty({
+        type: [OrderStatusHistoryResponseDto],
+    })
+    statusHistory: OrderStatusHistoryResponseDto[];
+
     @ApiProperty()
     createdAt: Date;
 
     @ApiProperty()
     updatedAt: Date;
+
+    @ApiPropertyOptional()
+    cancelledAt: Date | null;
+
+    @ApiPropertyOptional({
+        enum: OrderCancellationReason,
+    })
+    cancellationReason:
+        OrderCancellationReason | null;
 }

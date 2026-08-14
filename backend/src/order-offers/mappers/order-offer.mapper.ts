@@ -13,6 +13,8 @@ export class OrderOfferMapper {
       orderNumber:
         offer.order.orderNumber,
 
+        distanceKm: Number(offer.distanceKm),
+
       compensationAmount:
         Number(
           offer.compensationAmount,

@@ -16,6 +16,21 @@ export const ORDER_OFFER_MESSAGES = {
     ORDER_NOT_FOUND:
         'Order not found.',
 
+    FLORIST_NOT_FOUND:
+        'Florist not found.',
+
+        OFFER_ALREADY_EXISTS:
+        'An offer already exists for this order and florist.',
+
+        COMPENSATION_TOO_HIGH:
+        'Compensation amount cannot be greater than the order subtotal.',
+
+        COMPENSATION_MUST_BE_POSITIVE:
+        'Compensation amount must be greater than zero.',
+
+        COMPENSATION_INVALID:
+        'Invalid compensation amount.',
+
     OFFER_EXPIRED:
         'This offer has expired.',
 

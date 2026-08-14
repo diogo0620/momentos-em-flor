@@ -14,11 +14,11 @@ type CartContextType = {
     items: CartItem[];
 
     addItem: (
-        item: CartItem
+        item: CartItem,
     ) => void;
 
     removeItem: (
-        id: string
+        id: string,
     ) => void;
 
     clearCart: () => void;
@@ -26,7 +26,7 @@ type CartContextType = {
 
 const CartContext =
     createContext<CartContextType | null>(
-        null
+        null,
     );
 
 export function CartProvider({
@@ -34,98 +34,91 @@ export function CartProvider({
 }: {
     children: ReactNode;
 }) {
-
     const [items, setItems] =
         useState<CartItem[]>([]);
 
+    // Restaurar carrinho do localStorage
     useEffect(() => {
-
         const stored =
-            localStorage.getItem(
-                "cart"
-            );
+            localStorage.getItem("cart");
 
-        if (stored) {
-
-            setItems(
-                JSON.parse(stored)
-            );
-
+        if (!stored) {
+            return;
         }
 
+        try {
+            const parsed =
+                JSON.parse(stored);
+
+            if (Array.isArray(parsed)) {
+                setItems(parsed);
+            }
+        } catch {
+            localStorage.removeItem("cart");
+        }
     }, []);
 
+    // Guardar carrinho no localStorage
     useEffect(() => {
-
         localStorage.setItem(
             "cart",
-            JSON.stringify(items)
+            JSON.stringify(items),
         );
-
     }, [items]);
 
     function addItem(
-        item: CartItem
+        item: CartItem,
     ) {
-
         setItems((current) => {
 
             const existing =
                 current.find(
-                    (p) =>
-                        p.id === item.id &&
-                        p.recipient ===
+                    (product) =>
+                        product.id ===
+                            item.id &&
+                        product.recipient ===
                             item.recipient &&
-                        p.message ===
-                            item.message
+                        product.message ===
+                            item.message,
                 );
 
             if (existing) {
-
                 return current.map(
-                    (p) =>
-                        p === existing
+                    (product) =>
+                        product === existing
                             ? {
-                                  ...p,
+                                  ...product,
                                   quantity:
-                                      p.quantity +
+                                      product.quantity +
                                       item.quantity,
                               }
-                            : p
+                            : product,
                 );
-
             }
 
             return [
                 ...current,
                 item,
             ];
-
         });
-
     }
 
     function removeItem(
-        id: string
+        id: string,
     ) {
-
         setItems((current) =>
             current.filter(
                 (item) =>
-                    item.id !== id
-            )
+                    item.id !== id,
+            ),
         );
-
     }
 
     function clearCart() {
-
         setItems([]);
-
     }
 
     return (
-
         <CartContext.Provider
             value={{
                 items,
@@ -134,28 +127,20 @@ export function CartProvider({
                 clearCart,
             }}
         >
-
             {children}
-
         </CartContext.Provider>
-
     );
-
 }
 
 export function useCart() {
-
     const context =
         useContext(CartContext);
 
     if (!context) {
-
         throw new Error(
-            "useCart must be used inside CartProvider"
+            "useCart must be used inside CartProvider",
         );
-
     }
 
     return context;
-
 }

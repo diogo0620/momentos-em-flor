@@ -78,7 +78,9 @@ export class ProductsService {
         );
     }
 
-    async create(createProductDto: CreateProductDto): Promise<ProductResponseDto> {
+    async create(
+        createProductDto: CreateProductDto,
+    ): Promise<any> {
         const category =
             await this.prisma.category.findFirst({
                 where: {
@@ -86,11 +88,18 @@ export class ProductsService {
                     deletedAt: null,
                 },
             });
+
         if (!category) {
-            Exceptions.notFound(CATEGORY_MESSAGES.NOT_FOUND);
+            Exceptions.notFound(
+                CATEGORY_MESSAGES.NOT_FOUND,
+            );
         }
 
-        const slug = this.buildSlug(createProductDto.name);
+        const slug =
+            this.buildSlug(
+                createProductDto.name,
+            );
+
         const exists =
             await this.prisma.product.findFirst({
                 where: {
@@ -100,28 +109,43 @@ export class ProductsService {
             });
 
         if (exists) {
-            Exceptions.conflict(PRODUCT_MESSAGES.ALREADY_EXISTS);
+            Exceptions.conflict(
+                PRODUCT_MESSAGES.ALREADY_EXISTS,
+            );
         }
 
-        const product = await this.prisma.product.create({
-            data: {
-                ...createProductDto,
-                slug,
+        if (
+            createProductDto.baseFloristCompensation >=
+            createProductDto.basePrice
+        ) {
+            Exceptions.badRequest(
+                PRODUCT_MESSAGES
+                    .COMPENSATION_MUST_BE_LESS_THAN_PRICE,
+            );
+        }
 
-            },
-            include: {
-                category: true,
-            },
-        });
+        const product =
+            await this.prisma.product.create({
+                data: {
+                    ...createProductDto,
+                    slug,
+                },
+                include: {
+                    category: true,
+                },
+            });
 
-        return this.productMapper.toResponse(product);
+        return this.productMapper.toResponse(
+            product,
+        );
     }
 
     async update(
         id: number,
         dto: UpdateProductDto,
     ) {
-        await this.getProductOrThrow(id);
+        const currentProduct =
+            await this.getProductOrThrow(id);
 
         const slug = dto.name
             ? this.buildSlug(dto.name)
@@ -131,6 +155,7 @@ export class ProductsService {
             await this.prisma.product.findFirst({
                 where: {
                     deletedAt: null,
+
                     id: {
                         not: id,
                     },
@@ -161,22 +186,74 @@ export class ProductsService {
             );
         }
 
+        const newBasePrice =
+            dto.basePrice ??
+            Number(currentProduct.basePrice);
+
+        const newBaseFloristCompensation =
+            dto.baseFloristCompensation ??
+            Number(
+                currentProduct.baseFloristCompensation,
+            );
+
+        if (
+            newBaseFloristCompensation >=
+            newBasePrice
+        ) {
+            Exceptions.badRequest(
+                PRODUCT_MESSAGES
+                    .COMPENSATION_MUST_BE_LESS_THAN_PRICE,
+            );
+        }
+
+        if (
+            dto.basePrice !== undefined &&
+            dto.basePrice !==
+            Number(currentProduct.basePrice)
+        ) {
+            const existingRule =
+                await this.prisma.floristCompensationRule.findFirst({
+                    where: {
+                        productId: id,
+                        active: true,
+                        deletedAt: null,
+                        compensationAmount: {
+                            gte: newBasePrice,
+                        },
+                    },
+                });
+
+            if (existingRule) {
+                Exceptions.badRequest(
+                    PRODUCT_MESSAGES
+                        .PRICE_CANNOT_BE_LOWER_THAN_COMPENSATION_RULE,
+                );
+            }
+        }
+
         const product =
             await this.prisma.product.update({
                 where: {
                     id,
                 },
+
                 data: {
                     ...dto,
-                    ...(slug && { slug }),
+
+                    ...(slug && {
+                        slug,
+                    }),
                 },
+
                 include: {
                     category: true,
                 },
             });
 
         return ApiResponse.success(
-            this.productMapper.toResponse(product),
+            this.productMapper.toResponse(
+                product,
+            ),
             PRODUCT_MESSAGES.UPDATED,
         );
     }

@@ -1,3 +1,5 @@
+import { OrderCreateResponseDto } from '../dto/order-create-response.dto';
+import { OrderListResponseDto } from '../dto/order-list-response.dto';
 import { OrderResponseDto } from '../dto/order-response.dto';
 
 export class OrderMapper {
@@ -6,154 +8,275 @@ export class OrderMapper {
     ): OrderResponseDto {
         return {
             id: order.id,
-            orderNumber: order.orderNumber,
 
-            customerId: order.customerId,
-            customerFirstName: order.customerFirstName,
-            customerLastName: order.customerLastName,
-            customerEmail: order.customerEmail,
-            customerPhone: order.customerPhone,
+            orderNumber:
+                order.orderNumber,
+
+            customerId:
+                order.customerId,
+
+            customerFirstName:
+                order.customerFirstName,
+
+            customerLastName:
+                order.customerLastName,
+
+            customerEmail:
+                order.customerEmail,
+
+            customerPhone:
+                order.customerPhone,
 
             recipientFirstName:
                 order.recipientFirstName,
+
             recipientLastName:
                 order.recipientLastName,
+
             recipientPhone:
                 order.recipientPhone,
 
-            occasion: order.occasion,
+            occasion:
+                order.occasion,
 
             deliveryDate:
                 order.deliveryDate,
+
             deliveryTimeSlot:
                 order.deliveryTimeSlot,
+
             deliveryInstructions:
                 order.deliveryInstructions,
 
             deliveryStreet:
                 order.deliveryStreet,
+
             deliveryStreet2:
                 order.deliveryStreet2,
+
             deliveryPostalCode:
                 order.deliveryPostalCode,
+
             deliveryCity:
                 order.deliveryCity,
+
             deliveryDistrict:
                 order.deliveryDistrict,
+
             deliveryCountryCode:
                 order.deliveryCountryCode,
 
             deliveryLatitude:
-                Number(order.deliveryLatitude),
+                Number(
+                    order.deliveryLatitude,
+                ),
+
             deliveryLongitude:
-                Number(order.deliveryLongitude),
+                Number(
+                    order.deliveryLongitude,
+                ),
 
             cardMessage:
                 order.cardMessage,
 
             subtotal:
                 Number(order.subtotal),
+
             deliveryFee:
                 Number(order.deliveryFee),
+
             discount:
                 Number(order.discount),
+
             total:
                 Number(order.total),
 
             status:
                 order.status,
 
-            items: order.items.map(
-                (item: any) => ({
-                    id: item.id,
-                    productId: item.productId,
-                    productName: item.productName,
-                    productDescription:
-                        item.productDescription,
-                    quantity: item.quantity,
-                    unitPrice:
-                        Number(item.unitPrice),
-                    lineTotal:
-                        Number(item.lineTotal),
-                }),
-            ),
+            items:
+                (order.items ?? []).map(
+                    (item: any) => ({
+                        id:
+                            item.id,
 
-            offers: order.offers.map(
-                (offer: any) => ({
-                    id: offer.id,
+                        productId:
+                            item.productId,
 
-                    floristId:
-                        offer.floristId,
+                        productName:
+                            item.productName,
 
-                    florist: {
-                        id: offer.florist.id,
-                        name: offer.florist.name,
-                    },
+                        productDescription:
+                            item.productDescription,
 
-                    compensationAmount:
-                        Number(
-                            offer.compensationAmount,
-                        ),
+                        quantity:
+                            item.quantity,
 
-                    status:
-                        offer.status,
+                        unitPrice:
+                            Number(
+                                item.unitPrice,
+                            ),
 
-                    viewedAt:
-                        offer.viewedAt,
+                        lineTotal:
+                            Number(
+                                item.lineTotal,
+                            ),
+                    }),
+                ),
 
-                    acceptedAt:
-                        offer.acceptedAt,
+            offers:
+                (order.offers ?? []).map(
+                    (offer: any) => ({
+                        id:
+                            offer.id,
 
-                    declinedAt:
-                        offer.declinedAt,
+                        floristId:
+                            offer.floristId,
 
-                    expiresAt:
-                        offer.expiresAt,
+                        florist: {
+                            id:
+                                offer.florist.id,
 
-                    declineReason:
-                        offer.declineReason,
+                            name:
+                                offer.florist.name,
+                        },
 
-                    items:
-                        offer.orderOfferItems.map(
-                            (item: any) => ({
-                                id: item.id,
+                        compensationAmount:
+                            Number(
+                                offer.compensationAmount,
+                            ),
 
-                                orderItemId:
-                                    item.orderItemId,
+                        distanceKm:
+                            Number(
+                                offer.distanceKm,
+                            ),
 
-                                productId:
-                                    item.productId,
+                        status:
+                            offer.status,
 
-                                productName:
-                                    item.productName,
+                        viewedAt:
+                            offer.viewedAt,
 
-                                quantity:
-                                    item.quantity,
+                        acceptedAt:
+                            offer.acceptedAt,
 
-                                unitCompensation:
-                                    Number(
-                                        item.unitCompensation,
-                                    ),
+                        declinedAt:
+                            offer.declinedAt,
 
-                                totalCompensation:
-                                    Number(
-                                        item.totalCompensation,
-                                    ),
-                            }),
-                        ),
+                        expiresAt:
+                            offer.expiresAt,
 
-                    createdAt:
-                        offer.createdAt,
+                        declineReason:
+                            offer.declineReason,
 
-                    updatedAt:
-                        offer.updatedAt,
-                }),
-            ),
+                        items:
+                            (
+                                offer.orderOfferItems ??
+                                []
+                            ).map(
+                                (item: any) => ({
+                                    id:
+                                        item.id,
+
+                                    orderItemId:
+                                        item.orderItemId,
+
+                                    productId:
+                                        item.productId,
+
+                                    productName:
+                                        item.productName,
+
+                                    quantity:
+                                        item.quantity,
+
+                                    unitCompensation:
+                                        Number(
+                                            item.unitCompensation,
+                                        ),
+
+                                    totalCompensation:
+                                        Number(
+                                            item.totalCompensation,
+                                        ),
+                                }),
+                            ),
+
+                        createdAt:
+                            offer.createdAt,
+
+                        updatedAt:
+                            offer.updatedAt,
+                    }),
+                ),
+
+            statusHistory:
+                (
+                    order.statusHistory ??
+                    []
+                ).map(
+                    (history: any) => ({
+                        id:
+                            history.id,
+
+                        fromStatus:
+                            history.fromStatus,
+
+                        toStatus:
+                            history.toStatus,
+
+                        changedByUserId:
+                            history.changedByUserId,
+
+                        changedByUser:
+                            history.changedByUser
+                                ? {
+                                    id:
+                                        history
+                                            .changedByUser
+                                            .id,
+
+                                    firstName:
+                                        history
+                                            .changedByUser
+                                            .firstName,
+
+                                    lastName:
+                                        history
+                                            .changedByUser
+                                            .lastName,
+
+                                    email:
+                                        history
+                                            .changedByUser
+                                            .email,
+
+                                    role:
+                                        history
+                                            .changedByUser
+                                            .role,
+                                }
+                                : null,
+
+                        reason:
+                            history.reason,
+
+                        createdAt:
+                            history.createdAt,
+                    }),
+                ),
 
             createdAt:
                 order.createdAt,
+
             updatedAt:
                 order.updatedAt,
+
+            cancelledAt:
+                order.cancelledAt,
+
+            cancellationReason:
+                order.cancellationReason,
         };
     }
 
@@ -161,7 +284,141 @@ export class OrderMapper {
         orders: any[],
     ): OrderResponseDto[] {
         return orders.map(
-            (order) => this.toResponse(order),
+            (order) =>
+                this.toResponse(order),
         );
+    }
+
+    toListResponse(
+        order: any,
+    ): OrderListResponseDto {
+        return {
+            id: order.id,
+
+            orderNumber:
+                order.orderNumber,
+
+            customerId:
+                order.customerId,
+
+            customerFirstName:
+                order.customerFirstName,
+
+            customerLastName:
+                order.customerLastName,
+
+            customerEmail:
+                order.customerEmail,
+
+            customerPhone:
+                order.customerPhone,
+
+            recipientFirstName:
+                order.recipientFirstName,
+
+            recipientLastName:
+                order.recipientLastName,
+
+            recipientPhone:
+                order.recipientPhone,
+
+            occasion:
+                order.occasion,
+
+            deliveryDate:
+                order.deliveryDate,
+
+            deliveryTimeSlot:
+                order.deliveryTimeSlot,
+
+            deliveryInstructions:
+                order.deliveryInstructions,
+
+            deliveryStreet:
+                order.deliveryStreet,
+
+            deliveryStreet2:
+                order.deliveryStreet2,
+
+            deliveryPostalCode:
+                order.deliveryPostalCode,
+
+            deliveryCity:
+                order.deliveryCity,
+
+            deliveryDistrict:
+                order.deliveryDistrict,
+
+            deliveryCountryCode:
+                order.deliveryCountryCode,
+
+            deliveryLatitude:
+                Number(
+                    order.deliveryLatitude,
+                ),
+
+            deliveryLongitude:
+                Number(
+                    order.deliveryLongitude,
+                ),
+
+            cardMessage:
+                order.cardMessage,
+
+            subtotal:
+                Number(order.subtotal),
+
+            deliveryFee:
+                Number(order.deliveryFee),
+
+            discount:
+                Number(order.discount),
+
+            total:
+                Number(order.total),
+
+            status:
+                order.status,
+
+            createdAt:
+                order.createdAt,
+
+            updatedAt:
+                order.updatedAt,
+
+            cancelledAt:
+                order.cancelledAt,
+
+            cancellationReason:
+                order.cancellationReason,
+        };
+    }
+
+    toListResponses(
+        orders: any[],
+    ): OrderListResponseDto[] {
+        return orders.map(
+            (order) =>
+                this.toListResponse(
+                    order,
+                ),
+        );
+    }
+
+    toCreateResponse(
+        order: any,
+    ): OrderCreateResponseDto {
+        return {
+            id: order.id,
+
+            orderNumber:
+                order.orderNumber,
+
+            status:
+                order.status,
+
+            createdAt:
+                order.createdAt,
+        };
     }
 }

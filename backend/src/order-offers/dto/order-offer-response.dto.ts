@@ -41,6 +41,11 @@ export class OrderOfferResponseDto {
   @ApiProperty()
   orderNumber: string;
 
+  @ApiProperty({
+    example: 12.43,
+  })
+  distanceKm: number;
+
   @ApiProperty()
   compensationAmount: number;
 

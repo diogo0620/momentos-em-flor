@@ -1,17 +1,8 @@
-import type { Price } from "./price";
-
 export type CartItem = {
     id: string;
-
     name: string;
-
-    image: string;
-
-    price: Price;
-
+    price: number;
     quantity: number;
-
     recipient?: string;
-
     message?: string;
 };

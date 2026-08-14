@@ -4,14 +4,17 @@ import {
     Get,
     Param,
     ParseIntPipe,
+    Patch,
     Post,
     Query,
     UseGuards,
 } from '@nestjs/common';
+
 import {
     ApiBearerAuth,
     ApiTags,
 } from '@nestjs/swagger';
+
 import { UserRole } from '@prisma/client';
 
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
@@ -24,6 +27,8 @@ import type { AuthenticatedUser } from '@/auth/interfaces/authenticated-user.int
 import { OrderOffersService } from './order-offers.service';
 import { OrderOfferQueryDto } from './query/order-offer-query.dto';
 import { DeclineOrderOfferDto } from './dto/decline-order-offer.dto';
+import { CreateOrderOfferDto } from './dto/create-order-offer.dto';
+import { UpdateOrderOfferDto } from './dto/update-order-offer.dto';
 
 @ApiTags('Order Offers')
 @ApiBearerAuth('JWT')
@@ -38,8 +43,37 @@ export class OrderOffersController {
             OrderOffersService,
     ) { }
 
+    @Post()
+    @Roles(UserRole.SYSTEM_ADMIN)
+    create(
+        @Body()
+        dto: CreateOrderOfferDto,
+    ) {
+        return this.orderOffersService.create(
+            dto,
+        );
+    }
+
+    @Patch(':id')
+    @Roles(UserRole.SYSTEM_ADMIN)
+    update(
+        @Param('id', ParseIntPipe)
+        id: number,
+
+        @Body()
+        dto: UpdateOrderOfferDto,
+    ) {
+        return this.orderOffersService.update(
+            id,
+            dto,
+        );
+    }
+
     @Get()
-    @Roles(UserRole.FLORIST)
+    @Roles(
+        UserRole.FLORIST,
+        UserRole.SYSTEM_ADMIN,
+    )
     findAll(
         @CurrentUser()
         user: AuthenticatedUser,
@@ -54,7 +88,10 @@ export class OrderOffersController {
     }
 
     @Get(':id')
-    @Roles(UserRole.FLORIST)
+    @Roles(
+        UserRole.FLORIST,
+        UserRole.SYSTEM_ADMIN,
+    )
     findOne(
         @CurrentUser()
         user: AuthenticatedUser,
@@ -69,7 +106,10 @@ export class OrderOffersController {
     }
 
     @Post(':id/accept')
-    @Roles(UserRole.FLORIST)
+    @Roles(
+        UserRole.FLORIST,
+        UserRole.SYSTEM_ADMIN,
+    )
     accept(
         @CurrentUser()
         user: AuthenticatedUser,
@@ -84,7 +124,10 @@ export class OrderOffersController {
     }
 
     @Post(':id/decline')
-    @Roles(UserRole.FLORIST)
+    @Roles(
+        UserRole.FLORIST,
+        UserRole.SYSTEM_ADMIN,
+    )
     decline(
         @CurrentUser()
         user: AuthenticatedUser,

@@ -12,30 +12,339 @@ import { getPaginationResponse } from '@/common/database/pagination-response';
 import { OrderOfferMapper } from './mappers/order-offer.mapper';
 import {
     OrderOfferStatus,
+    OrderStatus,
+    UserRole,
 } from '@prisma/client';
 import { OrderOfferQueryDto } from './query/order-offer-query.dto';
 import { ORDER_OFFER_MESSAGES } from './constants/order-offer-messages';
 import { DeclineOrderOfferDto } from './dto/decline-order-offer.dto';
+import { CreateOrderOfferDto } from './dto/create-order-offer.dto';
+import { OrderDistributionService } from '@/orders/services/order-distribution.service';
+import { UpdateOrderOfferDto } from './dto/update-order-offer.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { OrderOfferAcceptedEvent } from '@/events/order-offer/order-offer-accepted.event';
 
 @Injectable()
 export class OrderOffersService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly mapper: OrderOfferMapper,
+        private readonly eventEmitter: EventEmitter2,
+        private readonly orderDistributionService : OrderDistributionService
     ) { }
+
+    async create(
+        dto: CreateOrderOfferDto,
+    ) {
+        const offer =
+            await this.orderDistributionService.createOffer(
+                dto.orderId,
+                dto.floristId,
+                dto.compensationAmount,
+            );
+
+        return ApiResponse.success(
+            this.mapper.toResponse(offer),
+        );
+    }
+    async update(
+        id: number,
+        dto: UpdateOrderOfferDto,
+    ) {
+        const offer =
+            await this.prisma.orderOffer.findFirst({
+                where: {
+                    id,
+                    order: {
+                        deletedAt: null,
+                    },
+                },
+                include: {
+                    order: {
+                        include: {
+                            items: true,
+                        },
+                    },
+                    orderOfferItems: true,
+                    florist: true,
+                },
+            });
+
+        if (!offer) {
+            Exceptions.notFound(
+                ORDER_OFFER_MESSAGES.NOT_FOUND,
+            );
+        }
+
+        if (
+            offer.status !==
+            OrderOfferStatus.PENDING &&
+            offer.status !==
+            OrderOfferStatus.VIEWED
+        ) {
+            Exceptions.badRequest(
+                ORDER_OFFER_MESSAGES.INVALID_STATUS,
+            );
+        }
+
+        /*
+         * Determine the new florist.
+         */
+        const floristId =
+            dto.floristId ??
+            offer.floristId;
+
+        /*
+         * Validate florist if it is being changed.
+         */
+        if (
+            dto.floristId !== undefined
+        ) {
+            const florist =
+                await this.prisma.florist.findFirst({
+                    where: {
+                        id: dto.floristId,
+                        active: true,
+                        acceptingOrders: true,
+                        deletedAt: null,
+                    },
+                });
+
+            if (!florist) {
+                Exceptions.notFound(
+                    ORDER_OFFER_MESSAGES.FLORIST_NOT_FOUND,
+                );
+            }
+
+            /*
+             * Do not allow two offers for the
+             * same order + florist.
+             */
+            if (
+                dto.floristId !==
+                offer.floristId
+            ) {
+                const existingOffer =
+                    await this.prisma.orderOffer.findUnique({
+                        where: {
+                            orderId_floristId: {
+                                orderId:
+                                    offer.orderId,
+                                floristId:
+                                    dto.floristId,
+                            },
+                        },
+                    });
+
+                if (existingOffer) {
+                    Exceptions.conflict(
+                        ORDER_OFFER_MESSAGES.OFFER_ALREADY_EXISTS,
+                    );
+                }
+            }
+        }
+
+        /*
+         * Determine the new compensation.
+         *
+         * If it was not provided, keep the
+         * current value.
+         */
+        const compensationAmount =
+            dto.compensationAmount ??
+            Number(offer.compensationAmount);
+
+        /*
+         * Compensation cannot exceed the
+         * order subtotal.
+         */
+        if (
+            compensationAmount >
+            Number(offer.order.subtotal)
+        ) {
+            Exceptions.badRequest(
+                ORDER_OFFER_MESSAGES.COMPENSATION_TOO_HIGH,
+            );
+        }
+
+        if (
+            compensationAmount <= 0
+        ) {
+            Exceptions.badRequest(
+                ORDER_OFFER_MESSAGES.COMPENSATION_MUST_BE_POSITIVE,
+            );
+        }
+
+        /*
+         * Recalculate the existing item
+         * distribution proportionally.
+         */
+        const currentItemsTotal =
+            offer.orderOfferItems.reduce(
+                (total, item) =>
+                    total +
+                    Number(item.totalCompensation),
+                0,
+            );
+
+        if (currentItemsTotal <= 0) {
+            Exceptions.badRequest(
+                ORDER_OFFER_MESSAGES.COMPENSATION_INVALID,
+            );
+        }
+
+        const factor =
+            compensationAmount /
+            currentItemsTotal;
+
+        const updatedItems =
+            offer.orderOfferItems.map(
+                (item) => {
+                    const totalCompensation =
+                        this.roundMoney(
+                            Number(
+                                item.totalCompensation,
+                            ) * factor,
+                        );
+
+                    return {
+                        id: item.id,
+                        quantity: item.quantity,
+                        totalCompensation,
+                        unitCompensation:
+                            this.roundMoney(
+                                totalCompensation /
+                                item.quantity,
+                            ),
+                    };
+                },
+            );
+
+        /*
+         * Correct rounding difference on
+         * the last item.
+         */
+        const distributedTotal =
+            this.roundMoney(
+                updatedItems.reduce(
+                    (total, item) =>
+                        total +
+                        item.totalCompensation,
+                    0,
+                ),
+            );
+
+        const roundingDifference =
+            this.roundMoney(
+                compensationAmount -
+                distributedTotal,
+            );
+
+        if (
+            roundingDifference !== 0 &&
+            updatedItems.length > 0
+        ) {
+            const lastIndex =
+                updatedItems.length - 1;
+
+            const lastItem =
+                updatedItems[lastIndex];
+
+            const correctedTotal =
+                this.roundMoney(
+                    lastItem.totalCompensation +
+                    roundingDifference,
+                );
+
+            updatedItems[lastIndex] = {
+                ...lastItem,
+                totalCompensation:
+                    correctedTotal,
+                unitCompensation:
+                    this.roundMoney(
+                        correctedTotal /
+                        lastItem.quantity,
+                    ),
+            };
+        }
+
+        /*
+         * Update everything atomically.
+         */
+        const updatedOffer =
+            await this.prisma.$transaction(
+                async (tx) => {
+                    await Promise.all(
+                        updatedItems.map(
+                            (item) =>
+                                tx.orderOfferItem.update({
+                                    where: {
+                                        id: item.id,
+                                    },
+                                    data: {
+                                        unitCompensation:
+                                            item.unitCompensation,
+
+                                        totalCompensation:
+                                            item.totalCompensation,
+                                    },
+                                }),
+                        ),
+                    );
+
+                    return tx.orderOffer.update({
+                        where: {
+                            id: offer.id,
+                        },
+                        data: {
+                            floristId,
+
+                            compensationAmount,
+
+                            ...(dto.floristId !==
+                                undefined &&
+                                dto.floristId !==
+                                offer.floristId
+                                ? {
+                                    viewedAt: null,
+                                    status:
+                                        OrderOfferStatus.PENDING,
+                                }
+                                : {}),
+                        },
+                        include: {
+                            order: true,
+                            orderOfferItems: true,
+                            florist: true,
+                        },
+                    });
+                },
+            );
+
+        return ApiResponse.success(
+            this.mapper.toResponse(
+                updatedOffer,
+            ),
+        );
+    }
 
     async findAll(
         user: AuthenticatedUser,
         query: OrderOfferQueryDto,
     ) {
-        if (!user.floristId) {
+        if (
+            user.role === UserRole.FLORIST &&
+            !user.floristId
+        ) {
             Exceptions.forbidden(
                 ORDER_OFFER_MESSAGES.FLORIST_REQUIRED,
             );
         }
 
         const where = {
-            floristId: user.floristId,
+            ...(user.role === UserRole.FLORIST && {
+                floristId: user.floristId!,
+            }),
 
             status: {
                 in: [
@@ -88,7 +397,10 @@ export class OrderOffersService {
         user: AuthenticatedUser,
         id: number,
     ) {
-        if (!user.floristId) {
+        if (
+            user.role === UserRole.FLORIST &&
+            !user.floristId
+        ) {
             Exceptions.forbidden(
                 ORDER_OFFER_MESSAGES.FLORIST_REQUIRED,
             );
@@ -98,7 +410,11 @@ export class OrderOffersService {
             await this.prisma.orderOffer.findFirst({
                 where: {
                     id,
-                    floristId: user.floristId,
+
+                    ...(user.role === UserRole.FLORIST && {
+                        floristId: user.floristId!,
+                    }),
+
                     order: {
                         deletedAt: null,
                     },
@@ -106,9 +422,7 @@ export class OrderOffersService {
 
                 include: {
                     order: true,
-
                     orderOfferItems: true,
-
                     florist: true,
                 },
             });
@@ -120,6 +434,7 @@ export class OrderOffersService {
         }
 
         if (
+            user.role === UserRole.FLORIST &&
             offer.status === OrderOfferStatus.PENDING
         ) {
             const viewedAt = new Date();
@@ -153,7 +468,10 @@ export class OrderOffersService {
         user: AuthenticatedUser,
         id: number,
     ) {
-        if (!user.floristId) {
+        if (
+            user.role === UserRole.FLORIST &&
+            !user.floristId
+        ) {
             Exceptions.forbidden(
                 ORDER_OFFER_MESSAGES.FLORIST_REQUIRED,
             );
@@ -163,7 +481,11 @@ export class OrderOffersService {
             await this.prisma.orderOffer.findFirst({
                 where: {
                     id,
-                    floristId: user.floristId,
+
+                    ...(user.role === UserRole.FLORIST && {
+                        floristId: user.floristId!,
+                    }),
+
                     order: {
                         deletedAt: null,
                     },
@@ -177,8 +499,10 @@ export class OrderOffersService {
         }
 
         if (
-            offer.status !== OrderOfferStatus.PENDING &&
-            offer.status !== OrderOfferStatus.VIEWED
+            offer.status !==
+            OrderOfferStatus.PENDING &&
+            offer.status !==
+            OrderOfferStatus.VIEWED
         ) {
             Exceptions.badRequest(
                 ORDER_OFFER_MESSAGES.INVALID_STATUS,
@@ -191,7 +515,8 @@ export class OrderOffersService {
                     id: offer.id,
                 },
                 data: {
-                    status: OrderOfferStatus.EXPIRED,
+                    status:
+                        OrderOfferStatus.EXPIRED,
                 },
             });
 
@@ -204,11 +529,10 @@ export class OrderOffersService {
             await this.prisma.$transaction(
                 async (tx) => {
                     /*
-                     * Only the first florist that reaches this
-                     * update while assignedFloristId is null
-                     * can assign the order.
+                     * Assign the florist to the order
+                     * and change the order status.
                      */
-                    const assignment =
+                    const orderUpdate =
                         await tx.order.updateMany({
                             where: {
                                 id: offer.orderId,
@@ -217,16 +541,24 @@ export class OrderOffersService {
                             },
                             data: {
                                 assignedFloristId:
-                                    user.floristId,
+                                    offer.floristId,
+
+                                status:
+                                    OrderStatus.ASSIGNED,
                             },
                         });
 
-                    if (assignment.count === 0) {
+                    if (
+                        orderUpdate.count === 0
+                    ) {
                         Exceptions.conflict(
                             ORDER_OFFER_MESSAGES.ORDER_ALREADY_ASSIGNED,
                         );
                     }
 
+                    /*
+                     * Accept the selected offer.
+                     */
                     const acceptedOffer =
                         await tx.orderOffer.update({
                             where: {
@@ -235,19 +567,25 @@ export class OrderOffersService {
                             data: {
                                 status:
                                     OrderOfferStatus.ACCEPTED,
+
                                 acceptedAt:
                                     new Date(),
                             },
                             include: {
-                                orderOfferItems: true,
-                                florist: true,
                                 order: true,
+                                florist: true,
+                                orderOfferItems: true,
                             },
                         });
 
+                    /*
+                     * Cancel all other active offers
+                     * for this order.
+                     */
                     await tx.orderOffer.updateMany({
                         where: {
-                            orderId: offer.orderId,
+                            orderId:
+                                offer.orderId,
 
                             id: {
                                 not: offer.id,
@@ -262,13 +600,26 @@ export class OrderOffersService {
                         },
                         data: {
                             status:
-                                OrderOfferStatus.EXPIRED,
+                                OrderOfferStatus.CANCELLED,
                         },
                     });
 
                     return acceptedOffer;
                 },
             );
+
+        /*
+         * The transaction succeeded.
+         * Now notify the rest of the application.
+         */
+        this.eventEmitter.emit(
+            'order.offer.accepted',
+            new OrderOfferAcceptedEvent(
+                result.id,
+                result.orderId,
+                result.floristId,
+            ),
+        );
 
         return ApiResponse.success(
             this.mapper.toResponse(result),
@@ -280,7 +631,10 @@ export class OrderOffersService {
         id: number,
         dto: DeclineOrderOfferDto,
     ) {
-        if (!user.floristId) {
+        if (
+            user.role === UserRole.FLORIST &&
+            !user.floristId
+        ) {
             Exceptions.forbidden(
                 ORDER_OFFER_MESSAGES.FLORIST_REQUIRED,
             );
@@ -290,7 +644,11 @@ export class OrderOffersService {
             await this.prisma.orderOffer.findFirst({
                 where: {
                     id,
-                    floristId: user.floristId,
+
+                    ...(user.role === UserRole.FLORIST && {
+                        floristId: user.floristId!,
+                    }),
+
                     order: {
                         deletedAt: null,
                     },
@@ -357,6 +715,14 @@ export class OrderOffersService {
                 declinedOffer,
             ),
         );
+    }
+
+    private roundMoney(
+        value: number,
+    ): number {
+        return Math.round(
+            (value + Number.EPSILON) * 100,
+        ) / 100;
     }
 
 

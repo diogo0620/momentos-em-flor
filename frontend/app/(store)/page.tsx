@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { products } from "@/data/products";
+import FeaturedProducts from "@/components/store/FeaturedProducts";
 
 import ProductCard from "@/components/ProductCard";
 import OccasionsSection from "@/components/OccasionsSection";
@@ -8,7 +8,6 @@ import FaqSection from "@/components/FaqSection";
 import FeaturedProductSection from "@/components/FeaturedProductSection";
 
 export default function HomePage() {
-  const featuredProducts = products.slice(0, 3);
 
   const categories = [
     "💐 Bouquets",
@@ -183,26 +182,8 @@ export default function HomePage() {
 
       {/* PRODUTOS */}
 
-      <section className="mx-auto max-w-7xl px-4 py-16">
 
-        <h2 className="mb-8 text-3xl font-bold">
-          Produtos em Destaque
-        </h2>
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-
-          {featuredProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-            />
-          ))}
-
-        </div>
-
-      </section>
-
-      <FeaturedProductSection />
+      <FeaturedProducts />
 
       {/* COMO FUNCIONA */}
 

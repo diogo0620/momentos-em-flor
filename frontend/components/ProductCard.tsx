@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 
 import type { Product } from "@/types/product";
 
@@ -10,11 +11,12 @@ export default function ProductCard({
     product,
 }: Props) {
     return (
-        <Link href={`/products/${product.id}`}>
-
+        <Link
+            href={`/products/${product.id}`}
+            className="group block"
+        >
             <article
                 className="
-                    group
                     overflow-hidden
                     rounded-3xl
                     border
@@ -22,69 +24,67 @@ export default function ProductCard({
                     bg-white
                     transition-all
                     duration-300
-                    hover:-translate-y-2
+                    hover:-translate-y-1
                     hover:shadow-xl
                 "
             >
-
                 {/* IMAGE */}
 
                 <div
                     className="
+                        relative
                         flex
                         h-80
                         items-center
                         justify-center
+                        overflow-hidden
                         bg-[#FAFAF7]
                     "
                 >
-
-                    <img
-                        src={product.image}
-                        alt={product.name}
+                    <div
                         className="
-                            max-h-72
-                            w-auto
-                            object-contain
+                            flex
+                            h-full
+                            w-full
+                            items-center
+                            justify-center
+                            text-8xl
                             transition-transform
                             duration-500
-                            group-hover:scale-105
+                            group-hover:scale-110
                         "
-                    />
+                    >
+                        🌸
+                    </div>
 
+                    {/* CATEGORY */}
+
+                    <span
+                        className="
+                            absolute
+                            left-5
+                            top-5
+                            rounded-full
+                            bg-white/90
+                            px-3
+                            py-1.5
+                            text-xs
+                            font-medium
+                            text-[#55624A]
+                            shadow-sm
+                            backdrop-blur
+                        "
+                    >
+                        {product.category.name}
+                    </span>
                 </div>
 
                 {/* CONTENT */}
 
                 <div className="p-6">
 
-                    <div className="flex items-center justify-between">
-
-                        <span
-                            className="
-                                rounded-full
-                                bg-[#D6DEC8]
-                                px-3
-                                py-1
-                                text-xs
-                                font-medium
-                                text-[#55624A]
-                            "
-                        >
-                            {product.category}
-                        </span>
-
-                        <span className="text-sm text-gray-400">
-                            {product.active
-                                ? "Disponível"
-                                : "Indisponível"}
-                        </span>
-
-                    </div>
-
                     <h2
                         className="
-                            mt-5
                             text-xl
                             font-semibold
                             text-[#2F3B2A]
@@ -96,25 +96,41 @@ export default function ProductCard({
                         {product.name}
                     </h2>
 
-                    <div className="mt-4 flex items-end justify-between">
+                    {product.description && (
+                        <p
+                            className="
+                                mt-2
+                                line-clamp-2
+                                text-sm
+                                leading-6
+                                text-gray-500
+                            "
+                        >
+                            {product.description}
+                        </p>
+                    )}
+
+                    <div className="mt-6 flex items-end justify-between">
 
                         <div>
 
-                            <div className="text-sm text-gray-500">
-                                Desde
-                            </div>
+                            <p className="text-xs text-gray-400">
+                                {product.pricingType === "PER_UNIT"
+                                    ? "A partir de"
+                                    : "Preço"}
+                            </p>
 
-                            <div className="text-3xl font-bold text-[#55624A]">
-                                {product.price.selling.toFixed(2)} €
-                            </div>
+                            <p className="mt-1 text-2xl font-bold text-[#55624A]">
+                                {product.basePrice.toFixed(2)} €
+                            </p>
 
                         </div>
 
                         <div
                             className="
                                 flex
-                                h-12
-                                w-12
+                                h-11
+                                w-11
                                 items-center
                                 justify-center
                                 rounded-full
@@ -126,15 +142,27 @@ export default function ProductCard({
                                 group-hover:text-white
                             "
                         >
-                            →
+                            <ArrowUpRight size={20} />
                         </div>
 
                     </div>
 
+                    <div
+                        className="
+                            mt-5
+                            border-t
+                            border-gray-100
+                            pt-4
+                            text-sm
+                            font-medium
+                            text-[#55624A]
+                        "
+                    >
+                        Ver produto
+                    </div>
+
                 </div>
-
             </article>
-
         </Link>
     );
 }

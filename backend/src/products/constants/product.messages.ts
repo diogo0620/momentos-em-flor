@@ -28,4 +28,10 @@ export const PRODUCT_MESSAGES = {
             EntityName.PRODUCT,
         ),
 
+    COMPENSATION_MUST_BE_LESS_THAN_PRICE:
+        'The florist compensation must be lower than the product price.',
+
+    PRICE_CANNOT_BE_LOWER_THAN_COMPENSATION_RULE:
+        'The product price cannot be lower than or equal to an existing florist compensation.',
+
 };

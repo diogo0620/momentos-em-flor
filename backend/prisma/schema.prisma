@@ -142,10 +142,13 @@ model User {
   active        Boolean @default(true)
   emailVerified Boolean @default(false)
 
-  lastLoginAt DateTime?
+  lastLoginAt   DateTime?
+  refreshTokens RefreshToken[]
 
   floristId Int?
   florist   Florist? @relation(fields: [floristId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  orderStatusHistory OrderStatusHistory[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -155,6 +158,25 @@ model User {
   @@index([role])
   @@index([active])
   @@index([deletedAt])
+}
+
+model RefreshToken {
+  id Int @id @default(autoincrement())
+
+  tokenId   String @unique
+  tokenHash String
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
 }
 
 model File {
@@ -198,6 +220,8 @@ model Product {
 
   // Default price before florist adjustments
   basePrice Decimal @db.Decimal(10, 2)
+
+  baseFloristCompensation Decimal @db.Decimal(10, 2)
 
   categoryId Int
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
@@ -244,6 +268,14 @@ enum Occasion {
   OTHER
 }
 
+enum OrderCancellationReason {
+  NO_FLORIST_AVAILABLE
+  CUSTOMER_REQUEST
+  ADMIN_REQUEST
+  PAYMENT_FAILED
+  OTHER
+}
+
 model Order {
   id Int @id @default(autoincrement())
 
@@ -251,15 +283,15 @@ model Order {
   orderNumber String @unique
 
   // Customer
-  customerId Int
-  customer   User @relation(fields: [customerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  customerId Int?
+  customer   User? @relation(fields: [customerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   assignedFloristId Int?
   assignedFlorist   Florist? @relation("OrderAssignedFlorist", fields: [assignedFloristId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   customerFirstName String
-  customerLastName  String
-  customerEmail     String
+  customerLastName  String?
+  customerEmail     String?
   customerPhone     String?
 
   // Recipient
@@ -304,10 +336,14 @@ model Order {
   // Relations
   items  OrderItem[]
   offers OrderOffer[]
+  statusHistory OrderStatusHistory[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
+
+  cancelledAt       DateTime?
+  cancellationReason OrderCancellationReason?
 
   @@index([customerId])
   @@index([status])
@@ -344,12 +380,34 @@ model OrderItem {
   @@index([productId])
 }
 
+model OrderStatusHistory {
+  id Int @id @default(autoincrement())
+
+  orderId Int
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  fromStatus OrderStatus?
+  toStatus   OrderStatus
+
+  changedByUserId Int?
+  changedByUser   User? @relation(fields: [changedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  reason String?
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([changedByUserId])
+  @@index([createdAt])
+}
+
 enum OrderOfferStatus {
   PENDING
   VIEWED
   ACCEPTED
   DECLINED
   EXPIRED
+  CANCELLED
 }
 
 model OrderOffer {
@@ -370,6 +428,8 @@ model OrderOffer {
 
   // Workflow
   status OrderOfferStatus @default(PENDING)
+
+  distanceKm Decimal @db.Decimal(8, 2)
 
   viewedAt   DateTime?
   acceptedAt DateTime?
@@ -420,8 +480,8 @@ model FloristCompensationRule {
   productId Int
   product   Product @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-  floristId Int?
-  florist   Florist? @relation(fields: [floristId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  floristId Int
+  florist   Florist @relation(fields: [floristId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   compensationAmount Decimal @db.Decimal(10, 2)
 
