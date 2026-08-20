@@ -26,6 +26,7 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrderCreatedEvent } from '@/events/order/order-created.event';
 import { OrderCreateResponseDto } from './dto/order-create-response.dto';
+import { GeocodingService } from '@/geocoding/geocoding.service';
 
 
 
@@ -35,6 +36,8 @@ export class OrdersService {
         private readonly prisma: PrismaService,
         private readonly mapper: OrderMapper,
         private readonly eventEmitter: EventEmitter2,
+        private readonly geocodingService:
+            GeocodingService,
     ) { }
 
     async findAll(
@@ -148,68 +151,104 @@ export class OrdersService {
     }
 
     async findOne(
-        user: AuthenticatedUser,
-        id: number,
+    user: AuthenticatedUser,
+    id: number,
+) {
+    /*
+     * Florist must be associated with a
+     * florist account.
+     */
+    if (
+        user.role === UserRole.FLORIST &&
+        !user.floristId
     ) {
-        if (
-            user.role !== UserRole.SYSTEM_ADMIN &&
-            user.role !== UserRole.CUSTOMER
-        ) {
-            Exceptions.forbidden(
-                ORDER_MESSAGES.FORBIDDEN,
-            );
-        }
+        Exceptions.forbidden(
+            ORDER_MESSAGES.FLORIST_REQUIRED,
+        );
+    }
 
-        const where = {
-            id,
-            deletedAt: null,
+    const where = {
+        id,
+        deletedAt: null,
 
-            ...(user.role === UserRole.CUSTOMER && {
-                customerId: user.id,
-            }),
-        };
+        /*
+         * CUSTOMER can only access their own orders.
+         */
+        ...(user.role === UserRole.CUSTOMER && {
+            customerId: user.id,
+        }),
 
-        const order =
-            await this.prisma.order.findFirst({
-                where,
-                include: {
-                    items: true,
-                    offers: {
-                        include: {
-                            orderOfferItems: true,
-                            florist: true,
-                        },
+        /*
+         * FLORIST can only access orders
+         * assigned to their florist.
+         */
+        ...(user.role === UserRole.FLORIST && {
+            assignedFloristId:
+                user.floristId!,
+        }),
+    };
+
+    /*
+     * Only SYSTEM_ADMIN, CUSTOMER and FLORIST
+     * are allowed to access orders.
+     */
+    if (
+        user.role !== UserRole.SYSTEM_ADMIN &&
+        user.role !== UserRole.CUSTOMER &&
+        user.role !== UserRole.FLORIST
+    ) {
+        Exceptions.forbidden(
+            ORDER_MESSAGES.FORBIDDEN,
+        );
+    }
+
+    const order =
+        await this.prisma.order.findFirst({
+            where,
+
+            include: {
+                items: true,
+
+                offers: {
+                    include: {
+                        orderOfferItems: true,
+
+                        florist: true,
                     },
-                    statusHistory: {
-                        orderBy: {
-                            createdAt: 'asc',
-                        },
+                },
 
-                        include: {
-                            changedByUser: {
-                                select: {
-                                    id: true,
-                                    firstName: true,
-                                    lastName: true,
-                                    email: true,
-                                    role: true,
-                                },
+                statusHistory: {
+                    orderBy: {
+                        createdAt: 'asc',
+                    },
+
+                    include: {
+                        changedByUser: {
+                            select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true,
+                                role: true,
                             },
                         },
                     },
                 },
-            });
+            },
+        });
 
-        if (!order) {
-            Exceptions.notFound(
-                ORDER_MESSAGES.NOT_FOUND,
-            );
-        }
-
-        return ApiResponse.success(
-            this.mapper.toResponse(order),
+    if (!order) {
+        Exceptions.notFound(
+            ORDER_MESSAGES.NOT_FOUND,
         );
     }
+
+    return ApiResponse.success(
+        this.mapper.toResponse(
+            order,
+        ),
+    );
+}
 
 
     async create(
@@ -270,7 +309,8 @@ export class OrdersService {
                 !dto.customerPhone?.trim()
             ) {
                 Exceptions.badRequest(
-                    ORDER_MESSAGES.CUSTOMER_CONTACT_REQUIRED,
+                    ORDER_MESSAGES
+                        .CUSTOMER_CONTACT_REQUIRED,
                 );
             }
 
@@ -278,7 +318,8 @@ export class OrdersService {
                 !dto.customerFirstName?.trim()
             ) {
                 Exceptions.badRequest(
-                    ORDER_MESSAGES.CUSTOMER_FIRST_NAME_REQUIRED,
+                    ORDER_MESSAGES
+                        .CUSTOMER_FIRST_NAME_REQUIRED,
                 );
             }
 
@@ -403,6 +444,35 @@ export class OrdersService {
             discount;
 
         /*
+         * Geocode delivery address.
+         *
+         * Latitude and longitude are generated
+         * by the backend and are not provided
+         * by the client.
+         */
+        const coordinates =
+            await this.geocodingService
+                .geocodeAddress({
+                    street:
+                        dto.deliveryStreet,
+
+                    street2:
+                        dto.deliveryStreet2,
+
+                    postalCode:
+                        dto.deliveryPostalCode,
+
+                    city:
+                        dto.deliveryCity,
+
+                    district:
+                        dto.deliveryDistrict,
+
+                    countryCode:
+                        dto.deliveryCountryCode,
+                });
+
+        /*
          * Generate order number
          */
         const orderNumber =
@@ -468,10 +538,10 @@ export class OrdersService {
                                     .toUpperCase(),
 
                             deliveryLatitude:
-                                dto.deliveryLatitude,
+                                coordinates.latitude,
 
                             deliveryLongitude:
-                                dto.deliveryLongitude,
+                                coordinates.longitude,
 
                             cardMessage:
                                 dto.cardMessage,
@@ -518,9 +588,6 @@ export class OrdersService {
         );
     }
 
-
-
-
     async update(
         id: number,
         dto: UpdateOrderDto,
@@ -539,11 +606,67 @@ export class OrdersService {
             );
         }
 
+        /*
+         * Check whether the delivery address
+         * is being changed.
+         */
+        const addressChanged =
+            dto.deliveryStreet !== undefined ||
+            dto.deliveryStreet2 !== undefined ||
+            dto.deliveryPostalCode !== undefined ||
+            dto.deliveryCity !== undefined ||
+            dto.deliveryDistrict !== undefined ||
+            dto.deliveryCountryCode !== undefined;
+
+        /*
+         * Geocode the final address only when
+         * one of the address fields changes.
+         */
+        let coordinates:
+            | {
+                latitude: number;
+                longitude: number;
+            }
+            | undefined;
+
+        if (addressChanged) {
+            coordinates =
+                await this.geocodingService
+                    .geocodeAddress({
+                        street:
+                            dto.deliveryStreet ??
+                            existingOrder.deliveryStreet,
+
+                        street2:
+                            dto.deliveryStreet2 ??
+                            existingOrder.deliveryStreet2,
+
+                        postalCode:
+                            dto.deliveryPostalCode ??
+                            existingOrder.deliveryPostalCode,
+
+                        city:
+                            dto.deliveryCity ??
+                            existingOrder.deliveryCity,
+
+                        district:
+                            dto.deliveryDistrict ??
+                            existingOrder.deliveryDistrict,
+
+                        countryCode:
+                            (
+                                dto.deliveryCountryCode ??
+                                existingOrder.deliveryCountryCode
+                            ).toUpperCase(),
+                    });
+        }
+
         const order =
             await this.prisma.order.update({
                 where: {
                     id,
                 },
+
                 data: {
                     ...(dto.recipientFirstName !== undefined && {
                         recipientFirstName:
@@ -561,12 +684,15 @@ export class OrdersService {
                     }),
 
                     ...(dto.occasion !== undefined && {
-                        occasion: dto.occasion,
+                        occasion:
+                            dto.occasion,
                     }),
 
                     ...(dto.deliveryDate !== undefined && {
                         deliveryDate:
-                            new Date(dto.deliveryDate),
+                            new Date(
+                                dto.deliveryDate,
+                            ),
                     }),
 
                     ...(dto.deliveryTimeSlot !== undefined && {
@@ -609,11 +735,24 @@ export class OrdersService {
                             dto.deliveryCountryCode.toUpperCase(),
                     }),
 
+                    /*
+                     * Update coordinates only when
+                     * the delivery address changed.
+                     */
+                    ...(coordinates && {
+                        deliveryLatitude:
+                            coordinates.latitude,
+
+                        deliveryLongitude:
+                            coordinates.longitude,
+                    }),
+
                     ...(dto.cardMessage !== undefined && {
                         cardMessage:
                             dto.cardMessage,
                     }),
                 },
+
                 include: {
                     items: true,
                 },
@@ -623,6 +762,7 @@ export class OrdersService {
             this.mapper.toResponse(order),
         );
     }
+
 
     async remove(id: number) {
         const order =

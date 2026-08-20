@@ -22,7 +22,7 @@ export default async function EditFloristPage({
     if (Number.isNaN(floristId)) {
         return (
             <div className="rounded-3xl bg-white p-10 text-center shadow-sm">
-                <h2 className="text-2xl font-bold">
+                <h2 className="text-2xl font-bold text-[#2F3B2A]">
                     Florista inválida
                 </h2>
 
@@ -45,13 +45,11 @@ export default async function EditFloristPage({
         const response =
             await getFlorist(floristId);
 
-        const florist = response.data;
-
         return (
             <div>
                 <Link
-                    href={`/admin/florists/${florist.id}`}
-                    className="inline-flex items-center gap-2 text-sm text-gray-500 transition hover:text-[#55624A]"
+                    href={`/admin/florists/${floristId}`}
+                    className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-[#55624A]"
                 >
                     <ArrowLeft size={16} />
                     Voltar à florista
@@ -60,13 +58,13 @@ export default async function EditFloristPage({
                 <div className="mt-6">
                     <PageHeader
                         title="Editar florista"
-                        subtitle={`Editar ${florist.name}`}
+                        subtitle={`Editar os dados de ${response.data.name}.`}
                     />
                 </div>
 
                 <div className="mt-8">
                     <FloristForm
-                        florist={florist}
+                        florist={response.data}
                     />
                 </div>
             </div>
@@ -76,20 +74,19 @@ export default async function EditFloristPage({
             <div>
                 <Link
                     href="/admin/florists"
-                    className="inline-flex items-center gap-2 text-sm text-gray-500 transition hover:text-[#55624A]"
+                    className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-[#55624A]"
                 >
                     <ArrowLeft size={16} />
                     Voltar às floristas
                 </Link>
 
                 <div className="mt-8 rounded-3xl bg-white p-10 text-center shadow-sm">
-                    <h2 className="text-2xl font-bold">
+                    <h2 className="text-2xl font-bold text-[#2F3B2A]">
                         Florista não encontrada
                     </h2>
 
                     <p className="mt-2 text-gray-500">
-                        Não foi possível carregar a
-                        florista #{id}.
+                        Não foi possível carregar a florista #{id}.
                     </p>
                 </div>
             </div>

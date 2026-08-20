@@ -1,6 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 
+class UserFloristResponseDto {
+    @ApiProperty()
+    id: number;
+
+    @ApiProperty()
+    name: string;
+}
+
 export class UserResponseDto {
   @ApiProperty({
     example: 1,
@@ -48,10 +56,11 @@ export class UserResponseDto {
   })
   emailVerified: boolean;
 
-  @ApiPropertyOptional({
-    example: 1,
-  })
-  floristId?: number;
+@ApiPropertyOptional({
+    type: UserFloristResponseDto,
+    nullable: true,
+})
+florist: UserFloristResponseDto | null;
 
   @ApiPropertyOptional({
     example: '2026-08-05T17:00:00.000Z',

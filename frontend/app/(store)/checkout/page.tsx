@@ -60,12 +60,6 @@ export default function CheckoutPage() {
     const [deliveryDistrict, setDeliveryDistrict] =
         useState("");
 
-    const [deliveryLatitude, setDeliveryLatitude] =
-        useState("");
-
-    const [deliveryLongitude, setDeliveryLongitude] =
-        useState("");
-
     const [cardMessage, setCardMessage] =
         useState("");
 
@@ -99,16 +93,6 @@ export default function CheckoutPage() {
             return;
         }
 
-        if (
-            !deliveryLatitude ||
-            !deliveryLongitude
-        ) {
-            setError(
-                "Introduza a latitude e longitude da morada de entrega.",
-            );
-            return;
-        }
-
         try {
             setIsSubmitting(true);
             setError(null);
@@ -123,6 +107,24 @@ export default function CheckoutPage() {
                     }),
                 ),
 
+                // CUSTOMER
+
+                customerFirstName:
+                    user.firstName,
+
+                customerLastName:
+                    user.lastName ||
+                    undefined,
+
+                customerEmail:
+                    user.email,
+
+                customerPhone:
+                    user.phone ||
+                    undefined,
+
+                // RECIPIENT
+
                 recipientFirstName,
 
                 recipientLastName:
@@ -134,6 +136,8 @@ export default function CheckoutPage() {
                     undefined,
 
                 occasion,
+
+                // DELIVERY
 
                 deliveryDate,
 
@@ -158,15 +162,7 @@ export default function CheckoutPage() {
                 deliveryCountryCode:
                     "PT",
 
-                deliveryLatitude:
-                    Number(
-                        deliveryLatitude,
-                    ),
-
-                deliveryLongitude:
-                    Number(
-                        deliveryLongitude,
-                    ),
+                // CARD
 
                 cardMessage:
                     cardMessage ||
@@ -327,6 +323,12 @@ export default function CheckoutPage() {
                             <p className="mt-1 text-sm text-gray-500">
                                 {user.email}
                             </p>
+
+                            {user.phone && (
+                                <p className="mt-1 text-sm text-gray-500">
+                                    {user.phone}
+                                </p>
+                            )}
 
                         </div>
 
@@ -566,57 +568,6 @@ export default function CheckoutPage() {
                                 placeholder="Distrito *"
                                 className="w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-[#55624A]"
                             />
-
-                            {/* COORDENADAS */}
-
-                            <div className="rounded-2xl bg-[#F5F7F2] p-4">
-
-                                <p className="text-sm font-medium text-[#2F3B2A]">
-                                    Localização
-                                </p>
-
-                                <p className="mt-1 text-xs text-gray-500">
-                                    Temporariamente necessárias
-                                    para criar a encomenda.
-                                </p>
-
-                                <div className="mt-4 grid gap-4 md:grid-cols-2">
-
-                                    <input
-                                        required
-                                        type="number"
-                                        step="any"
-                                        value={
-                                            deliveryLatitude
-                                        }
-                                        onChange={(e) =>
-                                            setDeliveryLatitude(
-                                                e.target.value,
-                                            )
-                                        }
-                                        placeholder="Latitude"
-                                        className="w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-[#55624A]"
-                                    />
-
-                                    <input
-                                        required
-                                        type="number"
-                                        step="any"
-                                        value={
-                                            deliveryLongitude
-                                        }
-                                        onChange={(e) =>
-                                            setDeliveryLongitude(
-                                                e.target.value,
-                                            )
-                                        }
-                                        placeholder="Longitude"
-                                        className="w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-[#55624A]"
-                                    />
-
-                                </div>
-
-                            </div>
 
                             <textarea
                                 value={

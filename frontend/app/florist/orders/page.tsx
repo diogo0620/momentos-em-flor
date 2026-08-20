@@ -10,6 +10,7 @@ import {
     Package,
     CalendarDays,
     MapPin,
+    Clock,
 } from "lucide-react";
 
 import { getOrders } from "@/lib/api/orders";
@@ -26,32 +27,71 @@ type Pagination = {
     pages: number;
 };
 
+/* -------------------------------------------------------------------------- */
+/* STATUS                                                                     */
+/* -------------------------------------------------------------------------- */
+
 const statusLabels: Record<OrderStatus, string> = {
-    PENDING: "Pendente",
-    PROCESSING: "Em processamento",
-    ACCEPTED: "Aceite",
-    PREPARING: "Em preparação",
-    OUT_FOR_DELIVERY: "Em entrega",
+    CREATED: "Criada",
+    WAITING_FOR_FLORISTS:
+        "À espera de florista",
+    ASSIGNED: "Atribuída",
+    IN_PRODUCTION: "Em preparação",
+    READY_FOR_DELIVERY:
+        "Pronta para entrega",
     DELIVERED: "Entregue",
     CANCELLED: "Cancelada",
 };
 
 const statusClasses: Record<OrderStatus, string> = {
-    PENDING:
-        "bg-yellow-50 text-yellow-700",
-    PROCESSING:
+    CREATED:
         "bg-blue-50 text-blue-700",
-    ACCEPTED:
-        "bg-indigo-50 text-indigo-700",
-    PREPARING:
+
+    WAITING_FOR_FLORISTS:
+        "bg-yellow-50 text-yellow-700",
+
+    ASSIGNED:
+        "bg-emerald-50 text-emerald-700",
+
+    IN_PRODUCTION:
         "bg-orange-50 text-orange-700",
-    OUT_FOR_DELIVERY:
+
+    READY_FOR_DELIVERY:
         "bg-purple-50 text-purple-700",
+
     DELIVERED:
         "bg-green-50 text-green-700",
+
     CANCELLED:
         "bg-red-50 text-red-700",
 };
+
+const statusDotClasses: Record<OrderStatus, string> = {
+    CREATED:
+        "bg-blue-500",
+
+    WAITING_FOR_FLORISTS:
+        "bg-yellow-500",
+
+    ASSIGNED:
+        "bg-emerald-500",
+
+    IN_PRODUCTION:
+        "bg-orange-500",
+
+    READY_FOR_DELIVERY:
+        "bg-purple-500",
+
+    DELIVERED:
+        "bg-green-500",
+
+    CANCELLED:
+        "bg-red-500",
+};
+
+/* -------------------------------------------------------------------------- */
+/* HELPERS                                                                    */
+/* -------------------------------------------------------------------------- */
 
 function formatDate(
     value: string,
@@ -75,8 +115,35 @@ function formatCurrency(
             style: "currency",
             currency: "EUR",
         },
-    ).format(value);
+    ).format(Number(value));
 }
+
+function formatTimeSlot(
+    value: string,
+) {
+    const labels: Record<string, string> = {
+        MORNING: "Manhã",
+        AFTERNOON: "Tarde",
+        EVENING: "Noite",
+    };
+
+    return labels[value] ?? value;
+}
+
+function getRecipientName(
+    order: Order,
+) {
+    return [
+        order.recipientFirstName,
+        order.recipientLastName,
+    ]
+        .filter(Boolean)
+        .join(" ");
+}
+
+/* -------------------------------------------------------------------------- */
+/* PAGE                                                                       */
+/* -------------------------------------------------------------------------- */
 
 export default function FloristOrdersPage() {
     const [orders, setOrders] =
@@ -105,6 +172,10 @@ export default function FloristOrdersPage() {
     const [error, setError] =
         useState<string | null>(null);
 
+    /* ---------------------------------------------------------------------- */
+    /* LOAD ORDERS                                                            */
+    /* ---------------------------------------------------------------------- */
+
     const loadOrders = useCallback(
         async (page = 1) => {
             try {
@@ -120,20 +191,22 @@ export default function FloristOrdersPage() {
                         order: "desc",
                     });
 
-                let data = response.data;
+                let data =
+                    response.data;
 
                 /*
-                 * O backend deverá idealmente filtrar
-                 * pelo florist autenticado.
+                 * Temporariamente filtramos o estado
+                 * no frontend.
                  *
-                 * O filtro de estado é feito aqui
-                 * enquanto não temos um filtro específico
-                 * de status no endpoint.
+                 * Idealmente o backend deverá receber
+                 * o status como query parameter para
+                 * que a paginação seja correta.
                  */
                 if (status) {
                     data = data.filter(
                         (order) =>
-                            order.status === status,
+                            order.status ===
+                            status,
                     );
                 }
 
@@ -159,6 +232,10 @@ export default function FloristOrdersPage() {
         loadOrders(1);
     }, [loadOrders]);
 
+    /* ---------------------------------------------------------------------- */
+    /* SEARCH                                                                  */
+    /* ---------------------------------------------------------------------- */
+
     function handleSearch(
         event: React.FormEvent,
     ) {
@@ -169,24 +246,34 @@ export default function FloristOrdersPage() {
         );
     }
 
+    /* ---------------------------------------------------------------------- */
+    /* FILTERS                                                                 */
+    /* ---------------------------------------------------------------------- */
+
     function clearFilters() {
         setSearchInput("");
         setSearch("");
         setStatus("");
     }
 
+    /* ---------------------------------------------------------------------- */
+    /* LOADING                                                                  */
+    /* ---------------------------------------------------------------------- */
+
     if (isLoading) {
         return (
             <div>
 
                 <div className="mb-8">
+
                     <h1 className="text-3xl font-bold text-[#2F3B2A]">
                         Encomendas
                     </h1>
 
                     <p className="mt-2 text-gray-500">
-                        Consulte e acompanhe as suas encomendas.
+                        Consulte e acompanhe as encomendas atribuídas à sua florista.
                     </p>
+
                 </div>
 
                 <div className="space-y-4">
@@ -196,7 +283,7 @@ export default function FloristOrdersPage() {
                             <div
                                 key={item}
                                 className="
-                                    h-24
+                                    h-28
                                     animate-pulse
                                     rounded-3xl
                                     bg-gray-100
@@ -211,18 +298,24 @@ export default function FloristOrdersPage() {
         );
     }
 
+    /* ---------------------------------------------------------------------- */
+    /* ERROR                                                                    */
+    /* ---------------------------------------------------------------------- */
+
     if (error) {
         return (
             <div>
 
                 <div className="mb-8">
+
                     <h1 className="text-3xl font-bold text-[#2F3B2A]">
                         Encomendas
                     </h1>
 
                     <p className="mt-2 text-gray-500">
-                        Consulte e acompanhe as suas encomendas.
+                        Consulte e acompanhe as encomendas atribuídas à sua florista.
                     </p>
+
                 </div>
 
                 <div className="rounded-3xl bg-red-50 p-8 text-center text-red-600">
@@ -233,10 +326,16 @@ export default function FloristOrdersPage() {
         );
     }
 
+    /* ---------------------------------------------------------------------- */
+    /* PAGE                                                                     */
+    /* ---------------------------------------------------------------------- */
+
     return (
         <div>
 
-            {/* HEADER */}
+            {/* ---------------------------------------------------------------- */}
+            {/* HEADER                                                           */}
+            {/* ---------------------------------------------------------------- */}
 
             <div className="mb-8">
 
@@ -244,7 +343,11 @@ export default function FloristOrdersPage() {
 
                     <div>
 
-                        <h1 className="text-3xl font-bold text-[#2F3B2A]">
+                        <p className="text-sm font-medium uppercase tracking-wider text-[#55624A]">
+                            Portal da Florista
+                        </p>
+
+                        <h1 className="mt-2 text-3xl font-bold text-[#2F3B2A]">
                             Encomendas
                         </h1>
 
@@ -271,21 +374,28 @@ export default function FloristOrdersPage() {
                     >
                         <Package size={16} />
 
-                        {pagination.total} encomendas
+                        {pagination.total}{" "}
+                        {pagination.total === 1
+                            ? "encomenda"
+                            : "encomendas"}
                     </div>
 
                 </div>
 
             </div>
 
-            {/* FILTERS */}
+            {/* ---------------------------------------------------------------- */}
+            {/* FILTERS                                                          */}
+            {/* ---------------------------------------------------------------- */}
 
             <div className="mb-6 rounded-3xl bg-white p-5 shadow-sm">
 
                 <div className="flex flex-col gap-4 lg:flex-row">
 
                     <form
-                        onSubmit={handleSearch}
+                        onSubmit={
+                            handleSearch
+                        }
                         className="flex flex-1 gap-3"
                     >
 
@@ -304,13 +414,19 @@ export default function FloristOrdersPage() {
 
                             <input
                                 type="text"
-                                value={searchInput}
-                                onChange={(event) =>
+                                value={
+                                    searchInput
+                                }
+                                onChange={(
+                                    event,
+                                ) =>
                                     setSearchInput(
-                                        event.target.value,
+                                        event
+                                            .target
+                                            .value,
                                     )
                                 }
-                                placeholder="Pesquisar encomendas..."
+                                placeholder="Pesquisar por encomenda..."
                                 className="
                                     w-full
                                     rounded-2xl
@@ -349,9 +465,12 @@ export default function FloristOrdersPage() {
 
                     <select
                         value={status}
-                        onChange={(event) =>
+                        onChange={(
+                            event,
+                        ) =>
                             setStatus(
-                                event.target.value,
+                                event.target
+                                    .value,
                             )
                         }
                         className="
@@ -373,10 +492,17 @@ export default function FloristOrdersPage() {
                         {Object.entries(
                             statusLabels,
                         ).map(
-                            ([value, label]) => (
+                            ([
+                                value,
+                                label,
+                            ]) => (
                                 <option
-                                    key={value}
-                                    value={value}
+                                    key={
+                                        value
+                                    }
+                                    value={
+                                        value
+                                    }
                                 >
                                     {label}
                                 </option>
@@ -384,10 +510,13 @@ export default function FloristOrdersPage() {
                         )}
                     </select>
 
-                    {(search || status) && (
+                    {(search ||
+                        status) && (
                         <button
                             type="button"
-                            onClick={clearFilters}
+                            onClick={
+                                clearFilters
+                            }
                             className="
                                 rounded-2xl
                                 px-4
@@ -407,7 +536,9 @@ export default function FloristOrdersPage() {
 
             </div>
 
-            {/* EMPTY */}
+            {/* ---------------------------------------------------------------- */}
+            {/* EMPTY                                                            */}
+            {/* ---------------------------------------------------------------- */}
 
             {orders.length === 0 ? (
                 <div className="rounded-3xl bg-white p-14 text-center shadow-sm">
@@ -439,13 +570,17 @@ export default function FloristOrdersPage() {
                 </div>
             ) : (
                 <>
-                    {/* DESKTOP TABLE */}
+
+                    {/* ======================================================== */}
+                    {/* DESKTOP                                                   */}
+                    {/* ======================================================== */}
 
                     <div className="hidden overflow-hidden rounded-3xl bg-white shadow-sm lg:block">
 
                         <table className="w-full">
 
                             <thead>
+
                                 <tr className="border-b border-gray-100 text-left">
 
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -453,7 +588,7 @@ export default function FloristOrdersPage() {
                                     </th>
 
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                        Cliente
+                                        Destinatário
                                     </th>
 
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -465,7 +600,7 @@ export default function FloristOrdersPage() {
                                     </th>
 
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                        Total
+                                        Valor
                                     </th>
 
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -475,6 +610,7 @@ export default function FloristOrdersPage() {
                                     <th className="px-6 py-4" />
 
                                 </tr>
+
                             </thead>
 
                             <tbody>
@@ -482,7 +618,9 @@ export default function FloristOrdersPage() {
                                 {orders.map(
                                     (order) => (
                                         <tr
-                                            key={order.id}
+                                            key={
+                                                order.id
+                                            }
                                             className="
                                                 border-b
                                                 border-gray-50
@@ -492,70 +630,110 @@ export default function FloristOrdersPage() {
                                             "
                                         >
 
+                                            {/* ORDER */}
+
                                             <td className="px-6 py-5">
 
                                                 <div>
+
                                                     <p className="font-semibold text-[#2F3B2A]">
-                                                        #{order.orderNumber}
+                                                        #
+                                                        {
+                                                            order.orderNumber
+                                                        }
                                                     </p>
 
                                                     <p className="mt-1 text-xs text-gray-400">
+                                                        Criada em{" "}
                                                         {formatDate(
                                                             order.createdAt,
                                                         )}
                                                     </p>
+
                                                 </div>
 
                                             </td>
+
+                                            {/* RECIPIENT */}
 
                                             <td className="px-6 py-5">
 
                                                 <p className="font-medium text-gray-700">
-                                                    {order.customerFirstName}{" "}
-                                                    {order.customerLastName}
-                                                </p>
-
-                                                <p className="mt-1 text-xs text-gray-400">
-                                                    {order.customerEmail}
+                                                    {getRecipientName(
+                                                        order,
+                                                    )}
                                                 </p>
 
                                             </td>
 
+                                            {/* DELIVERY */}
+
                                             <td className="px-6 py-5">
 
-                                                <div className="flex items-center gap-2">
+                                                <div className="space-y-2">
 
-                                                    <CalendarDays
-                                                        size={16}
-                                                        className="text-gray-400"
-                                                    />
+                                                    <div className="flex items-center gap-2">
 
-                                                    <span className="text-sm text-gray-600">
-                                                        {formatDate(
-                                                            order.deliveryDate,
-                                                        )}
-                                                    </span>
+                                                        <CalendarDays
+                                                            size={
+                                                                16
+                                                            }
+                                                            className="text-gray-400"
+                                                        />
+
+                                                        <span className="text-sm font-medium text-gray-700">
+                                                            {formatDate(
+                                                                order.deliveryDate,
+                                                            )}
+                                                        </span>
+
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2">
+
+                                                        <Clock
+                                                            size={
+                                                                15
+                                                            }
+                                                            className="text-gray-400"
+                                                        />
+
+                                                        <span className="text-xs text-gray-500">
+                                                            {formatTimeSlot(
+                                                                order.deliveryTimeSlot,
+                                                            )}
+                                                        </span>
+
+                                                    </div>
 
                                                 </div>
 
                                             </td>
+
+                                            {/* LOCATION */}
 
                                             <td className="px-6 py-5">
 
                                                 <div className="flex items-center gap-2">
 
                                                     <MapPin
-                                                        size={16}
+                                                        size={
+                                                            16
+                                                        }
                                                         className="text-gray-400"
                                                     />
 
                                                     <span className="text-sm text-gray-600">
-                                                        {order.deliveryCity}
+                                                        {
+                                                            order.deliveryCity
+                                                        }
                                                     </span>
 
                                                 </div>
 
                                             </td>
+
+                                            {/* VALUE */}
 
                                             <td className="px-6 py-5">
 
@@ -567,11 +745,15 @@ export default function FloristOrdersPage() {
 
                                             </td>
 
+                                            {/* STATUS */}
+
                                             <td className="px-6 py-5">
 
                                                 <span
                                                     className={`
                                                         inline-flex
+                                                        items-center
+                                                        gap-2
                                                         rounded-full
                                                         px-3
                                                         py-1.5
@@ -584,14 +766,31 @@ export default function FloristOrdersPage() {
                                                         }
                                                     `}
                                                 >
+
+                                                    <span
+                                                        className={`
+                                                            h-1.5
+                                                            w-1.5
+                                                            rounded-full
+                                                            ${
+                                                                statusDotClasses[
+                                                                    order.status
+                                                                ]
+                                                            }
+                                                        `}
+                                                    />
+
                                                     {
                                                         statusLabels[
                                                             order.status
                                                         ]
                                                     }
+
                                                 </span>
 
                                             </td>
+
+                                            {/* DETAIL */}
 
                                             <td className="px-6 py-5">
 
@@ -611,7 +810,11 @@ export default function FloristOrdersPage() {
                                                     "
                                                     title="Ver encomenda"
                                                 >
-                                                    <Eye size={18} />
+                                                    <Eye
+                                                        size={
+                                                            18
+                                                        }
+                                                    />
                                                 </Link>
 
                                             </td>
@@ -626,14 +829,18 @@ export default function FloristOrdersPage() {
 
                     </div>
 
-                    {/* MOBILE */}
+                    {/* ======================================================== */}
+                    {/* MOBILE                                                    */}
+                    {/* ======================================================== */}
 
                     <div className="space-y-4 lg:hidden">
 
                         {orders.map(
                             (order) => (
                                 <Link
-                                    key={order.id}
+                                    key={
+                                        order.id
+                                    }
                                     href={`/florist/orders/${order.id}`}
                                     className="
                                         block
@@ -646,22 +853,33 @@ export default function FloristOrdersPage() {
                                     "
                                 >
 
+                                    {/* TOP */}
+
                                     <div className="flex items-start justify-between gap-4">
 
                                         <div>
+
                                             <p className="font-semibold text-[#2F3B2A]">
-                                                #{order.orderNumber}
+                                                #
+                                                {
+                                                    order.orderNumber
+                                                }
                                             </p>
 
                                             <p className="mt-1 text-sm text-gray-500">
-                                                {order.customerFirstName}{" "}
-                                                {order.customerLastName}
+                                                {getRecipientName(
+                                                    order,
+                                                )}
                                             </p>
+
                                         </div>
 
                                         <span
                                             className={`
+                                                inline-flex
                                                 shrink-0
+                                                items-center
+                                                gap-2
                                                 rounded-full
                                                 px-3
                                                 py-1.5
@@ -674,53 +892,121 @@ export default function FloristOrdersPage() {
                                                 }
                                             `}
                                         >
+
+                                            <span
+                                                className={`
+                                                    h-1.5
+                                                    w-1.5
+                                                    rounded-full
+                                                    ${
+                                                        statusDotClasses[
+                                                            order.status
+                                                        ]
+                                                    }
+                                                `}
+                                            />
+
                                             {
                                                 statusLabels[
                                                     order.status
                                                 ]
                                             }
+
                                         </span>
 
                                     </div>
 
+                                    {/* DELIVERY */}
+
                                     <div className="mt-5 grid grid-cols-2 gap-4 border-t border-gray-100 pt-4">
 
                                         <div>
-                                            <p className="text-xs text-gray-400">
-                                                Entrega
-                                            </p>
+
+                                            <div className="flex items-center gap-2">
+
+                                                <CalendarDays
+                                                    size={
+                                                        15
+                                                    }
+                                                    className="text-gray-400"
+                                                />
+
+                                                <p className="text-xs text-gray-400">
+                                                    Entrega
+                                                </p>
+
+                                            </div>
 
                                             <p className="mt-1 text-sm font-medium text-gray-700">
                                                 {formatDate(
                                                     order.deliveryDate,
                                                 )}
                                             </p>
+
+                                            <p className="mt-1 text-xs text-gray-400">
+                                                {formatTimeSlot(
+                                                    order.deliveryTimeSlot,
+                                                )}
+                                            </p>
+
                                         </div>
 
                                         <div>
-                                            <p className="text-xs text-gray-400">
-                                                Local
-                                            </p>
+
+                                            <div className="flex items-center gap-2">
+
+                                                <MapPin
+                                                    size={
+                                                        15
+                                                    }
+                                                    className="text-gray-400"
+                                                />
+
+                                                <p className="text-xs text-gray-400">
+                                                    Local
+                                                </p>
+
+                                            </div>
 
                                             <p className="mt-1 text-sm font-medium text-gray-700">
-                                                {order.deliveryCity}
+                                                {
+                                                    order.deliveryCity
+                                                }
                                             </p>
+
                                         </div>
 
                                     </div>
 
+                                    {/* BOTTOM */}
+
                                     <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4">
 
-                                        <span className="font-semibold text-[#55624A]">
-                                            {formatCurrency(
-                                                order.total,
-                                            )}
-                                        </span>
+                                        <div>
 
-                                        <span className="flex items-center gap-1 text-sm font-medium text-[#55624A]">
+                                            <p className="text-xs text-gray-400">
+                                                Valor da encomenda
+                                            </p>
+
+                                            <p className="mt-1 font-semibold text-[#55624A]">
+                                                {formatCurrency(
+                                                    order.total,
+                                                )}
+                                            </p>
+
+                                        </div>
+
+                                        <div className="flex items-center gap-1 text-sm font-medium text-[#55624A]">
+
                                             Ver detalhes
-                                            <Eye size={16} />
-                                        </span>
+
+                                            <Eye
+                                                size={
+                                                    16
+                                                }
+                                            />
+
+                                        </div>
 
                                     </div>
 
@@ -730,15 +1016,19 @@ export default function FloristOrdersPage() {
 
                     </div>
 
-                    {/* PAGINATION */}
+                    {/* ======================================================== */}
+                    {/* PAGINATION                                                */}
+                    {/* ======================================================== */}
 
-                    {pagination.pages > 1 && (
+                    {pagination.pages >
+                        1 && (
                         <div className="mt-8 flex items-center justify-center gap-4">
 
                             <button
                                 type="button"
                                 disabled={
-                                    pagination.page <= 1
+                                    pagination.page <=
+                                    1
                                 }
                                 onClick={() =>
                                     loadOrders(
@@ -762,7 +1052,9 @@ export default function FloristOrdersPage() {
                                 "
                             >
                                 <ChevronLeft
-                                    size={20}
+                                    size={
+                                        20
+                                    }
                                 />
                             </button>
 
@@ -771,13 +1063,17 @@ export default function FloristOrdersPage() {
                                 Página{" "}
 
                                 <strong className="text-[#2F3B2A]">
-                                    {pagination.page}
+                                    {
+                                        pagination.page
+                                    }
                                 </strong>
 
                                 {" "}de{" "}
 
                                 <strong className="text-[#2F3B2A]">
-                                    {pagination.pages}
+                                    {
+                                        pagination.pages
+                                    }
                                 </strong>
 
                             </span>
@@ -810,7 +1106,9 @@ export default function FloristOrdersPage() {
                                 "
                             >
                                 <ChevronRight
-                                    size={20}
+                                    size={
+                                        20
+                                    }
                                 />
                             </button>
 
@@ -818,6 +1116,7 @@ export default function FloristOrdersPage() {
                     )}
 
                 </>
+
             )}
 
         </div>

@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import {
     OrderCancellationReason,
     OrderStatus,
+    Prisma,
     UserRole,
 } from '@prisma/client';
 
@@ -17,7 +18,191 @@ import type { AuthenticatedUser } from '@/auth/interfaces/authenticated-user.int
 export class OrderStatusService {
     constructor(
         private readonly prisma: PrismaService,
-    ) {}
+    ) { }
+
+    async assign(
+        orderId: number,
+        floristId: number,
+        user: AuthenticatedUser,
+        reason?: string,
+    ) {
+        return this.prisma.$transaction(
+            async (tx) => {
+                return this.assignWithTransaction(
+                    tx,
+                    orderId,
+                    floristId,
+                    user,
+                    reason,
+                );
+            },
+        );
+    }
+
+    async assignWithTransaction(
+        tx: Prisma.TransactionClient,
+        orderId: number,
+        floristId: number,
+        user: AuthenticatedUser,
+        reason?: string,
+    ) {
+        /*
+         * Only SYSTEM_ADMIN and FLORIST can
+         * perform an assignment.
+         */
+        if (
+            user.role !== UserRole.SYSTEM_ADMIN &&
+            user.role !== UserRole.FLORIST
+        ) {
+            Exceptions.forbidden(
+                ORDER_MESSAGES
+                    .STATUS_CHANGE_NOT_ALLOWED,
+            );
+        }
+
+        /*
+         * A florist can only assign an order
+         * to itself.
+         *
+         * This is important because this method
+         * is also used when a florist accepts
+         * an offer.
+         */
+        if (
+            user.role === UserRole.FLORIST &&
+            user.floristId !== floristId
+        ) {
+            Exceptions.forbidden(
+                ORDER_MESSAGES
+                    .STATUS_CHANGE_NOT_ALLOWED,
+            );
+        }
+
+        /*
+         * Get the order.
+         */
+        const order =
+            await tx.order.findFirst({
+                where: {
+                    id: orderId,
+                    deletedAt: null,
+                },
+
+                select: {
+                    id: true,
+                    status: true,
+                    assignedFloristId: true,
+                    assignedAt: true,
+                },
+            });
+
+        if (!order) {
+            Exceptions.notFound(
+                ORDER_MESSAGES.NOT_FOUND,
+            );
+        }
+
+        /*
+         * An order can only be assigned while
+         * waiting for florists.
+         */
+        if (
+            order.status !==
+            OrderStatus.WAITING_FOR_FLORISTS
+        ) {
+            Exceptions.badRequest(
+                ORDER_MESSAGES
+                    .INVALID_STATUS_TRANSITION,
+            );
+        }
+
+        /*
+         * Prevent assigning an order that has
+         * already been assigned.
+         */
+        if (
+            order.assignedFloristId !== null
+        ) {
+            Exceptions.conflict(
+                ORDER_MESSAGES
+                    .ORDER_ALREADY_ASSIGNED,
+            );
+        }
+
+        /*
+         * Make sure the florist exists and
+         * is active.
+         */
+        const florist =
+            await tx.florist.findFirst({
+                where: {
+                    id: floristId,
+                    active: true,
+                    deletedAt: null,
+                },
+
+                select: {
+                    id: true,
+                    name: true,
+                },
+            });
+
+        if (!florist) {
+            Exceptions.notFound(
+                ORDER_MESSAGES
+                    .FLORIST_NOT_FOUND,
+            );
+        }
+
+        const assignedAt =
+            new Date();
+
+        /*
+         * Assign the order.
+         */
+        const updatedOrder =
+            await tx.order.update({
+                where: {
+                    id: order.id,
+                },
+
+                data: {
+                    assignedFloristId:
+                        florist.id,
+
+                    assignedAt,
+
+                    status:
+                        OrderStatus.ASSIGNED,
+                },
+            });
+
+        /*
+         * Record the assignment in the
+         * order status history.
+         */
+        await tx.orderStatusHistory.create({
+            data: {
+                orderId:
+                    order.id,
+
+                fromStatus:
+                    order.status,
+
+                toStatus:
+                    OrderStatus.ASSIGNED,
+
+                changedByUserId:
+                    user.id,
+
+                reason:
+                    reason ??
+                    `Order assigned to florist ${florist.name}.`,
+            },
+        });
+
+        return updatedOrder;
+    }
 
     /**
      * Changes an order status through the
@@ -334,63 +519,63 @@ export class OrderStatusService {
                 OrderStatus,
                 OrderStatus[]
             > = {
-                /*
-                 * This transition is handled
-                 * by OrderCreatedListener.
-                 */
-                [OrderStatus.CREATED]: [
-                    OrderStatus.WAITING_FOR_FLORISTS,
-                ],
+            /*
+             * This transition is handled
+             * by OrderCreatedListener.
+             */
+            [OrderStatus.CREATED]: [
+                OrderStatus.WAITING_FOR_FLORISTS,
+            ],
 
-                /*
-                 * This transition is handled
-                 * by OrderOfferAccepted.
-                 */
-                [OrderStatus.WAITING_FOR_FLORISTS]: [
-                    OrderStatus.ASSIGNED,
-                ],
+            /*
+             * This transition is handled
+             * by OrderOfferAccepted.
+             */
+            [OrderStatus.WAITING_FOR_FLORISTS]: [
+                OrderStatus.ASSIGNED,
+            ],
 
-                /*
-                 * Admin may also skip directly
-                 * to READY_FOR_DELIVERY or
-                 * DELIVERED.
-                 */
-                [OrderStatus.ASSIGNED]: [
-                    OrderStatus.IN_PRODUCTION,
-                    OrderStatus.READY_FOR_DELIVERY,
-                    OrderStatus.DELIVERED,
-                ],
+            /*
+             * Admin may also skip directly
+             * to READY_FOR_DELIVERY or
+             * DELIVERED.
+             */
+            [OrderStatus.ASSIGNED]: [
+                OrderStatus.IN_PRODUCTION,
+                OrderStatus.READY_FOR_DELIVERY,
+                OrderStatus.DELIVERED,
+            ],
 
-                /*
-                 * Admin may skip directly
-                 * to DELIVERED.
-                 */
-                [OrderStatus.IN_PRODUCTION]: [
-                    OrderStatus.READY_FOR_DELIVERY,
-                    OrderStatus.DELIVERED,
-                ],
+            /*
+             * Admin may skip directly
+             * to DELIVERED.
+             */
+            [OrderStatus.IN_PRODUCTION]: [
+                OrderStatus.READY_FOR_DELIVERY,
+                OrderStatus.DELIVERED,
+            ],
 
-                /*
-                 * Normal final transition.
-                 */
-                [OrderStatus.READY_FOR_DELIVERY]: [
-                    OrderStatus.DELIVERED,
-                ],
+            /*
+             * Normal final transition.
+             */
+            [OrderStatus.READY_FOR_DELIVERY]: [
+                OrderStatus.DELIVERED,
+            ],
 
-                /*
-                 * Terminal state.
-                 */
-                [OrderStatus.DELIVERED]: [],
+            /*
+             * Terminal state.
+             */
+            [OrderStatus.DELIVERED]: [],
 
-                /*
-                 * Terminal state.
-                 */
-                [OrderStatus.CANCELLED]: [],
-            };
+            /*
+             * Terminal state.
+             */
+            [OrderStatus.CANCELLED]: [],
+        };
 
         const allowed =
             allowedTransitions[
-                currentStatus
+            currentStatus
             ];
 
         if (

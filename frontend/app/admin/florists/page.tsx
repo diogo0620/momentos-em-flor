@@ -10,16 +10,17 @@ import {
 import {
     ChevronLeft,
     ChevronRight,
+    Eye,
     Flower2,
     Mail,
     MapPin,
+    Pencil,
     Phone,
-    Plus
+    Plus,
 } from "lucide-react";
 
 import SearchInput from "@/components/admin/common/SearchInput";
 import FilterBar from "@/components/admin/common/FilterBar";
-
 import PageHeader from "@/components/admin/common/PageHeader";
 import StatusBadge from "@/components/admin/common/StatusBadge";
 
@@ -62,6 +63,10 @@ export default function AdminFloristsPage() {
 
     const [error, setError] =
         useState<string | null>(null);
+
+    /* ---------------------------------------------------------------------- */
+    /* LOAD FLORISTS                                                          */
+    /* ---------------------------------------------------------------------- */
 
     const loadFlorists = useCallback(
         async (
@@ -130,6 +135,10 @@ export default function AdminFloristsPage() {
         order,
     ]);
 
+    /* ---------------------------------------------------------------------- */
+    /* SEARCH                                                                 */
+    /* ---------------------------------------------------------------------- */
+
     function handleSearch(
         event: React.FormEvent,
     ) {
@@ -137,6 +146,10 @@ export default function AdminFloristsPage() {
 
         setSearch(searchInput);
     }
+
+    /* ---------------------------------------------------------------------- */
+    /* SORT                                                                   */
+    /* ---------------------------------------------------------------------- */
 
     function handleSort(
         field: string,
@@ -154,6 +167,10 @@ export default function AdminFloristsPage() {
         }
     }
 
+    /* ---------------------------------------------------------------------- */
+    /* PAGINATION                                                             */
+    /* ---------------------------------------------------------------------- */
+
     function goToPage(
         page: number,
     ) {
@@ -168,6 +185,10 @@ export default function AdminFloristsPage() {
             page,
         });
     }
+
+    /* ---------------------------------------------------------------------- */
+    /* METRICS                                                                */
+    /* ---------------------------------------------------------------------- */
 
     const activeCount =
         florists.filter(
@@ -195,125 +216,169 @@ export default function AdminFloristsPage() {
               florists.length
             : 0;
 
+    /* ---------------------------------------------------------------------- */
+    /* RENDER                                                                 */
+    /* ---------------------------------------------------------------------- */
+
     return (
         <div>
+
+            {/* ================================================================== */}
+            {/* HEADER                                                             */}
+            {/* ================================================================== */}
 
             <PageHeader
                 title="Floristas"
                 subtitle="Gestão das floristas parceiras do Momentos em Flor."
             />
 
-            {/* SEARCH + ACTION */}
+            {/* ================================================================== */}
+            {/* SEARCH + ACTION                                                    */}
+            {/* ================================================================== */}
 
             <div className="mt-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 
-    <div className="flex-1">
-        <FilterBar>
+                <div className="flex-1">
 
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <FilterBar>
 
-                <div className="w-full lg:max-w-md">
-                    <SearchInput
-                        value={searchInput}
-                        onChange={setSearchInput}
-                        placeholder="Pesquisar floristas..."
-                    />
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+
+                            <div className="w-full lg:max-w-md">
+
+                                <SearchInput
+                                    value={
+                                        searchInput
+                                    }
+                                    onChange={
+                                        setSearchInput
+                                    }
+                                    placeholder="Pesquisar floristas..."
+                                />
+
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-3">
+
+                                <select
+                                    value={
+                                        sort
+                                    }
+                                    onChange={(
+                                        e,
+                                    ) =>
+                                        setSort(
+                                            e
+                                                .target
+                                                .value,
+                                        )
+                                    }
+                                    className="
+                                        rounded-2xl
+                                        border
+                                        border-gray-200
+                                        bg-white
+                                        px-4
+                                        py-3
+                                        text-sm
+                                        outline-none
+                                        focus:border-[#55624A]
+                                        focus:ring-4
+                                        focus:ring-[#55624A]/10
+                                    "
+                                >
+
+                                    <option value="name">
+                                        Nome
+                                    </option>
+
+                                    <option value="deliveryRadiusKm">
+                                        Raio de entrega
+                                    </option>
+
+                                    <option value="createdAt">
+                                        Data de criação
+                                    </option>
+
+                                </select>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setOrder(
+                                            (
+                                                current,
+                                            ) =>
+                                                current ===
+                                                "asc"
+                                                    ? "desc"
+                                                    : "asc",
+                                        )
+                                    }
+                                    title={
+                                        order ===
+                                        "asc"
+                                            ? "Ordenação ascendente"
+                                            : "Ordenação descendente"
+                                    }
+                                    className="
+                                        flex
+                                        h-[46px]
+                                        w-[46px]
+                                        items-center
+                                        justify-center
+                                        rounded-2xl
+                                        border
+                                        border-gray-200
+                                        bg-white
+                                        text-lg
+                                        text-gray-600
+                                        transition
+                                        hover:bg-[#F5F7F2]
+                                        hover:text-[#55624A]
+                                    "
+                                >
+                                    {order ===
+                                    "asc"
+                                        ? "↑"
+                                        : "↓"}
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </FilterBar>
+
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3">
-
-                    <select
-                        value={sort}
-                        onChange={(e) =>
-                            setSort(e.target.value)
-                        }
-                        className="
-                            rounded-2xl
-                            border
-                            border-gray-200
-                            bg-white
-                            px-4
-                            py-3
-                            text-sm
-                            outline-none
-                            focus:border-[#55624A]
-                            focus:ring-4
-                            focus:ring-[#55624A]/10
-                        "
-                    >
-                        <option value="name">
-                            Nome
-                        </option>
-
-                        <option value="deliveryRadiusKm">
-                            Raio de entrega
-                        </option>
-
-                        <option value="createdAt">
-                            Data de criação
-                        </option>
-                    </select>
-
-                    <button
-                        type="button"
-                        onClick={() =>
-                            setOrder((current) =>
-                                current === "asc"
-                                    ? "desc"
-                                    : "asc",
-                            )
-                        }
-                        className="
-                            rounded-2xl
-                            border
-                            border-gray-200
-                            bg-white
-                            px-4
-                            py-3
-                            text-sm
-                            font-medium
-                            text-gray-600
-                            transition
-                            hover:bg-[#F5F7F2]
-                        "
-                    >
-                        {order === "asc"
-                            ? "↑"
-                            : "↓"}
-                    </button>
-
-                </div>
+                <Link
+                    href="/admin/florists/new"
+                    className="
+                        inline-flex
+                        h-[50px]
+                        shrink-0
+                        items-center
+                        justify-center
+                        gap-2
+                        rounded-2xl
+                        bg-[#55624A]
+                        px-5
+                        font-medium
+                        text-white
+                        transition
+                        hover:bg-[#46523C]
+                    "
+                >
+                    <Plus size={18} />
+                    Nova florista
+                </Link>
 
             </div>
 
-        </FilterBar>
-    </div>
-
-    <Link
-        href="/admin/florists/new"
-        className="
-            inline-flex
-            h-[50px]
-            shrink-0
-            items-center
-            justify-center
-            gap-2
-            rounded-2xl
-            bg-[#55624A]
-            px-5
-            font-medium
-            text-white
-            transition
-            hover:opacity-90
-        "
-    >
-        <Plus size={18} />
-        Nova florista
-    </Link>
-
-</div>
-
-            {/* METRICS */}
+            {/* ================================================================== */}
+            {/* METRICS                                                            */}
+            {/* ================================================================== */}
 
             <div className="mt-8 grid gap-6 md:grid-cols-4">
 
@@ -326,6 +391,7 @@ export default function AdminFloristsPage() {
                         </div>
 
                         <div>
+
                             <p className="text-sm text-gray-500">
                                 Total
                             </p>
@@ -335,6 +401,7 @@ export default function AdminFloristsPage() {
                                     pagination.total
                                 }
                             </p>
+
                         </div>
 
                     </div>
@@ -398,7 +465,9 @@ export default function AdminFloristsPage() {
 
             </div>
 
-            {/* ERROR */}
+            {/* ================================================================== */}
+            {/* ERROR                                                              */}
+            {/* ================================================================== */}
 
             {error && (
                 <div className="mt-8 rounded-2xl border border-red-100 bg-red-50 p-5 text-red-600">
@@ -406,7 +475,9 @@ export default function AdminFloristsPage() {
                 </div>
             )}
 
-            {/* TABLE */}
+            {/* ================================================================== */}
+            {/* TABLE                                                              */}
+            {/* ================================================================== */}
 
             <div className="mt-8 overflow-hidden rounded-3xl bg-white shadow-sm">
 
@@ -419,6 +490,7 @@ export default function AdminFloristsPage() {
                             <tr className="border-b border-gray-100 text-left">
 
                                 <th className="px-6 py-5">
+
                                     <button
                                         type="button"
                                         onClick={() =>
@@ -426,10 +498,16 @@ export default function AdminFloristsPage() {
                                                 "name",
                                             )
                                         }
-                                        className="font-semibold text-[#2F3B2A]"
+                                        className="
+                                            font-semibold
+                                            text-[#2F3B2A]
+                                            transition
+                                            hover:text-[#55624A]
+                                        "
                                     >
                                         Florista
                                     </button>
+
                                 </th>
 
                                 <th className="px-6 py-5 font-semibold text-[#2F3B2A]">
@@ -441,6 +519,7 @@ export default function AdminFloristsPage() {
                                 </th>
 
                                 <th className="px-6 py-5">
+
                                     <button
                                         type="button"
                                         onClick={() =>
@@ -448,17 +527,25 @@ export default function AdminFloristsPage() {
                                                 "deliveryRadiusKm",
                                             )
                                         }
-                                        className="font-semibold text-[#2F3B2A]"
+                                        className="
+                                            font-semibold
+                                            text-[#2F3B2A]
+                                            transition
+                                            hover:text-[#55624A]
+                                        "
                                     >
                                         Raio
                                     </button>
+
                                 </th>
 
                                 <th className="px-6 py-5 font-semibold text-[#2F3B2A]">
                                     Estado
                                 </th>
 
-                                <th className="px-6 py-5" />
+                                <th className="px-6 py-5 text-right font-semibold text-[#2F3B2A]">
+                                    Ações
+                                </th>
 
                             </tr>
 
@@ -468,20 +555,24 @@ export default function AdminFloristsPage() {
 
                             {isLoading ? (
                                 <tr>
+
                                     <td
                                         colSpan={6}
                                         className="px-6 py-16 text-center text-gray-500"
                                     >
                                         A carregar floristas...
                                     </td>
+
                                 </tr>
                             ) : florists.length ===
                               0 ? (
                                 <tr>
+
                                     <td
                                         colSpan={6}
                                         className="px-6 py-16 text-center"
                                     >
+
                                         <Flower2
                                             size={36}
                                             className="mx-auto text-gray-300"
@@ -494,7 +585,9 @@ export default function AdminFloristsPage() {
                                         <p className="mt-1 text-sm text-gray-400">
                                             Tente alterar a pesquisa.
                                         </p>
+
                                     </td>
+
                                 </tr>
                             ) : (
                                 florists.map(
@@ -505,14 +598,23 @@ export default function AdminFloristsPage() {
                                             key={
                                                 florist.id
                                             }
-                                            className="border-b border-gray-50 transition hover:bg-[#FAFBF8]"
+                                            className="
+                                                border-b
+                                                border-gray-50
+                                                transition
+                                                last:border-0
+                                                hover:bg-[#FAFBF8]
+                                            "
                                         >
 
-                                            {/* FLORIST */}
+                                            {/* ====================================================== */}
+                                            {/* FLORIST                                              */}
+                                            {/* ====================================================== */}
 
                                             <td className="px-6 py-5">
 
                                                 <div>
+
                                                     <p className="font-semibold text-[#2F3B2A]">
                                                         {
                                                             florist.name
@@ -533,11 +635,14 @@ export default function AdminFloristsPage() {
                                                             florist.taxNumber
                                                         }
                                                     </p>
+
                                                 </div>
 
                                             </td>
 
-                                            {/* CONTACT */}
+                                            {/* ====================================================== */}
+                                            {/* CONTACT                                               */}
+                                            {/* ====================================================== */}
 
                                             <td className="px-6 py-5">
 
@@ -547,10 +652,10 @@ export default function AdminFloristsPage() {
 
                                                         <Mail
                                                             size={15}
-                                                            className="text-gray-400"
+                                                            className="shrink-0 text-gray-400"
                                                         />
 
-                                                        <span>
+                                                        <span className="max-w-[220px] truncate">
                                                             {
                                                                 florist.email
                                                             }
@@ -562,7 +667,7 @@ export default function AdminFloristsPage() {
 
                                                         <Phone
                                                             size={15}
-                                                            className="text-gray-400"
+                                                            className="shrink-0 text-gray-400"
                                                         />
 
                                                         <span>
@@ -577,7 +682,9 @@ export default function AdminFloristsPage() {
 
                                             </td>
 
-                                            {/* LOCATION */}
+                                            {/* ====================================================== */}
+                                            {/* LOCATION                                              */}
+                                            {/* ====================================================== */}
 
                                             <td className="px-6 py-5">
 
@@ -612,7 +719,9 @@ export default function AdminFloristsPage() {
 
                                             </td>
 
-                                            {/* RADIUS */}
+                                            {/* ====================================================== */}
+                                            {/* RADIUS                                                */}
+                                            {/* ====================================================== */}
 
                                             <td className="px-6 py-5">
 
@@ -625,7 +734,9 @@ export default function AdminFloristsPage() {
 
                                             </td>
 
-                                            {/* STATUS */}
+                                            {/* ====================================================== */}
+                                            {/* STATUS                                                */}
+                                            {/* ====================================================== */}
 
                                             <td className="px-6 py-5">
 
@@ -640,6 +751,7 @@ export default function AdminFloristsPage() {
                                                     />
 
                                                     <div>
+
                                                         <span
                                                             className={`
                                                                 inline-flex
@@ -659,43 +771,74 @@ export default function AdminFloristsPage() {
                                                                 ? "Aceita encomendas"
                                                                 : "Não aceita encomendas"}
                                                         </span>
+
                                                     </div>
 
                                                 </div>
 
                                             </td>
 
-                                            {/* ACTION */}
+                                            {/* ====================================================== */}
+                                            {/* ACTIONS                                               */}
+                                            {/* ====================================================== */}
 
-                                            <td className="px-6 py-5 text-right">
+                                            <td className="px-6 py-5">
 
-                                                <div className="flex items-center justify-end gap-4">
+                                                <div className="flex items-center justify-end gap-2">
 
-    <Link
-        href={`/admin/florists/${florist.id}`}
-        className="
-            text-sm
-            font-medium
-            text-[#55624A]
-            hover:underline
-        "
-    >
-        Ver
-    </Link>
+                                                    <Link
+                                                        href={`/admin/florists/${florist.id}`}
+                                                        title="Ver florista"
+                                                        aria-label={`Ver ${florist.name}`}
+                                                        className="
+                                                            flex
+                                                            h-10
+                                                            w-10
+                                                            items-center
+                                                            justify-center
+                                                            rounded-xl
+                                                            border
+                                                            border-gray-200
+                                                            bg-white
+                                                            text-gray-500
+                                                            transition
+                                                            hover:border-[#D6DEC8]
+                                                            hover:bg-[#F5F7F2]
+                                                            hover:text-[#55624A]
+                                                        "
+                                                    >
+                                                        <Eye
+                                                            size={18}
+                                                        />
+                                                    </Link>
 
-    <Link
-        href={`/admin/florists/${florist.id}/edit`}
-        className="
-            text-sm
-            font-medium
-            text-gray-500
-            hover:text-[#55624A]
-        "
-    >
-        Editar
-    </Link>
+                                                    <Link
+                                                        href={`/admin/florists/${florist.id}/edit`}
+                                                        title="Editar florista"
+                                                        aria-label={`Editar ${florist.name}`}
+                                                        className="
+                                                            flex
+                                                            h-10
+                                                            w-10
+                                                            items-center
+                                                            justify-center
+                                                            rounded-xl
+                                                            border
+                                                            border-gray-200
+                                                            bg-white
+                                                            text-gray-500
+                                                            transition
+                                                            hover:border-[#D6DEC8]
+                                                            hover:bg-[#F5F7F2]
+                                                            hover:text-[#55624A]
+                                                        "
+                                                    >
+                                                        <Pencil
+                                                            size={17}
+                                                        />
+                                                    </Link>
 
-</div>
+                                                </div>
 
                                             </td>
 
@@ -710,7 +853,9 @@ export default function AdminFloristsPage() {
 
                 </div>
 
-                {/* PAGINATION */}
+                {/* ================================================================== */}
+                {/* PAGINATION                                                         */}
+                {/* ================================================================== */}
 
                 {!isLoading &&
                     pagination.pages >
@@ -718,13 +863,17 @@ export default function AdminFloristsPage() {
                         <div className="flex flex-col gap-4 border-t border-gray-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
 
                             <p className="text-sm text-gray-500">
+
                                 Página{" "}
+
                                 <span className="font-semibold text-gray-700">
                                     {
                                         pagination.page
                                     }
                                 </span>{" "}
+
                                 de{" "}
+
                                 <span className="font-semibold text-gray-700">
                                     {
                                         pagination.pages
@@ -732,12 +881,15 @@ export default function AdminFloristsPage() {
                                 </span>
 
                                 <span className="ml-2 text-gray-400">
+
                                     (
                                     {
                                         pagination.total
                                     }{" "}
                                     floristas)
+
                                 </span>
+
                             </p>
 
                             <div className="flex items-center gap-2">
@@ -754,6 +906,7 @@ export default function AdminFloristsPage() {
                                                 1,
                                         )
                                     }
+                                    title="Página anterior"
                                     className="
                                         flex
                                         h-10
@@ -765,6 +918,7 @@ export default function AdminFloristsPage() {
                                         border-gray-200
                                         transition
                                         hover:bg-[#F5F7F2]
+                                        hover:text-[#55624A]
                                         disabled:cursor-not-allowed
                                         disabled:opacity-40
                                     "
@@ -792,6 +946,7 @@ export default function AdminFloristsPage() {
                                                 1,
                                         )
                                     }
+                                    title="Página seguinte"
                                     className="
                                         flex
                                         h-10
@@ -803,6 +958,7 @@ export default function AdminFloristsPage() {
                                         border-gray-200
                                         transition
                                         hover:bg-[#F5F7F2]
+                                        hover:text-[#55624A]
                                         disabled:cursor-not-allowed
                                         disabled:opacity-40
                                     "

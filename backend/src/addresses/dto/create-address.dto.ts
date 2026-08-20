@@ -41,13 +41,6 @@ export class CreateAddressDto {
     @Length(2, 2)
     countryCode: string;
 
-    @ApiProperty()
-    @IsNumber()
-    latitude: number;
-
-    @ApiProperty()
-    @IsNumber()
-    longitude: number;
 
     @ApiPropertyOptional()
     @IsOptional()

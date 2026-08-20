@@ -341,6 +341,7 @@ model Order {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
+  assignedAt DateTime?
 
   cancelledAt       DateTime?
   cancellationReason OrderCancellationReason?
@@ -441,7 +442,6 @@ model OrderOffer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([orderId, floristId])
   @@index([orderId])
   @@index([floristId])
   @@index([status])

@@ -71,14 +71,14 @@ export async function acceptOrderOffer(
 
 export async function declineOrderOffer(
     id: number,
-    declineReason?: string,
+    reason?: string,
 ) {
     return apiFetch(
         `/order-offers/${id}/decline`,
         {
             method: "POST",
             body: JSON.stringify({
-                declineReason,
+                reason,
             }),
         },
     );

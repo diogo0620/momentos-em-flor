@@ -30,6 +30,8 @@ export const ORDER_OFFER_MESSAGES = {
 
         COMPENSATION_INVALID:
         'Invalid compensation amount.',
+        ACTIVE_OFFER_EXISTS:
+    'There is already an active offer for this florist and order.',
 
     OFFER_EXPIRED:
         'This offer has expired.',

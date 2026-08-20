@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
     ArrowLeft,
+    Check,
+    Clock,
     Pencil,
     Plus,
     X,
@@ -13,7 +15,16 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 
 import { getOrder } from "@/lib/api/orders";
 
-import type { Order } from "@/types/order";
+import {
+    acceptOrderOffer,
+    declineOrderOffer,
+} from "@/lib/api/order-offers";
+
+import type {
+    Order,
+    OrderStatusHistory,
+} from "@/types/order";
+
 import type { OrderOffer } from "@/types/order-offer";
 
 import OrderOfferForm from "@/components/admin/orders/OrderOfferForm";
@@ -92,15 +103,19 @@ function formatOccasion(value: string | null) {
     return labels[value] ?? value;
 }
 
-function getOrderStatusLabel(
-    status: string,
-) {
+/* -------------------------------------------------------------------------- */
+/* ORDER STATUS                                                               */
+/* -------------------------------------------------------------------------- */
+
+function getOrderStatusLabel(status: string) {
     const labels: Record<string, string> = {
-        PENDING: "Pendente",
-        PROCESSING: "Em processamento",
-        ACCEPTED: "Aceite",
-        PREPARING: "Em preparação",
-        OUT_FOR_DELIVERY: "Em entrega",
+        CREATED: "Criada",
+        WAITING_FOR_FLORISTS:
+            "À espera de floristas",
+        ASSIGNED: "Atribuída",
+        IN_PRODUCTION: "Em preparação",
+        READY_FOR_DELIVERY:
+            "Pronta para entrega",
         DELIVERED: "Entregue",
         CANCELLED: "Cancelada",
     };
@@ -108,23 +123,25 @@ function getOrderStatusLabel(
     return labels[status] ?? status;
 }
 
-function getOrderStatusClass(
-    status: string,
-) {
+function getOrderStatusClass(status: string) {
     switch (status) {
-        case "PENDING":
-            return "bg-yellow-50 text-yellow-700";
-
-        case "PROCESSING":
+        case "CREATED":
             return "bg-blue-50 text-blue-700";
 
-        case "ACCEPTED":
-        case "DELIVERED":
+        case "WAITING_FOR_FLORISTS":
+            return "bg-yellow-50 text-yellow-700";
+
+        case "ASSIGNED":
             return "bg-green-50 text-green-700";
 
-        case "PREPARING":
-        case "OUT_FOR_DELIVERY":
+        case "IN_PRODUCTION":
             return "bg-[#D6DEC8] text-[#55624A]";
+
+        case "READY_FOR_DELIVERY":
+            return "bg-purple-50 text-purple-700";
+
+        case "DELIVERED":
+            return "bg-green-50 text-green-700";
 
         case "CANCELLED":
             return "bg-red-50 text-red-700";
@@ -134,9 +151,11 @@ function getOrderStatusClass(
     }
 }
 
-function getOfferStatusLabel(
-    status: string,
-) {
+/* -------------------------------------------------------------------------- */
+/* OFFER STATUS                                                               */
+/* -------------------------------------------------------------------------- */
+
+function getOfferStatusLabel(status: string) {
     const labels: Record<string, string> = {
         PENDING: "Pendente",
         VIEWED: "Visualizada",
@@ -148,28 +167,79 @@ function getOfferStatusLabel(
     return labels[status] ?? status;
 }
 
-function getOfferStatusClass(
-    status: string,
-) {
+function getOfferStatusClasses(status: string) {
     switch (status) {
         case "PENDING":
-            return "bg-yellow-50 text-yellow-700";
+            return {
+                badge: "bg-yellow-50 text-yellow-700",
+                border: "border-yellow-200",
+                background: "bg-yellow-50/30",
+                dot: "bg-yellow-500",
+            };
 
         case "VIEWED":
-            return "bg-blue-50 text-blue-700";
+            return {
+                badge: "bg-blue-50 text-blue-700",
+                border: "border-blue-200",
+                background: "bg-blue-50/30",
+                dot: "bg-blue-500",
+            };
 
         case "ACCEPTED":
-            return "bg-green-50 text-green-700";
+            return {
+                badge: "bg-green-50 text-green-700",
+                border: "border-green-200",
+                background: "bg-green-50/30",
+                dot: "bg-green-500",
+            };
 
         case "DECLINED":
-            return "bg-red-50 text-red-700";
+            return {
+                badge: "bg-red-50 text-red-700",
+                border: "border-red-200",
+                background: "bg-red-50/30",
+                dot: "bg-red-500",
+            };
 
         case "EXPIRED":
-            return "bg-gray-100 text-gray-500";
+            return {
+                badge: "bg-gray-100 text-gray-500",
+                border: "border-gray-200",
+                background: "bg-gray-50",
+                dot: "bg-gray-400",
+            };
 
         default:
-            return "bg-gray-100 text-gray-600";
+            return {
+                badge: "bg-gray-100 text-gray-600",
+                border: "border-gray-200",
+                background: "bg-gray-50",
+                dot: "bg-gray-400",
+            };
     }
+}
+
+function canManageOffer(
+    offer: OrderOffer,
+) {
+    return (
+        offer.status === "PENDING" ||
+        offer.status === "VIEWED"
+    );
+}
+
+/* -------------------------------------------------------------------------- */
+/* HISTORY                                                                    */
+/* -------------------------------------------------------------------------- */
+
+function getHistoryUserName(
+    history: OrderStatusHistory,
+) {
+    if (!history.changedByUser) {
+        return "Sistema";
+    }
+
+    return `${history.changedByUser.firstName} ${history.changedByUser.lastName}`;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -199,6 +269,15 @@ export default function AdminOrderDetailPage({
 
     const [editingOffer, setEditingOffer] =
         useState<OrderOffer | null>(null);
+
+    const [processingOfferId, setProcessingOfferId] =
+        useState<number | null>(null);
+
+    const [decliningOfferId, setDecliningOfferId] =
+        useState<number | null>(null);
+
+    const [declineReason, setDeclineReason] =
+        useState("");
 
     /* ---------------------------------------------------------------------- */
     /* RESOLVE PARAMS                                                         */
@@ -244,52 +323,122 @@ export default function AdminOrderDetailPage({
     /* LOAD ORDER                                                             */
     /* ---------------------------------------------------------------------- */
 
+    async function loadOrder(
+        id: number,
+    ) {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const response =
+                await getOrder(id);
+
+            setOrder(response.data);
+        } catch (err) {
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Não foi possível carregar a encomenda.",
+            );
+        } finally {
+            setLoading(false);
+        }
+    }
+
     useEffect(() => {
-        if (authLoading) {
+        if (authLoading || !orderId) {
             return;
         }
 
-        if (!orderId) {
-            return;
-        }
-
-        async function loadOrder() {
-            try {
-                setLoading(true);
-                setError(null);
-
-                console.log(
-                    "ADMIN ORDER - GET:",
-                    orderId,
-                );
-
-                const response =
-                    await getOrder(orderId);
-
-                console.log(
-                    "ADMIN ORDER - RESPONSE:",
-                    response,
-                );
-
-                setOrder(response.data);
-            } catch (err) {
-                console.error(
-                    "ADMIN ORDER - ERROR:",
-                    err,
-                );
-
-                setError(
-                    err instanceof Error
-                        ? err.message
-                        : "Não foi possível carregar a encomenda.",
-                );
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        loadOrder();
+        loadOrder(orderId);
     }, [authLoading, orderId]);
+
+    /* ---------------------------------------------------------------------- */
+    /* ACCEPT OFFER                                                           */
+    /* ---------------------------------------------------------------------- */
+
+    async function handleAcceptOffer(
+        offer: OrderOffer,
+    ) {
+        if (!canManageOffer(offer)) {
+            return;
+        }
+
+        try {
+            setProcessingOfferId(
+                offer.id,
+            );
+
+            setError(null);
+
+            await acceptOrderOffer(
+                offer.id,
+            );
+
+            if (orderId) {
+                await loadOrder(orderId);
+            }
+        } catch (err) {
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Não foi possível aceitar a proposta.",
+            );
+        } finally {
+            setProcessingOfferId(null);
+        }
+    }
+
+    /* ---------------------------------------------------------------------- */
+    /* DECLINE OFFER                                                          */
+    /* ---------------------------------------------------------------------- */
+
+    async function handleDeclineOffer(
+        offer: OrderOffer,
+    ) {
+        if (!canManageOffer(offer)) {
+            return;
+        }
+
+        const reason =
+            declineReason.trim();
+
+        if (!reason) {
+            setError(
+                "Indique o motivo da recusa.",
+            );
+
+            return;
+        }
+
+        try {
+            setProcessingOfferId(
+                offer.id,
+            );
+
+            setError(null);
+
+            await declineOrderOffer(
+                offer.id,
+                reason,
+            );
+
+            setDecliningOfferId(null);
+            setDeclineReason("");
+
+            if (orderId) {
+                await loadOrder(orderId);
+            }
+        } catch (err) {
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Não foi possível recusar a proposta.",
+            );
+        } finally {
+            setProcessingOfferId(null);
+        }
+    }
 
     /* ---------------------------------------------------------------------- */
     /* LOADING                                                                */
@@ -353,7 +502,7 @@ export default function AdminOrderDetailPage({
     }
 
     /* ---------------------------------------------------------------------- */
-    /* OFFER / ORDER BUSINESS RULES                                          */
+    /* BUSINESS RULES                                                         */
     /* ---------------------------------------------------------------------- */
 
     const isOrderAssigned =
@@ -435,12 +584,20 @@ export default function AdminOrderDetailPage({
             </div>
 
             {/* ---------------------------------------------------------------- */}
+            {/* ERROR ACTION                                                     */}
+            {/* ---------------------------------------------------------------- */}
+
+            {error && (
+                <div className="mt-6 rounded-2xl bg-red-50 px-5 py-4 text-sm text-red-700">
+                    {error}
+                </div>
+            )}
+
+            {/* ---------------------------------------------------------------- */}
             {/* CLIENTE / DESTINATÁRIO                                          */}
             {/* ---------------------------------------------------------------- */}
 
             <div className="mt-8 grid gap-6 lg:grid-cols-2">
-
-                {/* CLIENTE */}
 
                 <section className="rounded-3xl bg-white p-6 shadow-sm">
 
@@ -467,7 +624,8 @@ export default function AdminOrderDetailPage({
                             </p>
 
                             <p className="mt-1 text-gray-700">
-                                {order.customerEmail}
+                                {order.customerEmail ??
+                                    "—"}
                             </p>
                         </div>
 
@@ -477,15 +635,14 @@ export default function AdminOrderDetailPage({
                             </p>
 
                             <p className="mt-1 text-gray-700">
-                                {order.customerPhone}
+                                {order.customerPhone ??
+                                    "—"}
                             </p>
                         </div>
 
                     </div>
 
                 </section>
-
-                {/* DESTINATÁRIO */}
 
                 <section className="rounded-3xl bg-white p-6 shadow-sm">
 
@@ -501,8 +658,11 @@ export default function AdminOrderDetailPage({
                             </p>
 
                             <p className="mt-1 font-medium text-gray-700">
-                                {order.recipientFirstName}{" "}
-                                {order.recipientLastName ?? ""}
+                                {
+                                    order.recipientFirstName
+                                }{" "}
+                                {order.recipientLastName ??
+                                    ""}
                             </p>
                         </div>
 
@@ -577,7 +737,9 @@ export default function AdminOrderDetailPage({
                         </p>
 
                         <p className="mt-1 font-medium text-gray-700">
-                            {order.deliveryCountryCode}
+                            {
+                                order.deliveryCountryCode
+                            }
                         </p>
                     </div>
 
@@ -614,7 +776,9 @@ export default function AdminOrderDetailPage({
                         </p>
 
                         <p className="mt-2 text-sm leading-6 text-gray-600">
-                            {order.deliveryInstructions}
+                            {
+                                order.deliveryInstructions
+                            }
                         </p>
 
                     </div>
@@ -677,7 +841,9 @@ export default function AdminOrderDetailPage({
                                 <div>
 
                                     <p className="font-semibold text-gray-700">
-                                        {item.productName}
+                                        {
+                                            item.productName
+                                        }
                                     </p>
 
                                     {item.productDescription && (
@@ -689,7 +855,10 @@ export default function AdminOrderDetailPage({
                                     )}
 
                                     <p className="mt-2 text-sm text-gray-400">
-                                        {item.quantity} ×{" "}
+                                        {
+                                            item.quantity
+                                        }{" "}
+                                        ×{" "}
                                         {formatCurrency(
                                             item.unitPrice,
                                         )}
@@ -708,8 +877,6 @@ export default function AdminOrderDetailPage({
                     )}
 
                 </div>
-
-                {/* RESUMO */}
 
                 <div className="mt-8 flex justify-end">
 
@@ -784,16 +951,24 @@ export default function AdminOrderDetailPage({
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
                     <div>
-                        <h2 className="text-lg font-bold text-[#2F3B2A]">
-                            Propostas para floristas
-                        </h2>
+
+                        <div className="flex items-center gap-3">
+
+                            <h2 className="text-lg font-bold text-[#2F3B2A]">
+                                Propostas
+                            </h2>
+
+                            <span className="rounded-full bg-[#F3F5EE] px-3 py-1 text-xs font-semibold text-[#55624A]">
+                                {order.offers.length}
+                            </span>
+
+                        </div>
 
                         <p className="mt-1 text-sm text-gray-500">
-                            Gere as propostas associadas a esta encomenda.
+                            Propostas enviadas às floristas para esta encomenda.
                         </p>
-                    </div>
 
-                    {/* NOVA PROPOSTA */}
+                    </div>
 
                     {canCreateOffer && (
                         <button
@@ -825,40 +1000,37 @@ export default function AdminOrderDetailPage({
 
                 </div>
 
-                {/* ORDER JÁ ATRIBUÍDA */}
-
                 {isOrderAssigned && (
                     <div className="mt-5 rounded-2xl bg-green-50 p-4">
 
                         <p className="text-sm font-semibold text-green-700">
-                            Esta encomenda já foi atribuída a uma florista.
+                            Encomenda atribuída
                         </p>
 
                         <p className="mt-1 text-sm text-green-600">
-                            Não é possível criar novas propostas para esta encomenda.
+                            Esta encomenda já foi aceite por uma florista.
+                            Não podem ser criadas novas propostas.
                         </p>
 
                     </div>
                 )}
-
-                {/* ORDER NÃO PODE RECEBER NOVAS OFFERS */}
 
                 {!isOrderAssigned &&
                     !canCreateOffer && (
                         <div className="mt-5 rounded-2xl bg-gray-50 p-4">
 
                             <p className="text-sm font-semibold text-gray-700">
-                                Não é possível criar novas propostas.
+                                Novas propostas indisponíveis
                             </p>
 
                             <p className="mt-1 text-sm text-gray-500">
-                                A encomenda já não se encontra num estado que permita novas propostas.
+                                A encomenda já não se encontra num estado que permita criar propostas.
                             </p>
 
                         </div>
                     )}
 
-                {/* FORMULÁRIO */}
+                {/* FORM */}
 
                 {offerFormOpen && (
                     <div className="mt-6 rounded-2xl border border-[#D6DEC8] bg-[#F8F9F5] p-6">
@@ -917,24 +1089,28 @@ export default function AdminOrderDetailPage({
                                     null,
                                 );
 
-                                window.location.reload();
+                                loadOrder(order.id);
                             }}
                         />
 
                     </div>
                 )}
 
-                {/* LISTA DE OFFERS */}
+                {/* OFFERS */}
 
                 {order.offers.length === 0 ? (
-                    <div className="mt-6 rounded-2xl border border-dashed border-gray-200 p-8 text-center">
+                    <div className="mt-6 rounded-2xl border border-dashed border-gray-200 p-10 text-center">
 
-                        <p className="font-medium text-gray-600">
-                            Ainda não existem propostas.
+                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#F3F5EE] text-[#55624A]">
+                            <Plus size={20} />
+                        </div>
+
+                        <p className="mt-4 font-medium text-gray-600">
+                            Ainda não existem propostas
                         </p>
 
                         <p className="mt-1 text-sm text-gray-400">
-                            Cria uma proposta para enviar esta encomenda a uma florista.
+                            Cria uma proposta para enviar a encomenda a uma florista.
                         </p>
 
                     </div>
@@ -943,95 +1119,156 @@ export default function AdminOrderDetailPage({
 
                         {order.offers.map(
                             (offer) => {
+                                const styles =
+                                    getOfferStatusClasses(
+                                        offer.status,
+                                    );
 
-                                const canEditOffer =
-                                    offer.status ===
-                                        "PENDING" ||
-                                    offer.status ===
-                                        "VIEWED";
+                                const manageable =
+                                    canManageOffer(
+                                        offer,
+                                    );
+
+                                const isProcessing =
+                                    processingOfferId ===
+                                    offer.id;
+
+                                const isDeclining =
+                                    decliningOfferId ===
+                                    offer.id;
 
                                 return (
                                     <div
                                         key={offer.id}
-                                        className="
+                                        className={`
+                                            overflow-hidden
                                             rounded-2xl
                                             border
-                                            border-gray-100
-                                            p-5
-                                        "
+                                            ${styles.border}
+                                            ${styles.background}
+                                        `}
                                     >
 
-                                        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                                        {/* OFFER HEADER */}
 
-                                            {/* INFO */}
+                                        <div className="p-5">
 
-                                            <div>
+                                            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 
-                                                <div className="flex flex-wrap items-center gap-3">
+                                                <div className="flex items-start gap-4">
 
-                                                    <p className="font-semibold text-[#2F3B2A]">
-                                                        {offer.florist?.name ??
-                                                            `Florista #${offer.floristId}`}
-                                                    </p>
-
-                                                    <span
+                                                    <div
                                                         className={`
+                                                            mt-1
+                                                            h-3
+                                                            w-3
+                                                            shrink-0
                                                             rounded-full
-                                                            px-3
-                                                            py-1
-                                                            text-xs
-                                                            font-medium
-                                                            ${getOfferStatusClass(
-                                                                offer.status,
-                                                            )}
+                                                            ${styles.dot}
                                                         `}
-                                                    >
-                                                        {getOfferStatusLabel(
-                                                            offer.status,
-                                                        )}
-                                                    </span>
+                                                    />
+
+                                                    <div>
+
+                                                        <div className="flex flex-wrap items-center gap-3">
+
+                                                            <h3 className="text-base font-bold text-[#2F3B2A]">
+                                                                {offer.florist?.name ??
+                                                                    `Florista #${offer.floristId}`}
+                                                            </h3>
+
+                                                            <span
+                                                                className={`
+                                                                    rounded-full
+                                                                    px-3
+                                                                    py-1
+                                                                    text-xs
+                                                                    font-semibold
+                                                                    ${styles.badge}
+                                                                `}
+                                                            >
+                                                                {getOfferStatusLabel(
+                                                                    offer.status,
+                                                                )}
+                                                            </span>
+
+                                                        </div>
+
+                                                        <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-500">
+
+                                                            <span>
+                                                                Criada{" "}
+                                                                {formatDateTime(
+                                                                    offer.createdAt,
+                                                                )}
+                                                            </span>
+
+                                                            <span>
+                                                                Expira{" "}
+                                                                {formatDateTime(
+                                                                    offer.expiresAt,
+                                                                )}
+                                                            </span>
+
+                                                        </div>
+
+                                                    </div>
 
                                                 </div>
 
-                                                <p className="mt-2 text-sm text-gray-500">
-                                                    Criada em{" "}
-                                                    {formatDateTime(
-                                                        offer.createdAt,
-                                                    )}
-                                                </p>
+                                                {/* AMOUNT */}
 
-                                                <p className="mt-1 text-sm text-gray-500">
-                                                    Expira em{" "}
-                                                    {formatDateTime(
-                                                        offer.expiresAt,
-                                                    )}
-                                                </p>
+                                                <div className="flex items-center justify-between gap-6 lg:justify-end">
+
+                                                    <div className="text-left lg:text-right">
+
+                                                        <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                                                            Compensação
+                                                        </p>
+
+                                                        <p className="mt-1 text-2xl font-bold text-[#55624A]">
+                                                            {formatCurrency(
+                                                                offer.compensationAmount,
+                                                            )}
+                                                        </p>
+
+                                                    </div>
+
+                                                </div>
 
                                             </div>
 
-                                            {/* VALOR + AÇÕES */}
+                                        </div>
 
-                                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                                        {/* DECLINE REASON */}
 
-                                                <div className="sm:text-right">
+                                        {offer.declineReason && (
+                                            <div className="border-t border-red-100 bg-red-50 px-5 py-4">
 
-                                                    <p className="text-xs text-gray-400">
-                                                        Compensação
-                                                    </p>
+                                                <p className="text-xs font-semibold uppercase tracking-wide text-red-500">
+                                                    Motivo da recusa
+                                                </p>
 
-                                                    <p className="mt-1 text-xl font-bold text-[#55624A]">
-                                                        {formatCurrency(
-                                                            offer.compensationAmount,
-                                                        )}
-                                                    </p>
+                                                <p className="mt-1 text-sm leading-6 text-red-700">
+                                                    {
+                                                        offer.declineReason
+                                                    }
+                                                </p>
 
-                                                </div>
+                                            </div>
+                                        )}
 
-                                                {/* EDITAR */}
+                                        {/* ACTIONS */}
 
-                                                {canEditOffer && (
+                                        {manageable &&
+                                            !isDeclining && (
+                                                <div className="flex flex-wrap items-center justify-end gap-3 border-t border-black/5 px-5 py-4">
+
                                                     <button
                                                         type="button"
+                                                        disabled={
+                                                            isProcessing
+                                                        }
                                                         onClick={() => {
                                                             setEditingOffer(
                                                                 offer,
@@ -1044,11 +1281,11 @@ export default function AdminOrderDetailPage({
                                                         className="
                                                             inline-flex
                                                             items-center
-                                                            justify-center
                                                             gap-2
-                                                            rounded-full
+                                                            rounded-xl
                                                             border
                                                             border-gray-200
+                                                            bg-white
                                                             px-4
                                                             py-2.5
                                                             text-sm
@@ -1056,77 +1293,250 @@ export default function AdminOrderDetailPage({
                                                             text-gray-600
                                                             transition
                                                             hover:bg-gray-50
+                                                            disabled:cursor-not-allowed
+                                                            disabled:opacity-50
                                                         "
                                                     >
                                                         <Pencil
-                                                            size={16}
+                                                            size={
+                                                                16
+                                                            }
+                                                        />
+                                                        Editar valor
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        disabled={
+                                                            isProcessing
+                                                        }
+                                                        onClick={() => {
+                                                            setDecliningOfferId(
+                                                                offer.id,
+                                                            );
+
+                                                            setDeclineReason(
+                                                                "",
+                                                            );
+
+                                                            setError(
+                                                                null,
+                                                            );
+                                                        }}
+                                                        className="
+                                                            inline-flex
+                                                            items-center
+                                                            gap-2
+                                                            rounded-xl
+                                                            border
+                                                            border-red-200
+                                                            bg-white
+                                                            px-4
+                                                            py-2.5
+                                                            text-sm
+                                                            font-medium
+                                                            text-red-600
+                                                            transition
+                                                            hover:bg-red-50
+                                                            disabled:cursor-not-allowed
+                                                            disabled:opacity-50
+                                                        "
+                                                    >
+                                                        <X
+                                                            size={
+                                                                16
+                                                            }
+                                                        />
+                                                        Recusar
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        disabled={
+                                                            isProcessing
+                                                        }
+                                                        onClick={() =>
+                                                            handleAcceptOffer(
+                                                                offer,
+                                                            )
+                                                        }
+                                                        className="
+                                                            inline-flex
+                                                            items-center
+                                                            gap-2
+                                                            rounded-xl
+                                                            bg-[#55624A]
+                                                            px-5
+                                                            py-2.5
+                                                            text-sm
+                                                            font-medium
+                                                            text-white
+                                                            transition
+                                                            hover:opacity-90
+                                                            disabled:cursor-not-allowed
+                                                            disabled:opacity-50
+                                                        "
+                                                    >
+                                                        <Check
+                                                            size={
+                                                                16
+                                                            }
                                                         />
 
-                                                        Editar
+                                                        {isProcessing
+                                                            ? "A processar..."
+                                                            : "Aceitar"}
                                                     </button>
-                                                )}
-
-                                            </div>
-
-                                        </div>
-
-                                        {/* MOTIVO DA RECUSA */}
-
-                                        {offer.declineReason && (
-                                            <div className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-600">
-
-                                                <strong>
-                                                    Motivo da recusa:
-                                                </strong>{" "}
-
-                                                {
-                                                    offer.declineReason
-                                                }
-
-                                            </div>
-                                        )}
-
-                                        {/* PRODUTOS DA OFFER */}
-
-                                        {offer.items?.length > 0 && (
-                                            <div className="mt-5 border-t border-gray-100 pt-4">
-
-                                                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                                    Produtos incluídos
-                                                </p>
-
-                                                <div className="mt-3 space-y-2">
-
-                                                    {offer.items.map(
-                                                        (item) => (
-                                                            <div
-                                                                key={
-                                                                    item.id
-                                                                }
-                                                                className="flex items-center justify-between text-sm"
-                                                            >
-
-                                                                <span className="text-gray-600">
-                                                                    {
-                                                                        item.productName
-                                                                    }{" "}
-                                                                    ×{" "}
-                                                                    {
-                                                                        item.quantity
-                                                                    }
-                                                                </span>
-
-                                                                <span className="font-medium text-gray-700">
-                                                                    {formatCurrency(
-                                                                        item.totalCompensation,
-                                                                    )}
-                                                                </span>
-
-                                                            </div>
-                                                        ),
-                                                    )}
 
                                                 </div>
+                                            )}
+
+                                        {/* DECLINE FORM */}
+
+                                        {manageable &&
+                                            isDeclining && (
+                                                <div className="border-t border-red-100 bg-red-50/60 p-5">
+
+                                                    <p className="text-sm font-semibold text-[#2F3B2A]">
+                                                        Recusar proposta
+                                                    </p>
+
+                                                    <p className="mt-1 text-sm text-gray-500">
+                                                        Indique o motivo da recusa desta proposta.
+                                                    </p>
+
+                                                    <textarea
+                                                        value={
+                                                            declineReason
+                                                        }
+                                                        onChange={(
+                                                            event,
+                                                        ) =>
+                                                            setDeclineReason(
+                                                                event
+                                                                    .target
+                                                                    .value,
+                                                            )
+                                                        }
+                                                        rows={
+                                                            3
+                                                        }
+                                                        maxLength={
+                                                            500
+                                                        }
+                                                        placeholder="Ex.: O valor proposto não é adequado para esta encomenda."
+                                                        className="
+                                                            mt-4
+                                                            w-full
+                                                            resize-none
+                                                            rounded-xl
+                                                            border
+                                                            border-red-200
+                                                            bg-white
+                                                            p-3
+                                                            text-sm
+                                                            outline-none
+                                                            transition
+                                                            focus:border-red-400
+                                                            focus:ring-4
+                                                            focus:ring-red-100
+                                                        "
+                                                        autoFocus
+                                                    />
+
+                                                    <div className="mt-4 flex justify-end gap-3">
+
+                                                        <button
+                                                            type="button"
+                                                            disabled={
+                                                                isProcessing
+                                                            }
+                                                            onClick={() => {
+                                                                setDecliningOfferId(
+                                                                    null,
+                                                                );
+
+                                                                setDeclineReason(
+                                                                    "",
+                                                                );
+                                                            }}
+                                                            className="
+                                                                rounded-xl
+                                                                px-4
+                                                                py-2.5
+                                                                text-sm
+                                                                font-medium
+                                                                text-gray-600
+                                                                transition
+                                                                hover:bg-white
+                                                            "
+                                                        >
+                                                            Cancelar
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            disabled={
+                                                                isProcessing ||
+                                                                !declineReason.trim()
+                                                            }
+                                                            onClick={() =>
+                                                                handleDeclineOffer(
+                                                                    offer,
+                                                                )
+                                                            }
+                                                            className="
+                                                                inline-flex
+                                                                items-center
+                                                                gap-2
+                                                                rounded-xl
+                                                                bg-red-600
+                                                                px-5
+                                                                py-2.5
+                                                                text-sm
+                                                                font-medium
+                                                                text-white
+                                                                transition
+                                                                hover:opacity-90
+                                                                disabled:cursor-not-allowed
+                                                                disabled:opacity-50
+                                                            "
+                                                        >
+                                                            <X
+                                                                size={
+                                                                    16
+                                                                }
+                                                            />
+
+                                                            {isProcessing
+                                                                ? "A recusar..."
+                                                                : "Confirmar recusa"}
+                                                        </button>
+
+                                                    </div>
+
+                                                </div>
+                                            )}
+
+                                        {/* LOCKED MESSAGE */}
+
+                                        {!manageable && (
+                                            <div className="border-t border-black/5 px-5 py-3">
+
+                                                <p className="text-xs text-gray-400">
+
+                                                    {offer.status ===
+                                                    "ACCEPTED"
+                                                        ? "Esta proposta foi aceite e já não pode ser alterada."
+                                                        : offer.status ===
+                                                            "DECLINED"
+                                                          ? "Esta proposta foi recusada e já não pode ser alterada."
+                                                          : offer.status ===
+                                                              "EXPIRED"
+                                                            ? "Esta proposta expirou e já não pode ser alterada."
+                                                            : "Esta proposta já não pode ser alterada."}
+
+                                                </p>
 
                                             </div>
                                         )}
@@ -1135,6 +1545,173 @@ export default function AdminOrderDetailPage({
                                 );
                             },
                         )}
+
+                    </div>
+                )}
+
+            </section>
+
+            {/* ---------------------------------------------------------------- */}
+            {/* HISTÓRICO                                                        */}
+            {/* ---------------------------------------------------------------- */}
+
+            <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+
+                <div>
+
+                    <h2 className="text-lg font-bold text-[#2F3B2A]">
+                        Histórico da encomenda
+                    </h2>
+
+                    <p className="mt-1 text-sm text-gray-500">
+                        Registo das alterações de estado desta encomenda.
+                    </p>
+
+                </div>
+
+                {order.statusHistory.length ===
+                0 ? (
+                    <div className="mt-6 rounded-2xl border border-dashed border-gray-200 p-8 text-center">
+
+                        <p className="font-medium text-gray-600">
+                            Ainda não existe histórico.
+                        </p>
+
+                    </div>
+                ) : (
+                    <div className="relative mt-8">
+
+                        <div className="
+                            absolute
+                            bottom-0
+                            left-[11px]
+                            top-0
+                            w-px
+                            bg-gray-200
+                        " />
+
+                        <div className="space-y-8">
+
+                            {order.statusHistory.map(
+                                (history) => (
+                                    <div
+                                        key={history.id}
+                                        className="relative flex gap-5"
+                                    >
+
+                                        <div className="
+                                            relative
+                                            z-10
+                                            mt-1
+                                            h-[23px]
+                                            w-[23px]
+                                            shrink-0
+                                            rounded-full
+                                            border-4
+                                            border-white
+                                            bg-[#55624A]
+                                            shadow-sm
+                                        " />
+
+                                        <div className="min-w-0 flex-1">
+
+                                            <p className="text-sm font-semibold text-[#2F3B2A]">
+                                                {formatDateTime(
+                                                    history.createdAt,
+                                                )}
+                                            </p>
+
+                                            <div className="mt-2 flex flex-wrap items-center gap-2">
+
+                                                {history.fromStatus && (
+                                                    <>
+                                                        <span className="
+                                                            rounded-full
+                                                            bg-gray-100
+                                                            px-3
+                                                            py-1
+                                                            text-xs
+                                                            font-medium
+                                                            text-gray-600
+                                                        ">
+                                                            {getOrderStatusLabel(
+                                                                history.fromStatus,
+                                                            )}
+                                                        </span>
+
+                                                        <span className="text-gray-400">
+                                                            →
+                                                        </span>
+                                                    </>
+                                                )}
+
+                                                <span className="
+                                                    rounded-full
+                                                    bg-[#D6DEC8]
+                                                    px-3
+                                                    py-1
+                                                    text-xs
+                                                    font-medium
+                                                    text-[#55624A]
+                                                ">
+                                                    {getOrderStatusLabel(
+                                                        history.toStatus,
+                                                    )}
+                                                </span>
+
+                                            </div>
+
+                                            <p className="mt-3 text-sm text-gray-500">
+
+                                                Alterado por{" "}
+
+                                                <span className="font-medium text-gray-700">
+                                                    {getHistoryUserName(
+                                                        history,
+                                                    )}
+                                                </span>
+
+                                            </p>
+
+                                            {history.changedByUser && (
+                                                <p className="mt-1 text-xs text-gray-400">
+                                                    {history
+                                                        .changedByUser
+                                                        .role ===
+                                                    "SYSTEM_ADMIN"
+                                                        ? "Administrador"
+                                                        : history
+                                                              .changedByUser
+                                                              .role ===
+                                                          "FLORIST"
+                                                        ? "Florista"
+                                                        : "Cliente"}
+                                                </p>
+                                            )}
+
+                                            {history.reason && (
+                                                <div className="mt-3 rounded-xl bg-[#F8F9F5] p-3">
+
+                                                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                                                        Motivo
+                                                    </p>
+
+                                                    <p className="mt-1 text-sm leading-6 text-gray-600">
+                                                        {
+                                                            history.reason
+                                                        }
+                                                    </p>
+
+                                                </div>
+                                            )}
+
+                                        </div>
+
+                                    </div>
+                                ),
+                            )}
+
+                        </div>
 
                     </div>
                 )}

@@ -17,6 +17,13 @@ export type CreateOrderItemData = {
 export type CreateOrderData = {
     items: CreateOrderItemData[];
 
+    // Customer / Guest checkout
+    customerFirstName?: string;
+    customerLastName?: string;
+    customerEmail?: string;
+    customerPhone?: string;
+
+    // Recipient
     recipientFirstName: string;
     recipientLastName?: string;
     recipientPhone?: string;
@@ -33,6 +40,7 @@ export type CreateOrderData = {
         | "CHRISTMAS"
         | "OTHER";
 
+    // Delivery
     deliveryDate: string;
 
     deliveryTimeSlot:
@@ -42,6 +50,7 @@ export type CreateOrderData = {
 
     deliveryInstructions?: string;
 
+    // Delivery address
     deliveryStreet: string;
     deliveryStreet2?: string;
     deliveryPostalCode: string;
@@ -49,9 +58,7 @@ export type CreateOrderData = {
     deliveryDistrict: string;
     deliveryCountryCode: string;
 
-    deliveryLatitude: number;
-    deliveryLongitude: number;
-
+    // Card
     cardMessage?: string;
 };
 
@@ -182,5 +189,38 @@ export async function deleteOrder(
         data: unknown;
     }>(`/orders/${id}`, {
         method: "DELETE",
+    });
+}
+
+export async function startProduction(
+    id: number,
+) {
+    return apiFetch<{
+        success: boolean;
+        data: Order;
+    }>(`/orders/${id}/start-production`, {
+        method: "POST",
+    });
+}
+
+export async function readyForDelivery(
+    id: number,
+) {
+    return apiFetch<{
+        success: boolean;
+        data: Order;
+    }>(`/orders/${id}/ready-for-delivery`, {
+        method: "POST",
+    });
+}
+
+export async function deliverOrder(
+    id: number,
+) {
+    return apiFetch<{
+        success: boolean;
+        data: Order;
+    }>(`/orders/${id}/deliver`, {
+        method: "POST",
     });
 }

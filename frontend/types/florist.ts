@@ -1,44 +1,60 @@
-
 export type FloristAddress = {
     id: number;
-    label?: string | null;
+    label: string | null;
+
     street: string;
-    street2?: string | null;
+    street2: string | null;
+
     postalCode: string;
     city: string;
     district: string;
-    countryCode: string;
+    country: string;
+
     latitude: number;
     longitude: number;
-    notes?: string | null;
+
+    notes: string | null;
+};
+
+export type FloristAdmin = {
+    id: number;
+
+    firstName: string;
+    lastName: string;
+
+    email: string;
+    phone: string | null;
+
+    active: boolean;
+    emailVerified: boolean;
+
+    createdAt: string;
+    updatedAt: string;
 };
 
 export type Florist = {
     id: number;
 
     name: string;
-
-    legalName?: string | null;
+    legalName: string | null;
 
     taxNumber: string;
 
     email: string;
-
     phone: string;
 
-    website?: string | null;
-
-    description?: string | null;
+    website: string | null;
+    description: string | null;
 
     active: boolean;
-
     acceptingOrders: boolean;
 
     deliveryRadiusKm: number;
 
     address: FloristAddress;
 
-    createdAt: string;
+    admins: FloristAdmin[];
 
+    createdAt: string;
     updatedAt: string;
 };

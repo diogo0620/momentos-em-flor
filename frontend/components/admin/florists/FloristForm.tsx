@@ -2,13 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-import {
-    createFlorist,
-    updateFlorist,
-} from "@/lib/api/florists";
-
+import { createFlorist, updateFlorist } from "@/lib/api/florists";
 import type { Florist } from "@/types/florist";
+import FloristAdminsManager from "@/components/admin/florists/FloristAdminsManager";
 
 type Props = {
     florist?: Florist;
@@ -25,14 +21,10 @@ export default function FloristForm({
         useState(florist?.name ?? "");
 
     const [legalName, setLegalName] =
-        useState(
-            florist?.legalName ?? "",
-        );
+        useState(florist?.legalName ?? "");
 
     const [taxNumber, setTaxNumber] =
-        useState(
-            florist?.taxNumber ?? "",
-        );
+        useState(florist?.taxNumber ?? "");
 
     const [email, setEmail] =
         useState(florist?.email ?? "");
@@ -41,19 +33,14 @@ export default function FloristForm({
         useState(florist?.phone ?? "");
 
     const [website, setWebsite] =
-        useState(
-            florist?.website ?? "",
-        );
+        useState(florist?.website ?? "");
 
     const [description, setDescription] =
-        useState(
-            florist?.description ?? "",
-        );
+        useState(florist?.description ?? "");
 
     const [deliveryRadiusKm, setDeliveryRadiusKm] =
         useState(
-            florist?.deliveryRadiusKm?.toString() ??
-                "",
+            florist?.deliveryRadiusKm?.toString() ?? "",
         );
 
     const [street, setStreet] =
@@ -83,20 +70,7 @@ export default function FloristForm({
 
     const [countryCode, setCountryCode] =
         useState(
-            florist?.address.countryCode ??
-                "PT",
-        );
-
-    const [latitude, setLatitude] =
-        useState(
-            florist?.address.latitude?.toString() ??
-                "",
-        );
-
-    const [longitude, setLongitude] =
-        useState(
-            florist?.address.longitude?.toString() ??
-                "",
+            florist?.address.countryCode ?? "PT",
         );
 
     const [notes, setNotes] =
@@ -193,30 +167,12 @@ export default function FloristForm({
         const radius =
             Number(deliveryRadiusKm);
 
-        const lat = Number(latitude);
-
-        const lng = Number(longitude);
-
         if (
             Number.isNaN(radius) ||
             radius < 0
         ) {
             setError(
                 "O raio de entrega é inválido.",
-            );
-            return;
-        }
-
-        if (Number.isNaN(lat)) {
-            setError(
-                "A latitude é inválida.",
-            );
-            return;
-        }
-
-        if (Number.isNaN(lng)) {
-            setError(
-                "A longitude é inválida.",
             );
             return;
         }
@@ -270,10 +226,6 @@ export default function FloristForm({
                         .trim()
                         .toUpperCase(),
 
-                latitude: lat,
-
-                longitude: lng,
-
                 notes:
                     notes.trim() ||
                     undefined,
@@ -297,9 +249,7 @@ export default function FloristForm({
                     `/admin/florists/${florist.id}`,
                 );
             } else {
-                await createFlorist(
-                    data,
-                );
+                await createFlorist(data);
 
                 router.push(
                     "/admin/florists",
@@ -334,26 +284,22 @@ export default function FloristForm({
             {/* EMPRESA */}
 
             <div className="rounded-3xl bg-white p-8 shadow-sm">
-
                 <h2 className="text-xl font-bold text-[#2F3B2A]">
                     Dados da empresa
                 </h2>
 
                 <div className="mt-8 grid gap-6 md:grid-cols-2">
-
                     <Field
                         label="Nome comercial"
                         value={name}
                         onChange={setName}
                         required
-                        placeholder="Momentos em Flor Braga"
                     />
 
                     <Field
                         label="Nome legal"
                         value={legalName}
                         onChange={setLegalName}
-                        placeholder="Momentos em Flor Braga, Lda."
                     />
 
                     <Field
@@ -361,30 +307,24 @@ export default function FloristForm({
                         value={taxNumber}
                         onChange={setTaxNumber}
                         required
-                        placeholder="999999990"
                     />
-
                 </div>
-
             </div>
 
             {/* CONTACTOS */}
 
             <div className="rounded-3xl bg-white p-8 shadow-sm">
-
                 <h2 className="text-xl font-bold text-[#2F3B2A]">
                     Contactos
                 </h2>
 
                 <div className="mt-8 grid gap-6 md:grid-cols-2">
-
                     <Field
                         label="Email"
                         type="email"
                         value={email}
                         onChange={setEmail}
                         required
-                        placeholder="braga@momentosemflor.pt"
                     />
 
                     <Field
@@ -392,38 +332,32 @@ export default function FloristForm({
                         value={phone}
                         onChange={setPhone}
                         required
-                        placeholder="+351253000000"
                     />
 
                     <Field
                         label="Website"
                         value={website}
                         onChange={setWebsite}
-                        placeholder="https://momentosemflor.pt"
                     />
-
                 </div>
-
             </div>
 
             {/* DESCRIÇÃO */}
 
             <div className="rounded-3xl bg-white p-8 shadow-sm">
-
                 <h2 className="text-xl font-bold text-[#2F3B2A]">
                     Descrição
                 </h2>
 
                 <textarea
                     value={description}
-                    onChange={(e) =>
+                    onChange={(event) =>
                         setDescription(
-                            e.target.value,
+                            event.target.value,
                         )
                     }
                     rows={5}
                     maxLength={500}
-                    placeholder="Descrição da florista..."
                     className="
                         mt-6
                         w-full
@@ -437,19 +371,16 @@ export default function FloristForm({
                         focus:border-[#55624A]
                     "
                 />
-
             </div>
 
             {/* ENTREGA */}
 
             <div className="rounded-3xl bg-white p-8 shadow-sm">
-
                 <h2 className="text-xl font-bold text-[#2F3B2A]">
                     Entrega
                 </h2>
 
                 <div className="mt-8 max-w-sm">
-
                     <Field
                         label="Raio de entrega (km)"
                         type="number"
@@ -460,36 +391,34 @@ export default function FloristForm({
                         required
                         min="0"
                         step="0.01"
-                        placeholder="20"
                     />
-
                 </div>
-
             </div>
 
             {/* MORADA */}
 
             <div className="rounded-3xl bg-white p-8 shadow-sm">
-
                 <h2 className="text-xl font-bold text-[#2F3B2A]">
                     Morada
                 </h2>
 
-                <div className="mt-8 grid gap-6 md:grid-cols-2">
+                <p className="mt-1 text-sm text-gray-500">
+                    As coordenadas são calculadas
+                    automaticamente.
+                </p>
 
+                <div className="mt-8 grid gap-6 md:grid-cols-2">
                     <Field
                         label="Morada"
                         value={street}
                         onChange={setStreet}
                         required
-                        placeholder="Rua das Flores 123"
                     />
 
                     <Field
                         label="Morada adicional"
                         value={street2}
                         onChange={setStreet2}
-                        placeholder="2º Esq."
                     />
 
                     <Field
@@ -497,7 +426,6 @@ export default function FloristForm({
                         value={postalCode}
                         onChange={setPostalCode}
                         required
-                        placeholder="4700-000"
                     />
 
                     <Field
@@ -505,7 +433,6 @@ export default function FloristForm({
                         value={city}
                         onChange={setCity}
                         required
-                        placeholder="Braga"
                     />
 
                     <Field
@@ -513,7 +440,6 @@ export default function FloristForm({
                         value={district}
                         onChange={setDistrict}
                         required
-                        placeholder="Braga"
                     />
 
                     <Field
@@ -521,70 +447,26 @@ export default function FloristForm({
                         value={countryCode}
                         onChange={setCountryCode}
                         required
-                        placeholder="PT"
                         maxLength={2}
                     />
-
                 </div>
-
-            </div>
-
-            {/* COORDENADAS */}
-
-            <div className="rounded-3xl bg-white p-8 shadow-sm">
-
-                <h2 className="text-xl font-bold text-[#2F3B2A]">
-                    Coordenadas
-                </h2>
-
-                <p className="mt-2 text-sm text-gray-500">
-                    Utilizadas para calcular a distância
-                    até ao local de entrega.
-                </p>
-
-                <div className="mt-8 grid gap-6 md:grid-cols-2">
-
-                    <Field
-                        label="Latitude"
-                        type="number"
-                        value={latitude}
-                        onChange={setLatitude}
-                        required
-                        step="any"
-                        placeholder="41.5454"
-                    />
-
-                    <Field
-                        label="Longitude"
-                        type="number"
-                        value={longitude}
-                        onChange={setLongitude}
-                        required
-                        step="any"
-                        placeholder="-8.4265"
-                    />
-
-                </div>
-
             </div>
 
             {/* NOTAS */}
 
             <div className="rounded-3xl bg-white p-8 shadow-sm">
-
                 <h2 className="text-xl font-bold text-[#2F3B2A]">
                     Notas da morada
                 </h2>
 
                 <textarea
                     value={notes}
-                    onChange={(e) =>
+                    onChange={(event) =>
                         setNotes(
-                            e.target.value,
+                            event.target.value,
                         )
                     }
                     rows={4}
-                    placeholder="Notas internas sobre a morada..."
                     className="
                         mt-6
                         w-full
@@ -598,43 +480,50 @@ export default function FloristForm({
                         focus:border-[#55624A]
                     "
                 />
-
             </div>
 
             {/* ESTADO */}
 
-            <div className="rounded-3xl bg-white p-8 shadow-sm">
+            {isEditing && (
+                <div className="rounded-3xl bg-white p-8 shadow-sm">
+                    <h2 className="text-xl font-bold text-[#2F3B2A]">
+                        Estado operacional
+                    </h2>
 
-                <h2 className="text-xl font-bold text-[#2F3B2A]">
-                    Estado operacional
-                </h2>
+                    <div className="mt-6 space-y-5">
+                        <Toggle
+                            label="Florista ativa"
+                            description="A florista está ativa na plataforma."
+                            value={active}
+                            onChange={setActive}
+                        />
 
-                <div className="mt-6 space-y-5">
-
-                    <Toggle
-                        label="Florista ativa"
-                        description="A florista está ativa na plataforma."
-                        value={active}
-                        onChange={setActive}
-                    />
-
-                    <Toggle
-                        label="Aceita encomendas"
-                        description="A florista pode receber novas propostas."
-                        value={acceptingOrders}
-                        onChange={
-                            setAcceptingOrders
-                        }
-                    />
-
+                        <Toggle
+                            label="Aceita encomendas"
+                            description="A florista pode receber novas propostas."
+                            value={acceptingOrders}
+                            onChange={
+                                setAcceptingOrders
+                            }
+                        />
+                    </div>
                 </div>
+            )}
 
-            </div>
+            {/* ================================================================ */}
+            {/* ADMINISTRADORES                                                 */}
+            {/* ================================================================ */}
 
-            {/* ACTIONS */}
+            {isEditing && (
+                <FloristAdminsManager
+                    floristId={florist.id}
+                    admins={florist.admins ?? []}
+                />
+            )}
+
+            {/* AÇÕES */}
 
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-
                 <button
                     type="button"
                     onClick={() =>
@@ -649,9 +538,7 @@ export default function FloristForm({
                         py-3
                         font-medium
                         text-gray-600
-                        transition
                         hover:bg-gray-50
-                        disabled:opacity-50
                     "
                 >
                     Cancelar
@@ -667,25 +554,22 @@ export default function FloristForm({
                         py-3
                         font-medium
                         text-white
-                        transition
                         hover:opacity-90
-                        disabled:cursor-not-allowed
                         disabled:opacity-50
                     "
                 >
                     {isSubmitting
-                        ? isEditing
-                            ? "A guardar..."
-                            : "A criar..."
-                        : isEditing
-                          ? "Guardar alterações"
-                          : "Criar florista"}
+                        ? "A guardar..."
+                        : "Guardar alterações"}
                 </button>
-
             </div>
         </form>
     );
 }
+
+/* ========================================================================== */
+/* FIELD                                                                      */
+/* ========================================================================== */
 
 type FieldProps = {
     label: string;
@@ -693,7 +577,6 @@ type FieldProps = {
     onChange: (value: string) => void;
     type?: string;
     required?: boolean;
-    placeholder?: string;
     min?: string;
     maxLength?: number;
     step?: string;
@@ -705,7 +588,6 @@ function Field({
     onChange,
     type = "text",
     required = false,
-    placeholder,
     min,
     maxLength,
     step,
@@ -714,6 +596,7 @@ function Field({
         <div>
             <label className="mb-2 block text-sm font-medium text-gray-700">
                 {label}
+
                 {required && (
                     <span className="ml-1 text-red-500">
                         *
@@ -724,13 +607,12 @@ function Field({
             <input
                 type={type}
                 value={value}
-                onChange={(e) =>
+                onChange={(event) =>
                     onChange(
-                        e.target.value,
+                        event.target.value,
                     )
                 }
                 required={required}
-                placeholder={placeholder}
                 min={min}
                 maxLength={maxLength}
                 step={step}
@@ -742,13 +624,16 @@ function Field({
                     px-4
                     py-3
                     outline-none
-                    transition
                     focus:border-[#55624A]
                 "
             />
         </div>
     );
 }
+
+/* ========================================================================== */
+/* TOGGLE                                                                     */
+/* ========================================================================== */
 
 type ToggleProps = {
     label: string;
@@ -765,7 +650,6 @@ function Toggle({
 }: ToggleProps) {
     return (
         <div className="flex items-center justify-between gap-6">
-
             <div>
                 <p className="font-medium text-[#2F3B2A]">
                     {label}
@@ -813,7 +697,6 @@ function Toggle({
                     `}
                 />
             </button>
-
         </div>
     );
 }

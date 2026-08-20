@@ -186,17 +186,6 @@ export class CreateOrderDto {
     @MaxLength(2)
     deliveryCountryCode: string;
 
-    @ApiProperty({
-        example: 41.14961,
-    })
-    @IsNumber()
-    deliveryLatitude: number;
-
-    @ApiProperty({
-        example: -8.61099,
-    })
-    @IsNumber()
-    deliveryLongitude: number;
 
     // Card
 

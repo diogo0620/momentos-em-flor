@@ -23,14 +23,24 @@ import { OrderDistributionService } from '@/orders/services/order-distribution.s
 import { UpdateOrderOfferDto } from './dto/update-order-offer.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrderOfferAcceptedEvent } from '@/events/order-offer/order-offer-accepted.event';
+import { OrderStatusService } from '@/orders/services/order-status.service';
 
 @Injectable()
 export class OrderOffersService {
     constructor(
         private readonly prisma: PrismaService,
-        private readonly mapper: OrderOfferMapper,
-        private readonly eventEmitter: EventEmitter2,
-        private readonly orderDistributionService : OrderDistributionService
+
+        private readonly mapper:
+            OrderOfferMapper,
+
+        private readonly eventEmitter:
+            EventEmitter2,
+
+        private readonly orderDistributionService:
+            OrderDistributionService,
+
+        private readonly orderStatusService:
+            OrderStatusService,
     ) { }
 
     async create(
@@ -44,9 +54,12 @@ export class OrderOffersService {
             );
 
         return ApiResponse.success(
-            this.mapper.toResponse(offer),
+            this.mapper.toResponse(
+                offer,
+            ),
         );
     }
+
     async update(
         id: number,
         dto: UpdateOrderOfferDto,
@@ -55,17 +68,17 @@ export class OrderOffersService {
             await this.prisma.orderOffer.findFirst({
                 where: {
                     id,
+
                     order: {
                         deletedAt: null,
                     },
                 },
+
                 include: {
-                    order: {
-                        include: {
-                            items: true,
-                        },
-                    },
+                    order: true,
+
                     orderOfferItems: true,
+
                     florist: true,
                 },
             });
@@ -103,10 +116,17 @@ export class OrderOffersService {
             const florist =
                 await this.prisma.florist.findFirst({
                     where: {
-                        id: dto.floristId,
-                        active: true,
-                        acceptingOrders: true,
-                        deletedAt: null,
+                        id:
+                            dto.floristId,
+
+                        active:
+                            true,
+
+                        acceptingOrders:
+                            true,
+
+                        deletedAt:
+                            null,
                     },
                 });
 
@@ -117,28 +137,40 @@ export class OrderOffersService {
             }
 
             /*
-             * Do not allow two offers for the
-             * same order + florist.
+             * Do not allow two active offers
+             * for the same order + florist.
              */
             if (
                 dto.floristId !==
                 offer.floristId
             ) {
-                const existingOffer =
-                    await this.prisma.orderOffer.findUnique({
+                const existingActiveOffer =
+                    await this.prisma.orderOffer.findFirst({
                         where: {
-                            orderId_floristId: {
-                                orderId:
-                                    offer.orderId,
-                                floristId:
-                                    dto.floristId,
+                            orderId:
+                                offer.orderId,
+
+                            floristId:
+                                dto.floristId,
+
+                            status: {
+                                in: [
+                                    OrderOfferStatus.PENDING,
+                                    OrderOfferStatus.VIEWED,
+                                ],
+                            },
+
+                            id: {
+                                not:
+                                    offer.id,
                             },
                         },
                     });
 
-                if (existingOffer) {
+                if (existingActiveOffer) {
                     Exceptions.conflict(
-                        ORDER_OFFER_MESSAGES.OFFER_ALREADY_EXISTS,
+                        ORDER_OFFER_MESSAGES
+                            .ACTIVE_OFFER_EXISTS,
                     );
                 }
             }
@@ -152,7 +184,9 @@ export class OrderOffersService {
          */
         const compensationAmount =
             dto.compensationAmount ??
-            Number(offer.compensationAmount);
+            Number(
+                offer.compensationAmount,
+            );
 
         /*
          * Compensation cannot exceed the
@@ -160,10 +194,13 @@ export class OrderOffersService {
          */
         if (
             compensationAmount >
-            Number(offer.order.subtotal)
+            Number(
+                offer.order.subtotal,
+            )
         ) {
             Exceptions.badRequest(
-                ORDER_OFFER_MESSAGES.COMPENSATION_TOO_HIGH,
+                ORDER_OFFER_MESSAGES
+                    .COMPENSATION_TOO_HIGH,
             );
         }
 
@@ -171,7 +208,8 @@ export class OrderOffersService {
             compensationAmount <= 0
         ) {
             Exceptions.badRequest(
-                ORDER_OFFER_MESSAGES.COMPENSATION_MUST_BE_POSITIVE,
+                ORDER_OFFER_MESSAGES
+                    .COMPENSATION_MUST_BE_POSITIVE,
             );
         }
 
@@ -183,13 +221,18 @@ export class OrderOffersService {
             offer.orderOfferItems.reduce(
                 (total, item) =>
                     total +
-                    Number(item.totalCompensation),
+                    Number(
+                        item.totalCompensation,
+                    ),
                 0,
             );
 
-        if (currentItemsTotal <= 0) {
+        if (
+            currentItemsTotal <= 0
+        ) {
             Exceptions.badRequest(
-                ORDER_OFFER_MESSAGES.COMPENSATION_INVALID,
+                ORDER_OFFER_MESSAGES
+                    .COMPENSATION_INVALID,
             );
         }
 
@@ -208,9 +251,14 @@ export class OrderOffersService {
                         );
 
                     return {
-                        id: item.id,
-                        quantity: item.quantity,
+                        id:
+                            item.id,
+
+                        quantity:
+                            item.quantity,
+
                         totalCompensation,
+
                         unitCompensation:
                             this.roundMoney(
                                 totalCompensation /
@@ -258,8 +306,10 @@ export class OrderOffersService {
 
             updatedItems[lastIndex] = {
                 ...lastItem,
+
                 totalCompensation:
                     correctedTotal,
+
                 unitCompensation:
                     this.roundMoney(
                         correctedTotal /
@@ -279,8 +329,10 @@ export class OrderOffersService {
                             (item) =>
                                 tx.orderOfferItem.update({
                                     where: {
-                                        id: item.id,
+                                        id:
+                                            item.id,
                                     },
+
                                     data: {
                                         unitCompensation:
                                             item.unitCompensation,
@@ -294,8 +346,10 @@ export class OrderOffersService {
 
                     return tx.orderOffer.update({
                         where: {
-                            id: offer.id,
+                            id:
+                                offer.id,
                         },
+
                         data: {
                             floristId,
 
@@ -306,16 +360,23 @@ export class OrderOffersService {
                                 dto.floristId !==
                                 offer.floristId
                                 ? {
-                                    viewedAt: null,
+                                    viewedAt:
+                                        null,
+
                                     status:
                                         OrderOfferStatus.PENDING,
                                 }
                                 : {}),
                         },
+
                         include: {
                             order: true,
-                            orderOfferItems: true,
-                            florist: true,
+
+                            orderOfferItems:
+                                true,
+
+                            florist:
+                                true,
                         },
                     });
                 },
@@ -337,13 +398,15 @@ export class OrderOffersService {
             !user.floristId
         ) {
             Exceptions.forbidden(
-                ORDER_OFFER_MESSAGES.FLORIST_REQUIRED,
+                ORDER_OFFER_MESSAGES
+                    .FLORIST_REQUIRED,
             );
         }
 
         const where = {
             ...(user.role === UserRole.FLORIST && {
-                floristId: user.floristId!,
+                floristId:
+                    user.floristId!,
             }),
 
             status: {
@@ -364,12 +427,17 @@ export class OrderOffersService {
 
                 include: {
                     order: true,
-                    orderOfferItems: true,
-                    florist: true,
+
+                    orderOfferItems:
+                        true,
+
+                    florist:
+                        true,
                 },
 
                 orderBy: {
-                    createdAt: 'desc',
+                    createdAt:
+                        'desc',
                 },
 
                 ...getPagination(
@@ -384,7 +452,10 @@ export class OrderOffersService {
             });
 
         return ApiResponse.paginated(
-            this.mapper.toResponses(offers),
+            this.mapper.toResponses(
+                offers,
+            ),
+
             getPaginationResponse(
                 query.page,
                 query.pageSize,
@@ -402,7 +473,8 @@ export class OrderOffersService {
             !user.floristId
         ) {
             Exceptions.forbidden(
-                ORDER_OFFER_MESSAGES.FLORIST_REQUIRED,
+                ORDER_OFFER_MESSAGES
+                    .FLORIST_REQUIRED,
             );
         }
 
@@ -412,7 +484,8 @@ export class OrderOffersService {
                     id,
 
                     ...(user.role === UserRole.FLORIST && {
-                        floristId: user.floristId!,
+                        floristId:
+                            user.floristId!,
                     }),
 
                     order: {
@@ -422,8 +495,12 @@ export class OrderOffersService {
 
                 include: {
                     order: true,
-                    orderOfferItems: true,
-                    florist: true,
+
+                    orderOfferItems:
+                        true,
+
+                    florist:
+                        true,
                 },
             });
 
@@ -435,13 +512,16 @@ export class OrderOffersService {
 
         if (
             user.role === UserRole.FLORIST &&
-            offer.status === OrderOfferStatus.PENDING
+            offer.status ===
+                OrderOfferStatus.PENDING
         ) {
-            const viewedAt = new Date();
+            const viewedAt =
+                new Date();
 
             await this.prisma.orderOffer.update({
                 where: {
-                    id: offer.id,
+                    id:
+                        offer.id,
                 },
 
                 data: {
@@ -460,7 +540,9 @@ export class OrderOffersService {
         }
 
         return ApiResponse.success(
-            this.mapper.toResponse(offer),
+            this.mapper.toResponse(
+                offer,
+            ),
         );
     }
 
@@ -468,22 +550,34 @@ export class OrderOffersService {
         user: AuthenticatedUser,
         id: number,
     ) {
+        /*
+         * Florist must be associated with a
+         * florist account.
+         */
         if (
             user.role === UserRole.FLORIST &&
             !user.floristId
         ) {
             Exceptions.forbidden(
-                ORDER_OFFER_MESSAGES.FLORIST_REQUIRED,
+                ORDER_OFFER_MESSAGES
+                    .FLORIST_REQUIRED,
             );
         }
 
+        /*
+         * Find the offer.
+         *
+         * Florists can only access their own
+         * offers.
+         */
         const offer =
             await this.prisma.orderOffer.findFirst({
                 where: {
                     id,
 
                     ...(user.role === UserRole.FLORIST && {
-                        floristId: user.floristId!,
+                        floristId:
+                            user.floristId!,
                     }),
 
                     order: {
@@ -498,6 +592,10 @@ export class OrderOffersService {
             );
         }
 
+        /*
+         * Only pending or viewed offers can
+         * be accepted.
+         */
         if (
             offer.status !==
             OrderOfferStatus.PENDING &&
@@ -505,15 +603,24 @@ export class OrderOffersService {
             OrderOfferStatus.VIEWED
         ) {
             Exceptions.badRequest(
-                ORDER_OFFER_MESSAGES.INVALID_STATUS,
+                ORDER_OFFER_MESSAGES
+                    .INVALID_STATUS,
             );
         }
 
-        if (offer.expiresAt <= new Date()) {
+        /*
+         * Check expiration.
+         */
+        if (
+            offer.expiresAt <=
+            new Date()
+        ) {
             await this.prisma.orderOffer.update({
                 where: {
-                    id: offer.id,
+                    id:
+                        offer.id,
                 },
+
                 data: {
                     status:
                         OrderOfferStatus.EXPIRED,
@@ -521,40 +628,45 @@ export class OrderOffersService {
             });
 
             Exceptions.badRequest(
-                ORDER_OFFER_MESSAGES.OFFER_EXPIRED,
+                ORDER_OFFER_MESSAGES
+                    .OFFER_EXPIRED,
             );
         }
 
+        /*
+         * Everything below happens in one
+         * transaction:
+         *
+         * 1. Assign order
+         * 2. Create status history
+         * 3. Accept offer
+         * 4. Cancel other offers
+         */
         const result =
             await this.prisma.$transaction(
                 async (tx) => {
                     /*
-                     * Assign the florist to the order
-                     * and change the order status.
+                     * Assign the order through the
+                     * centralized OrderStatusService.
+                     *
+                     * This also:
+                     * - sets assignedFloristId
+                     * - sets assignedAt
+                     * - changes status to ASSIGNED
+                     * - creates OrderStatusHistory
                      */
-                    const orderUpdate =
-                        await tx.order.updateMany({
-                            where: {
-                                id: offer.orderId,
-                                deletedAt: null,
-                                assignedFloristId: null,
-                            },
-                            data: {
-                                assignedFloristId:
-                                    offer.floristId,
+                    await this.orderStatusService
+                        .assignWithTransaction(
+                            tx,
 
-                                status:
-                                    OrderStatus.ASSIGNED,
-                            },
-                        });
+                            offer.orderId,
 
-                    if (
-                        orderUpdate.count === 0
-                    ) {
-                        Exceptions.conflict(
-                            ORDER_OFFER_MESSAGES.ORDER_ALREADY_ASSIGNED,
+                            offer.floristId,
+
+                            user,
+
+                            `Order assigned through accepted offer ${offer.id}.`,
                         );
-                    }
 
                     /*
                      * Accept the selected offer.
@@ -562,8 +674,10 @@ export class OrderOffersService {
                     const acceptedOffer =
                         await tx.orderOffer.update({
                             where: {
-                                id: offer.id,
+                                id:
+                                    offer.id,
                             },
+
                             data: {
                                 status:
                                     OrderOfferStatus.ACCEPTED,
@@ -571,16 +685,22 @@ export class OrderOffersService {
                                 acceptedAt:
                                     new Date(),
                             },
+
                             include: {
-                                order: true,
-                                florist: true,
-                                orderOfferItems: true,
+                                order:
+                                    true,
+
+                                florist:
+                                    true,
+
+                                orderOfferItems:
+                                    true,
                             },
                         });
 
                     /*
                      * Cancel all other active offers
-                     * for this order.
+                     * belonging to this order.
                      */
                     await tx.orderOffer.updateMany({
                         where: {
@@ -588,7 +708,8 @@ export class OrderOffersService {
                                 offer.orderId,
 
                             id: {
-                                not: offer.id,
+                                not:
+                                    offer.id,
                             },
 
                             status: {
@@ -598,6 +719,7 @@ export class OrderOffersService {
                                 ],
                             },
                         },
+
                         data: {
                             status:
                                 OrderOfferStatus.CANCELLED,
@@ -608,21 +730,10 @@ export class OrderOffersService {
                 },
             );
 
-        /*
-         * The transaction succeeded.
-         * Now notify the rest of the application.
-         */
-        this.eventEmitter.emit(
-            'order.offer.accepted',
-            new OrderOfferAcceptedEvent(
-                result.id,
-                result.orderId,
-                result.floristId,
-            ),
-        );
-
         return ApiResponse.success(
-            this.mapper.toResponse(result),
+            this.mapper.toResponse(
+                result,
+            ),
         );
     }
 
@@ -636,7 +747,8 @@ export class OrderOffersService {
             !user.floristId
         ) {
             Exceptions.forbidden(
-                ORDER_OFFER_MESSAGES.FLORIST_REQUIRED,
+                ORDER_OFFER_MESSAGES
+                    .FLORIST_REQUIRED,
             );
         }
 
@@ -646,7 +758,8 @@ export class OrderOffersService {
                     id,
 
                     ...(user.role === UserRole.FLORIST && {
-                        floristId: user.floristId!,
+                        floristId:
+                            user.floristId!,
                     }),
 
                     order: {
@@ -672,11 +785,16 @@ export class OrderOffersService {
             );
         }
 
-        if (offer.expiresAt <= new Date()) {
+        if (
+            offer.expiresAt <=
+            new Date()
+        ) {
             await this.prisma.orderOffer.update({
                 where: {
-                    id: offer.id,
+                    id:
+                        offer.id,
                 },
+
                 data: {
                     status:
                         OrderOfferStatus.EXPIRED,
@@ -691,8 +809,10 @@ export class OrderOffersService {
         const declinedOffer =
             await this.prisma.orderOffer.update({
                 where: {
-                    id: offer.id,
+                    id:
+                        offer.id,
                 },
+
                 data: {
                     status:
                         OrderOfferStatus.DECLINED,
@@ -703,10 +823,16 @@ export class OrderOffersService {
                     declineReason:
                         dto.reason.trim(),
                 },
+
                 include: {
-                    orderOfferItems: true,
-                    florist: true,
-                    order: true,
+                    order:
+                        true,
+
+                    orderOfferItems:
+                        true,
+
+                    florist:
+                        true,
                 },
             });
 
@@ -720,10 +846,12 @@ export class OrderOffersService {
     private roundMoney(
         value: number,
     ): number {
-        return Math.round(
-            (value + Number.EPSILON) * 100,
-        ) / 100;
+        return (
+            Math.round(
+                (value +
+                    Number.EPSILON) *
+                    100,
+            ) / 100
+        );
     }
-
-
 }

@@ -1,82 +1,122 @@
 import {
-  ApiProperty,
-  ApiPropertyOptional,
+    ApiProperty,
+    ApiPropertyOptional,
 } from '@nestjs/swagger';
 
-import { OrderOfferStatus } from '@prisma/client';
+import {
+    DeliveryTimeSlot,
+    Occasion,
+    OrderOfferStatus,
+} from '@prisma/client';
 
 class OrderOfferItemResponseDto {
-  @ApiProperty()
-  id: number;
+    @ApiProperty()
+    id: number;
 
-  @ApiProperty()
-  orderItemId: number;
+    @ApiProperty()
+    productId: number;
 
-  @ApiProperty()
-  productId: number;
+    @ApiProperty()
+    productName: string;
 
-  @ApiProperty()
-  productName: string;
+    @ApiProperty()
+    quantity: number;
+}
 
-  @ApiProperty()
-  quantity: number;
+class OrderOfferAddressResponseDto {
+    @ApiProperty()
+    street: string;
 
-  @ApiProperty()
-  unitCompensation: number;
+    @ApiPropertyOptional()
+    street2: string | null;
 
-  @ApiProperty()
-  totalCompensation: number;
+    @ApiProperty()
+    postalCode: string;
+
+    @ApiProperty()
+    city: string;
+
+    @ApiProperty()
+    district: string;
+
+    @ApiProperty()
+    countryCode: string;
+}
+
+class OrderOfferOrderResponseDto {
+    @ApiProperty()
+    id: number;
+
+    @ApiProperty()
+    orderNumber: string;
+
+    @ApiPropertyOptional({
+        enum: Occasion,
+    })
+    occasion: Occasion | null;
+
+    @ApiProperty()
+    deliveryDate: Date;
+
+    @ApiProperty({
+        enum: DeliveryTimeSlot,
+    })
+    deliveryTimeSlot: DeliveryTimeSlot;
+
+    @ApiProperty({
+        type: OrderOfferAddressResponseDto,
+    })
+    deliveryAddress: OrderOfferAddressResponseDto;
 }
 
 export class OrderOfferResponseDto {
-  @ApiProperty()
-  id: number;
+    @ApiProperty()
+    id: number;
 
-  @ApiProperty()
-  orderId: number;
+    @ApiProperty()
+    floristId: number;
 
-  @ApiProperty()
-  floristId: number;
+    @ApiProperty({
+        example: 12.43,
+    })
+    distanceKm: number;
 
-  @ApiProperty()
-  orderNumber: string;
+    @ApiProperty()
+    compensationAmount: number;
 
-  @ApiProperty({
-    example: 12.43,
-  })
-  distanceKm: number;
+    @ApiProperty({
+        enum: OrderOfferStatus,
+    })
+    status: OrderOfferStatus;
 
-  @ApiProperty()
-  compensationAmount: number;
+    @ApiPropertyOptional()
+    viewedAt: Date | null;
 
-  @ApiProperty({
-    enum: OrderOfferStatus,
-  })
-  status: OrderOfferStatus;
+    @ApiPropertyOptional()
+    acceptedAt: Date | null;
 
-  @ApiPropertyOptional()
-  viewedAt: Date | null;
+    @ApiPropertyOptional()
+    declinedAt: Date | null;
 
-  @ApiPropertyOptional()
-  acceptedAt: Date | null;
+    @ApiProperty()
+    expiresAt: Date;
 
-  @ApiPropertyOptional()
-  declinedAt: Date | null;
+    @ApiPropertyOptional()
+    declineReason: string | null;
 
-  @ApiProperty()
-  expiresAt: Date;
+    @ApiProperty({
+        type: OrderOfferOrderResponseDto,
+    })
+    order: OrderOfferOrderResponseDto;
 
-  @ApiPropertyOptional()
-  declineReason: string | null;
+    @ApiProperty({
+        type: [OrderOfferItemResponseDto],
+    })
+    items: OrderOfferItemResponseDto[];
 
-  @ApiProperty({
-    type: [OrderOfferItemResponseDto],
-  })
-  items: OrderOfferItemResponseDto[];
+    @ApiProperty()
+    createdAt: Date;
 
-  @ApiProperty()
-  createdAt: Date;
-
-  @ApiProperty()
-  updatedAt: Date;
+    @ApiProperty()
+    updatedAt: Date;
 }

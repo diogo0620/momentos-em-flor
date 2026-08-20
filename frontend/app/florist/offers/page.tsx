@@ -1,14 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import {
+    useCallback,
+    useEffect,
+    useState,
+} from "react";
+
 import {
     Check,
     Clock,
     MapPin,
     Package,
     X,
-    ChevronRight,
 } from "lucide-react";
 
 import {
@@ -21,31 +24,62 @@ import type {
     OrderOffer,
 } from "@/types/order-offer";
 
+/* -------------------------------------------------------------------------- */
+/* HELPERS                                                                    */
+/* -------------------------------------------------------------------------- */
+
 function formatCurrency(value: number) {
     return new Intl.NumberFormat("pt-PT", {
         style: "currency",
         currency: "EUR",
-    }).format(value);
+    }).format(Number(value));
 }
 
 function formatDate(value: string) {
-    return new Intl.DateTimeFormat("pt-PT", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-    }).format(new Date(value));
+    return new Intl.DateTimeFormat(
+        "pt-PT",
+        {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+        },
+    ).format(new Date(value));
 }
 
 function formatDateTime(value: string) {
-    return new Intl.DateTimeFormat("pt-PT", {
-        day: "2-digit",
-        month: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-    }).format(new Date(value));
+    return new Intl.DateTimeFormat(
+        "pt-PT",
+        {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        },
+    ).format(new Date(value));
 }
 
-function getTimeRemaining(expiresAt: string) {
+function formatTimeSlot(
+    value: string,
+) {
+    switch (value) {
+        case "MORNING":
+            return "Manhã";
+
+        case "AFTERNOON":
+            return "Tarde";
+
+        case "EVENING":
+            return "Noite";
+
+        default:
+            return value;
+    }
+}
+
+function getTimeRemaining(
+    expiresAt: string,
+) {
     const difference =
         new Date(expiresAt).getTime() -
         Date.now();
@@ -55,11 +89,13 @@ function getTimeRemaining(expiresAt: string) {
     }
 
     const hours = Math.floor(
-        difference / (1000 * 60 * 60),
+        difference /
+            (1000 * 60 * 60),
     );
 
     const minutes = Math.floor(
-        (difference % (1000 * 60 * 60)) /
+        (difference %
+            (1000 * 60 * 60)) /
             (1000 * 60),
     );
 
@@ -69,6 +105,10 @@ function getTimeRemaining(expiresAt: string) {
 
     return `${minutes}min restantes`;
 }
+
+/* -------------------------------------------------------------------------- */
+/* COMPONENT                                                                  */
+/* -------------------------------------------------------------------------- */
 
 export default function FloristOffersPage() {
     const [offers, setOffers] =
@@ -80,8 +120,18 @@ export default function FloristOffersPage() {
     const [processingId, setProcessingId] =
         useState<number | null>(null);
 
+    const [decliningId, setDecliningId] =
+        useState<number | null>(null);
+
+    const [declineReason, setDeclineReason] =
+        useState("");
+
     const [error, setError] =
         useState<string | null>(null);
+
+    /* ---------------------------------------------------------------------- */
+    /* LOAD OFFERS                                                            */
+    /* ---------------------------------------------------------------------- */
 
     const loadOffers = useCallback(
         async () => {
@@ -109,6 +159,10 @@ export default function FloristOffersPage() {
     useEffect(() => {
         loadOffers();
     }, [loadOffers]);
+
+    /* ---------------------------------------------------------------------- */
+    /* ACCEPT                                                                 */
+    /* ---------------------------------------------------------------------- */
 
     async function handleAccept(
         offerId: number,
@@ -138,15 +192,21 @@ export default function FloristOffersPage() {
         }
     }
 
+    /* ---------------------------------------------------------------------- */
+    /* DECLINE                                                                */
+    /* ---------------------------------------------------------------------- */
+
     async function handleDecline(
         offerId: number,
     ) {
-        const confirmed =
-            window.confirm(
-                "Tem a certeza de que pretende recusar esta proposta?",
+        const reason =
+            declineReason.trim();
+
+        if (!reason) {
+            setError(
+                "Indique o motivo da recusa.",
             );
 
-        if (!confirmed) {
             return;
         }
 
@@ -156,6 +216,7 @@ export default function FloristOffersPage() {
 
             await declineOrderOffer(
                 offerId,
+                reason,
             );
 
             setOffers((current) =>
@@ -164,6 +225,9 @@ export default function FloristOffersPage() {
                         offer.id !== offerId,
                 ),
             );
+
+            setDecliningId(null);
+            setDeclineReason("");
         } catch (err) {
             setError(
                 err instanceof Error
@@ -175,11 +239,16 @@ export default function FloristOffersPage() {
         }
     }
 
+    /* ---------------------------------------------------------------------- */
+    /* LOADING                                                                 */
+    /* ---------------------------------------------------------------------- */
+
     if (isLoading) {
         return (
             <div>
 
                 <div className="mb-8">
+
                     <h1 className="text-3xl font-bold text-[#2F3B2A]">
                         Propostas
                     </h1>
@@ -187,6 +256,7 @@ export default function FloristOffersPage() {
                     <p className="mt-2 text-gray-500">
                         Consulte as propostas de encomendas que recebeu.
                     </p>
+
                 </div>
 
                 <div className="space-y-5">
@@ -196,7 +266,7 @@ export default function FloristOffersPage() {
                             <div
                                 key={item}
                                 className="
-                                    h-64
+                                    h-72
                                     animate-pulse
                                     rounded-3xl
                                     bg-gray-100
@@ -210,6 +280,10 @@ export default function FloristOffersPage() {
             </div>
         );
     }
+
+    /* ---------------------------------------------------------------------- */
+    /* PAGE                                                                    */
+    /* ---------------------------------------------------------------------- */
 
     return (
         <div>
@@ -250,6 +324,7 @@ export default function FloristOffersPage() {
                         <Package size={16} />
 
                         {offers.length}{" "}
+
                         {offers.length === 1
                             ? "proposta"
                             : "propostas"}
@@ -299,394 +374,674 @@ export default function FloristOffersPage() {
 
                 </div>
             ) : (
-                <div className="space-y-5">
+                <div className="space-y-6">
 
-                    {offers.map((offer) => {
-                        const isProcessing =
-                            processingId ===
-                            offer.id;
+                    {offers.map(
+                        (offer) => {
+                            const isProcessing =
+                                processingId ===
+                                offer.id;
 
-                        const isExpired =
-                            new Date(
-                                offer.expiresAt,
-                            ).getTime() <=
-                            Date.now();
+                            const isDeclining =
+                                decliningId ===
+                                offer.id;
 
-                        return (
-                            <article
-                                key={offer.id}
-                                className="
-                                    overflow-hidden
-                                    rounded-3xl
-                                    bg-white
-                                    shadow-sm
-                                "
-                            >
+                            const isExpired =
+                                new Date(
+                                    offer.expiresAt,
+                                ).getTime() <=
+                                Date.now();
 
-                                {/* TOP */}
+                            return (
+                                <article
+                                    key={offer.id}
+                                    className="
+                                        overflow-hidden
+                                        rounded-3xl
+                                        bg-white
+                                        shadow-sm
+                                    "
+                                >
 
-                                <div className="border-b border-gray-100 p-6">
+                                    {/* TOP */}
 
-                                    <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+                                    <div className="border-b border-gray-100 p-6">
 
-                                        <div>
+                                        <div className="flex flex-col justify-between gap-5 md:flex-row md:items-start">
 
-                                            <div className="flex items-center gap-3">
+                                            <div>
 
-                                                <span className="text-lg font-bold text-[#2F3B2A]">
-                                                    #{offer.orderNumber}
-                                                </span>
+                                                <p className="text-sm font-medium uppercase tracking-wider text-[#55624A]">
+                                                    Nova proposta
+                                                </p>
 
-                                                {offer.status ===
-                                                    "PENDING" && (
-                                                    <span
-                                                        className="
-                                                            rounded-full
-                                                            bg-yellow-50
-                                                            px-3
-                                                            py-1
-                                                            text-xs
-                                                            font-medium
-                                                            text-yellow-700
-                                                        "
-                                                    >
-                                                        Nova proposta
-                                                    </span>
-                                                )}
+                                                <h2 className="mt-2 text-xl font-bold text-[#2F3B2A]">
+                                                    Nova encomenda para entrega
+                                                </h2>
+
+                                                <p className="mt-2 text-sm text-gray-400">
+                                                    Recebida em{" "}
+                                                    {formatDateTime(
+                                                        offer.createdAt,
+                                                    )}
+                                                </p>
 
                                             </div>
 
-                                            <p className="mt-2 text-sm text-gray-400">
-                                                Recebida em{" "}
-                                                {formatDateTime(
-                                                    offer.createdAt,
-                                                )}
-                                            </p>
+                                            <div className="text-left md:text-right">
 
-                                        </div>
+                                                <p className="text-xs text-gray-400">
+                                                    Vai receber
+                                                </p>
 
-                                        <div className="text-left md:text-right">
+                                                <p className="mt-1 text-3xl font-bold text-[#55624A]">
+                                                    {formatCurrency(
+                                                        offer.compensationAmount,
+                                                    )}
+                                                </p>
 
-                                            <p className="text-xs text-gray-400">
-                                                Compensação
-                                            </p>
-
-                                            <p className="mt-1 text-2xl font-bold text-[#55624A]">
-                                                {formatCurrency(
-                                                    offer.compensationAmount,
-                                                )}
-                                            </p>
+                                            </div>
 
                                         </div>
 
                                     </div>
 
-                                </div>
+                                    {/* KEY INFORMATION */}
 
-                                {/* INFO */}
+                                    <div className="grid gap-6 border-b border-gray-100 p-6 md:grid-cols-2 xl:grid-cols-4">
 
-                                <div className="grid gap-6 border-b border-gray-100 p-6 md:grid-cols-3">
+                                        {/* DISTANCE */}
 
-                                    <div className="flex items-start gap-3">
+                                        <div className="flex items-start gap-3">
 
-                                        <div
-                                            className="
-                                                flex
-                                                h-10
-                                                w-10
-                                                shrink-0
-                                                items-center
-                                                justify-center
-                                                rounded-full
-                                                bg-[#F5F7F2]
-                                                text-[#55624A]
-                                            "
-                                        >
-                                            <Package
-                                                size={18}
-                                            />
-                                        </div>
-
-                                        <div>
-
-                                            <p className="text-xs text-gray-400">
-                                                Produtos
-                                            </p>
-
-                                            <p className="mt-1 font-medium text-gray-700">
-                                                {offer.items.length}{" "}
-                                                {offer.items.length ===
-                                                1
-                                                    ? "produto"
-                                                    : "produtos"}
-                                            </p>
-
-                                        </div>
-
-                                    </div>
-
-                                    <div className="flex items-start gap-3">
-
-                                        <div
-                                            className="
-                                                flex
-                                                h-10
-                                                w-10
-                                                shrink-0
-                                                items-center
-                                                justify-center
-                                                rounded-full
-                                                bg-[#F5F7F2]
-                                                text-[#55624A]
-                                            "
-                                        >
-                                            <Clock
-                                                size={18}
-                                            />
-                                        </div>
-
-                                        <div>
-
-                                            <p className="text-xs text-gray-400">
-                                                Responder até
-                                            </p>
-
-                                            <p
-                                                className={`
-                                                    mt-1
-                                                    font-medium
-                                                    ${
-                                                        isExpired
-                                                            ? "text-red-600"
-                                                            : "text-gray-700"
-                                                    }
-                                                `}
+                                            <div
+                                                className="
+                                                    flex
+                                                    h-10
+                                                    w-10
+                                                    shrink-0
+                                                    items-center
+                                                    justify-center
+                                                    rounded-full
+                                                    bg-[#F5F7F2]
+                                                    text-[#55624A]
+                                                "
                                             >
-                                                {isExpired
-                                                    ? "Expirada"
-                                                    : getTimeRemaining(
-                                                          offer.expiresAt,
-                                                      )}
-                                            </p>
+                                                <MapPin
+                                                    size={18}
+                                                />
+                                            </div>
+
+                                            <div>
+
+                                                <p className="text-xs text-gray-400">
+                                                    Distância
+                                                </p>
+
+                                                <p className="mt-1 font-medium text-gray-700">
+                                                    {Number(
+                                                        offer.distanceKm,
+                                                    ).toFixed(
+                                                        1,
+                                                    )}{" "}
+                                                    km
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+
+                                        {/* DELIVERY DATE */}
+
+                                        <div className="flex items-start gap-3">
+
+                                            <div
+                                                className="
+                                                    flex
+                                                    h-10
+                                                    w-10
+                                                    shrink-0
+                                                    items-center
+                                                    justify-center
+                                                    rounded-full
+                                                    bg-[#F5F7F2]
+                                                    text-[#55624A]
+                                                "
+                                            >
+                                                <Clock
+                                                    size={18}
+                                                />
+                                            </div>
+
+                                            <div>
+
+                                                <p className="text-xs text-gray-400">
+                                                    Entrega
+                                                </p>
+
+                                                <p className="mt-1 font-medium text-gray-700">
+                                                    {formatDate(
+                                                        offer
+                                                            .order
+                                                            .deliveryDate,
+                                                    )}
+                                                </p>
+
+                                                <p className="mt-0.5 text-sm text-gray-400">
+                                                    {formatTimeSlot(
+                                                        offer
+                                                            .order
+                                                            .deliveryTimeSlot,
+                                                    )}
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+
+                                        {/* RESPONSE DEADLINE */}
+
+                                        <div className="flex items-start gap-3">
+
+                                            <div
+                                                className="
+                                                    flex
+                                                    h-10
+                                                    w-10
+                                                    shrink-0
+                                                    items-center
+                                                    justify-center
+                                                    rounded-full
+                                                    bg-[#F5F7F2]
+                                                    text-[#55624A]
+                                                "
+                                            >
+                                                <Clock
+                                                    size={18}
+                                                />
+                                            </div>
+
+                                            <div>
+
+                                                <p className="text-xs text-gray-400">
+                                                    Responder até
+                                                </p>
+
+                                                <p
+                                                    className={`
+                                                        mt-1
+                                                        font-medium
+                                                        ${
+                                                            isExpired
+                                                                ? "text-red-600"
+                                                                : "text-gray-700"
+                                                        }
+                                                    `}
+                                                >
+                                                    {isExpired
+                                                        ? "Expirada"
+                                                        : getTimeRemaining(
+                                                              offer.expiresAt,
+                                                          )}
+                                                </p>
+
+                                                <p className="mt-0.5 text-xs text-gray-400">
+                                                    {formatDateTime(
+                                                        offer.expiresAt,
+                                                    )}
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+
+                                        {/* PRODUCTS COUNT */}
+
+                                        <div className="flex items-start gap-3">
+
+                                            <div
+                                                className="
+                                                    flex
+                                                    h-10
+                                                    w-10
+                                                    shrink-0
+                                                    items-center
+                                                    justify-center
+                                                    rounded-full
+                                                    bg-[#F5F7F2]
+                                                    text-[#55624A]
+                                                "
+                                            >
+                                                <Package
+                                                    size={18}
+                                                />
+                                            </div>
+
+                                            <div>
+
+                                                <p className="text-xs text-gray-400">
+                                                    Produtos
+                                                </p>
+
+                                                <p className="mt-1 font-medium text-gray-700">
+                                                    {offer.items.length}{" "}
+                                                    {offer.items.length ===
+                                                    1
+                                                        ? "produto"
+                                                        : "produtos"}
+                                                </p>
+
+                                                <p className="mt-0.5 text-sm text-gray-400">
+                                                    {
+                                                        offer.items.reduce(
+                                                            (
+                                                                total,
+                                                                item,
+                                                            ) =>
+                                                                total +
+                                                                item.quantity,
+                                                            0,
+                                                        )
+                                                    }{" "}
+                                                    unidades
+                                                </p>
+
+                                            </div>
 
                                         </div>
 
                                     </div>
 
-                                    <div className="flex items-start gap-3">
+                                    {/* DELIVERY ADDRESS */}
 
-                                        <div
-                                            className="
-                                                flex
-                                                h-10
-                                                w-10
-                                                shrink-0
-                                                items-center
-                                                justify-center
-                                                rounded-full
-                                                bg-[#F5F7F2]
-                                                text-[#55624A]
-                                            "
-                                        >
-                                            <MapPin
-                                                size={18}
-                                            />
-                                        </div>
+                                    <div className="border-b border-gray-100 p-6">
 
-                                        <div>
+                                        <div className="flex items-start gap-3">
 
-                                            <p className="text-xs text-gray-400">
-                                                Entrega
-                                            </p>
+                                            <div
+                                                className="
+                                                    flex
+                                                    h-10
+                                                    w-10
+                                                    shrink-0
+                                                    items-center
+                                                    justify-center
+                                                    rounded-full
+                                                    bg-[#F5F7F2]
+                                                    text-[#55624A]
+                                                "
+                                            >
+                                                <MapPin
+                                                    size={18}
+                                                />
+                                            </div>
 
-                                            <p className="mt-1 font-medium text-gray-700">
-                                                Ver detalhes da encomenda
-                                            </p>
+                                            <div>
 
-                                        </div>
+                                                <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
+                                                    Morada de entrega
+                                                </p>
 
-                                    </div>
-
-                                </div>
-
-                                {/* PRODUCTS */}
-
-                                <div className="p-6">
-
-                                    <h3 className="mb-4 text-sm font-semibold text-[#2F3B2A]">
-                                        Produtos da encomenda
-                                    </h3>
-
-                                    <div className="space-y-3">
-
-                                        {offer.items.map(
-                                            (item) => (
-                                                <div
-                                                    key={
-                                                        item.id
+                                                <p className="mt-2 font-medium text-gray-700">
+                                                    {
+                                                        offer
+                                                            .order
+                                                            .deliveryAddress
+                                                            .street
                                                     }
+
+                                                    {offer
+                                                        .order
+                                                        .deliveryAddress
+                                                        .street2 && (
+                                                        <>
+                                                            {", "}
+                                                            {
+                                                                offer
+                                                                    .order
+                                                                    .deliveryAddress
+                                                                    .street2
+                                                            }
+                                                        </>
+                                                    )}
+                                                </p>
+
+                                                <p className="mt-1 text-sm text-gray-500">
+                                                    {
+                                                        offer
+                                                            .order
+                                                            .deliveryAddress
+                                                            .postalCode
+                                                    }{" "}
+                                                    {
+                                                        offer
+                                                            .order
+                                                            .deliveryAddress
+                                                            .city
+                                                    }
+                                                </p>
+
+                                                <p className="text-sm text-gray-500">
+                                                    {
+                                                        offer
+                                                            .order
+                                                            .deliveryAddress
+                                                            .district
+                                                    }
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                    {/* PRODUCTS */}
+
+                                    <div className="p-6">
+
+                                        <h3 className="mb-4 text-sm font-semibold text-[#2F3B2A]">
+                                            Produtos da encomenda
+                                        </h3>
+
+                                        <div className="space-y-3">
+
+                                            {offer.items.map(
+                                                (item) => (
+                                                    <div
+                                                        key={
+                                                            item.id
+                                                        }
+                                                        className="
+                                                            flex
+                                                            items-center
+                                                            justify-between
+                                                            gap-4
+                                                            rounded-2xl
+                                                            bg-[#FAFBF8]
+                                                            px-4
+                                                            py-4
+                                                        "
+                                                    >
+
+                                                        <div className="flex items-center gap-3">
+
+                                                            <div
+                                                                className="
+                                                                    flex
+                                                                    h-9
+                                                                    w-9
+                                                                    shrink-0
+                                                                    items-center
+                                                                    justify-center
+                                                                    rounded-full
+                                                                    bg-[#D6DEC8]
+                                                                    text-sm
+                                                                    font-semibold
+                                                                    text-[#55624A]
+                                                                "
+                                                            >
+                                                                {
+                                                                    item.quantity
+                                                                }
+                                                                ×
+                                                            </div>
+
+                                                            <div>
+
+                                                                <p className="font-medium text-gray-700">
+                                                                    {
+                                                                        item.productName
+                                                                    }
+                                                                </p>
+
+                                                                <p className="mt-1 text-xs text-gray-400">
+                                                                    Quantidade:{" "}
+                                                                    {
+                                                                        item.quantity
+                                                                    }
+                                                                </p>
+
+                                                            </div>
+
+                                                        </div>
+
+                                                    </div>
+                                                ),
+                                            )}
+
+                                        </div>
+
+                                    </div>
+
+                                    {/* DECLINE FORM */}
+
+                                    {isDeclining && (
+                                        <div className="border-t border-gray-100 bg-red-50/50 p-6">
+
+                                            <label className="mb-2 block text-sm font-semibold text-[#2F3B2A]">
+                                                Motivo da recusa
+                                            </label>
+
+                                            <p className="mb-3 text-sm text-gray-500">
+                                                Indique o motivo pelo qual não pode aceitar esta encomenda.
+                                            </p>
+
+                                            <textarea
+                                                value={
+                                                    declineReason
+                                                }
+                                                onChange={(
+                                                    event,
+                                                ) =>
+                                                    setDeclineReason(
+                                                        event
+                                                            .target
+                                                            .value,
+                                                    )
+                                                }
+                                                rows={
+                                                    4
+                                                }
+                                                maxLength={
+                                                    1000
+                                                }
+                                                placeholder="Ex.: Não tenho disponibilidade para realizar esta entrega."
+                                                className="
+                                                    w-full
+                                                    resize-none
+                                                    rounded-2xl
+                                                    border
+                                                    border-gray-200
+                                                    bg-white
+                                                    p-4
+                                                    text-sm
+                                                    text-gray-700
+                                                    outline-none
+                                                    transition
+                                                    placeholder:text-gray-400
+                                                    focus:border-[#55624A]
+                                                    focus:ring-4
+                                                    focus:ring-[#55624A]/10
+                                                "
+                                                autoFocus
+                                            />
+
+                                            <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+
+                                                <button
+                                                    type="button"
+                                                    disabled={
+                                                        isProcessing
+                                                    }
+                                                    onClick={() => {
+                                                        setDecliningId(
+                                                            null,
+                                                        );
+                                                        setDeclineReason(
+                                                            "",
+                                                        );
+                                                        setError(
+                                                            null,
+                                                        );
+                                                    }}
                                                     className="
-                                                        flex
-                                                        items-center
-                                                        justify-between
-                                                        gap-4
                                                         rounded-2xl
-                                                        bg-[#FAFBF8]
-                                                        px-4
+                                                        px-5
                                                         py-3
+                                                        text-sm
+                                                        font-medium
+                                                        text-gray-600
+                                                        transition
+                                                        hover:bg-white
                                                     "
                                                 >
+                                                    Cancelar
+                                                </button>
 
-                                                    <div>
+                                                <button
+                                                    type="button"
+                                                    disabled={
+                                                        isProcessing ||
+                                                        !declineReason.trim()
+                                                    }
+                                                    onClick={() =>
+                                                        handleDecline(
+                                                            offer.id,
+                                                        )
+                                                    }
+                                                    className="
+                                                        inline-flex
+                                                        items-center
+                                                        justify-center
+                                                        gap-2
+                                                        rounded-2xl
+                                                        bg-red-600
+                                                        px-5
+                                                        py-3
+                                                        text-sm
+                                                        font-medium
+                                                        text-white
+                                                        transition
+                                                        hover:opacity-90
+                                                        disabled:cursor-not-allowed
+                                                        disabled:opacity-50
+                                                    "
+                                                >
+                                                    <X
+                                                        size={
+                                                            17
+                                                        }
+                                                    />
 
-                                                        <p className="font-medium text-gray-700">
-                                                            {
-                                                                item.productName
-                                                            }
-                                                        </p>
+                                                    {isProcessing
+                                                        ? "A recusar..."
+                                                        : "Confirmar recusa"}
+                                                </button>
 
-                                                        <p className="mt-1 text-xs text-gray-400">
-                                                            Quantidade:{" "}
-                                                            {
-                                                                item.quantity
-                                                            }
-                                                        </p>
+                                            </div>
 
-                                                    </div>
+                                        </div>
+                                    )}
 
-                                                    <div className="text-right">
+                                    {/* ACTIONS */}
 
-                                                        <p className="text-sm font-medium text-gray-700">
-                                                            {formatCurrency(
-                                                                item.totalCompensation,
-                                                            )}
-                                                        </p>
+                                    {!isDeclining && (
+                                        <div className="flex flex-col gap-3 border-t border-gray-100 bg-[#FAFBF8] p-6 sm:flex-row sm:items-center sm:justify-end">
 
-                                                        <p className="text-xs text-gray-400">
-                                                            {formatCurrency(
-                                                                item.unitCompensation,
-                                                            )}{" "}
-                                                            / unidade
-                                                        </p>
+                                            <button
+                                                type="button"
+                                                disabled={
+                                                    isProcessing ||
+                                                    isExpired
+                                                }
+                                                onClick={() => {
+                                                    setDecliningId(
+                                                        offer.id,
+                                                    );
+                                                    setDeclineReason(
+                                                        "",
+                                                    );
+                                                    setError(
+                                                        null,
+                                                    );
+                                                }}
+                                                className="
+                                                    inline-flex
+                                                    items-center
+                                                    justify-center
+                                                    gap-2
+                                                    rounded-2xl
+                                                    border
+                                                    border-red-200
+                                                    bg-white
+                                                    px-5
+                                                    py-3
+                                                    text-sm
+                                                    font-medium
+                                                    text-red-600
+                                                    transition
+                                                    hover:bg-red-50
+                                                    disabled:cursor-not-allowed
+                                                    disabled:opacity-50
+                                                "
+                                            >
+                                                <X
+                                                    size={
+                                                        17
+                                                    }
+                                                />
 
-                                                    </div>
+                                                Recusar
+                                            </button>
 
-                                                </div>
-                                            ),
-                                        )}
+                                            <button
+                                                type="button"
+                                                disabled={
+                                                    isProcessing ||
+                                                    isExpired
+                                                }
+                                                onClick={() =>
+                                                    handleAccept(
+                                                        offer.id,
+                                                    )
+                                                }
+                                                className="
+                                                    inline-flex
+                                                    items-center
+                                                    justify-center
+                                                    gap-2
+                                                    rounded-2xl
+                                                    bg-[#55624A]
+                                                    px-6
+                                                    py-3
+                                                    text-sm
+                                                    font-medium
+                                                    text-white
+                                                    transition
+                                                    hover:opacity-90
+                                                    disabled:cursor-not-allowed
+                                                    disabled:opacity-50
+                                                "
+                                            >
+                                                <Check
+                                                    size={
+                                                        17
+                                                    }
+                                                />
 
-                                    </div>
+                                                {isProcessing
+                                                    ? "A processar..."
+                                                    : "Aceitar"}
+                                            </button>
 
-                                </div>
+                                        </div>
+                                    )}
 
-                                {/* FOOTER */}
-
-                                <div className="flex flex-col gap-3 border-t border-gray-100 bg-[#FAFBF8] p-6 sm:flex-row sm:items-center sm:justify-between">
-
-                                    <Link
-                                        href={`/florist/orders/${offer.orderId}`}
-                                        className="
-                                            inline-flex
-                                            items-center
-                                            justify-center
-                                            gap-2
-                                            rounded-2xl
-                                            px-5
-                                            py-3
-                                            text-sm
-                                            font-medium
-                                            text-[#55624A]
-                                            transition
-                                            hover:bg-[#F0F2EB]
-                                        "
-                                    >
-                                        Ver encomenda
-                                        <ChevronRight
-                                            size={16}
-                                        />
-                                    </Link>
-
-                                    <div className="flex gap-3">
-
-                                        <button
-                                            type="button"
-                                            disabled={
-                                                isProcessing ||
-                                                isExpired
-                                            }
-                                            onClick={() =>
-                                                handleDecline(
-                                                    offer.id,
-                                                )
-                                            }
-                                            className="
-                                                inline-flex
-                                                items-center
-                                                justify-center
-                                                gap-2
-                                                rounded-2xl
-                                                border
-                                                border-red-200
-                                                bg-white
-                                                px-5
-                                                py-3
-                                                text-sm
-                                                font-medium
-                                                text-red-600
-                                                transition
-                                                hover:bg-red-50
-                                                disabled:cursor-not-allowed
-                                                disabled:opacity-50
-                                            "
-                                        >
-                                            <X size={17} />
-
-                                            Recusar
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            disabled={
-                                                isProcessing ||
-                                                isExpired
-                                            }
-                                            onClick={() =>
-                                                handleAccept(
-                                                    offer.id,
-                                                )
-                                            }
-                                            className="
-                                                inline-flex
-                                                items-center
-                                                justify-center
-                                                gap-2
-                                                rounded-2xl
-                                                bg-[#55624A]
-                                                px-6
-                                                py-3
-                                                text-sm
-                                                font-medium
-                                                text-white
-                                                transition
-                                                hover:opacity-90
-                                                disabled:cursor-not-allowed
-                                                disabled:opacity-50
-                                            "
-                                        >
-                                            <Check size={17} />
-
-                                            {isProcessing
-                                                ? "A processar..."
-                                                : "Aceitar"}
-                                        </button>
-
-                                    </div>
-
-                                </div>
-
-                            </article>
-                        );
-                    })}
+                                </article>
+                            );
+                        },
+                    )}
 
                 </div>
             )}

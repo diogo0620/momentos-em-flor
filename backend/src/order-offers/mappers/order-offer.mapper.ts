@@ -1,86 +1,116 @@
 import { OrderOfferResponseDto } from '../dto/order-offer-response.dto';
 
 export class OrderOfferMapper {
-  toResponse(
-    offer: any,
-  ): OrderOfferResponseDto {
-    return {
-      id: offer.id,
+    toResponse(
+        offer: any,
+    ): OrderOfferResponseDto {
+        return {
+            id:
+                offer.id,
+            floristId:
+                offer.floristId,
 
-      orderId: offer.orderId,
-      floristId: offer.floristId,
+            distanceKm:
+                Number(
+                    offer.distanceKm,
+                ),
 
-      orderNumber:
-        offer.order.orderNumber,
+            compensationAmount:
+                Number(
+                    offer.compensationAmount,
+                ),
 
-        distanceKm: Number(offer.distanceKm),
+            status:
+                offer.status,
 
-      compensationAmount:
-        Number(
-          offer.compensationAmount,
-        ),
+            viewedAt:
+                offer.viewedAt,
 
-      status:
-        offer.status,
+            acceptedAt:
+                offer.acceptedAt,
 
-      viewedAt:
-        offer.viewedAt,
+            declinedAt:
+                offer.declinedAt,
 
-      acceptedAt:
-        offer.acceptedAt,
+            expiresAt:
+                offer.expiresAt,
 
-      declinedAt:
-        offer.declinedAt,
+            declineReason:
+                offer.declineReason,
 
-      expiresAt:
-        offer.expiresAt,
+            order: {
+                id:
+                    offer.order.id,
 
-      declineReason:
-        offer.declineReason,
+                orderNumber:
+                    offer.order.orderNumber,
 
-      items:
-        offer.orderOfferItems.map(
-          (item: any) => ({
-            id: item.id,
+                occasion:
+                    offer.order.occasion,
 
-            orderItemId:
-              item.orderItemId,
+                deliveryDate:
+                    offer.order.deliveryDate,
 
-            productId:
-              item.productId,
+                deliveryTimeSlot:
+                    offer.order.deliveryTimeSlot,
 
-            productName:
-              item.productName,
+                deliveryAddress: {
+                    street:
+                        offer.order.deliveryStreet,
 
-            quantity:
-              item.quantity,
+                    street2:
+                        offer.order.deliveryStreet2,
 
-            unitCompensation:
-              Number(
-                item.unitCompensation,
-              ),
+                    postalCode:
+                        offer.order.deliveryPostalCode,
 
-            totalCompensation:
-              Number(
-                item.totalCompensation,
-              ),
-          }),
-        ),
+                    city:
+                        offer.order.deliveryCity,
 
-      createdAt:
-        offer.createdAt,
+                    district:
+                        offer.order.deliveryDistrict,
 
-      updatedAt:
-        offer.updatedAt,
-    };
-  }
+                    countryCode:
+                        offer.order.deliveryCountryCode,
+                },
+            },
 
-  toResponses(
-    offers: any[],
-  ): OrderOfferResponseDto[] {
-    return offers.map(
-      (offer) =>
-        this.toResponse(offer),
-    );
-  }
+            items:
+                (
+                    offer.orderOfferItems ??
+                    []
+                ).map(
+                    (item: any) => ({
+                        id:
+                            item.id,
+
+                        productId:
+                            item.productId,
+
+                        productName:
+                            item.productName,
+
+                        quantity:
+                            item.quantity,
+                    }),
+                ),
+
+            createdAt:
+                offer.createdAt,
+
+            updatedAt:
+                offer.updatedAt,
+        };
+    }
+
+    toResponses(
+        offers: any[],
+    ): OrderOfferResponseDto[] {
+        return offers.map(
+            (offer) =>
+                this.toResponse(
+                    offer,
+                ),
+        );
+    }
 }

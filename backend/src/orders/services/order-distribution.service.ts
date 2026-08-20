@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { Exceptions } from '@/common/exceptions/exceptions';
 import { ORDER_MESSAGES } from '../constants/order.messages';
-import { DeliveryTimeSlot } from '@prisma/client';
+import { DeliveryTimeSlot, OrderOfferStatus } from '@prisma/client';
 
 @Injectable()
 export class OrderDistributionService {
@@ -177,19 +177,24 @@ export class OrderDistributionService {
                 Number(florist.address.longitude),
             );
 
-        const existingOffer =
-            await this.prisma.orderOffer.findUnique({
+        const existingActiveOffer =
+            await this.prisma.orderOffer.findFirst({
                 where: {
-                    orderId_floristId: {
-                        orderId,
-                        floristId,
+                    orderId,
+                    floristId,
+
+                    status: {
+                        in: [
+                            OrderOfferStatus.PENDING,
+                            OrderOfferStatus.VIEWED,
+                        ],
                     },
                 },
             });
 
-        if (existingOffer) {
+        if (existingActiveOffer) {
             Exceptions.conflict(
-                ORDER_MESSAGES.OFFER_ALREADY_EXISTS,
+                ORDER_MESSAGES.ACTIVE_OFFER_EXISTS,
             );
         }
 

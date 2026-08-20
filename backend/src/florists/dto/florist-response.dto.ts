@@ -1,74 +1,119 @@
-import { AddressResponseDto } from '@/addresses/dto/address-response.dto';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+    ApiProperty,
+    ApiPropertyOptional,
+} from '@nestjs/swagger';
 
-export class FloristResponseDto {
-    @ApiProperty({
-        example: 1,
-    })
+class FloristAddressResponseDto {
+    @ApiProperty()
     id: number;
 
-    @ApiProperty({
-        example: 'Momentos em Flor Braga',
-    })
-    name: string;
+    @ApiPropertyOptional()
+    label: string | null;
 
-    @ApiPropertyOptional({
-        example: 'Momentos em Flor Braga, Lda.',
-    })
-    legalName?: string;
+    @ApiProperty()
+    street: string;
 
-    @ApiProperty({
-        example: '999999990',
-    })
-    taxNumber: string;
+    @ApiPropertyOptional()
+    street2: string | null;
 
-    @ApiProperty({
-        example: 'braga@momentosemflor.pt',
-    })
+    @ApiProperty()
+    postalCode: string;
+
+    @ApiProperty()
+    city: string;
+
+    @ApiProperty()
+    district: string;
+
+    @ApiProperty()
+    country: string;
+
+    @ApiProperty()
+    latitude: number;
+
+    @ApiProperty()
+    longitude: number;
+
+    @ApiPropertyOptional()
+    notes: string | null;
+}
+
+class FloristAdminResponseDto {
+    @ApiProperty()
+    id: number;
+
+    @ApiProperty()
+    firstName: string;
+
+    @ApiProperty()
+    lastName: string;
+
+    @ApiProperty()
     email: string;
 
-    @ApiProperty({
-        example: '+351253000000',
-    })
-    phone: string;
+    @ApiPropertyOptional()
+    phone: string | null;
 
-    @ApiPropertyOptional({
-        example: 'https://momentosemflor.pt',
-    })
-    website?: string;
-
-    @ApiPropertyOptional({
-        example: 'Florista parceira de Braga.',
-    })
-    description?: string;
-
-    @ApiProperty({
-        example: true,
-    })
+    @ApiProperty()
     active: boolean;
 
-    @ApiProperty({
-        example: true,
-    })
+    @ApiProperty()
+    emailVerified: boolean;
+
+    @ApiProperty()
+    createdAt: Date;
+
+    @ApiProperty()
+    updatedAt: Date;
+}
+
+export class FloristResponseDto {
+    @ApiProperty()
+    id: number;
+
+    @ApiProperty()
+    name: string;
+
+    @ApiPropertyOptional()
+    legalName: string | null;
+
+    @ApiProperty()
+    taxNumber: string;
+
+    @ApiProperty()
+    email: string;
+
+    @ApiProperty()
+    phone: string;
+
+    @ApiPropertyOptional()
+    website: string | null;
+
+    @ApiPropertyOptional()
+    description: string | null;
+
+    @ApiProperty()
+    active: boolean;
+
+    @ApiProperty()
     acceptingOrders: boolean;
 
-    @ApiProperty({
-        example: 20,
-    })
+    @ApiProperty()
     deliveryRadiusKm: number;
 
     @ApiProperty({
-        type: AddressResponseDto,
+        type: FloristAddressResponseDto,
     })
-    address: AddressResponseDto;
+    address: FloristAddressResponseDto;
 
     @ApiProperty({
-        example: '2026-08-03T15:00:00.000Z',
+        type: [FloristAdminResponseDto],
     })
+    admins: FloristAdminResponseDto[];
+
+    @ApiProperty()
     createdAt: Date;
 
-    @ApiProperty({
-        example: '2026-08-03T15:00:00.000Z',
-    })
+    @ApiProperty()
     updatedAt: Date;
 }

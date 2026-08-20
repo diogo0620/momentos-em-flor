@@ -75,4 +75,8 @@ export const ORDER_MESSAGES = {
         'This order is not assigned to you.',
     CANNOT_CANCEL_ORDER:
         'This order cannot be cancelled.',
+    ORDER_ALREADY_ASSIGNED:
+        'This order is already assigned.',
+        ACTIVE_OFFER_EXISTS:
+    'There is already an active offer for this florist and order.',
 };

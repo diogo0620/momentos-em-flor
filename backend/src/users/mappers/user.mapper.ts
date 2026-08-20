@@ -5,28 +5,73 @@ import { BaseMapper } from '@/common/mappers/base.mapper';
 
 import { UserResponseDto } from '../dto/user-response.dto';
 
+type UserWithOptionalFlorist = User & {
+    florist?: {
+        id: number;
+        name: string;
+    } | null;
+};
+
 @Injectable()
 export class UserMapper
-  extends BaseMapper<User, UserResponseDto> {
+    extends BaseMapper<
+        User,
+        UserResponseDto
+    > {
 
-  toResponse(
-    user: User,
-  ): UserResponseDto {
+    toResponse(
+        user: UserWithOptionalFlorist,
+    ): UserResponseDto {
+        return {
+            id:
+                user.id,
 
-    return {
-      id: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      phone: user.phone ?? undefined,
-      avatarUrl: user.avatarUrl ?? undefined,
-      role: user.role,
-      active: user.active,
-      emailVerified: user.emailVerified,
-      floristId: user.floristId ?? undefined,
-      lastLoginAt: user.lastLoginAt ?? undefined,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
-  }
+            firstName:
+                user.firstName,
+
+            lastName:
+                user.lastName,
+
+            email:
+                user.email,
+
+            phone:
+                user.phone ??
+                undefined,
+
+            avatarUrl:
+                user.avatarUrl ??
+                undefined,
+
+            role:
+                user.role,
+
+            active:
+                user.active,
+
+            emailVerified:
+                user.emailVerified,
+
+            florist:
+                user.florist
+                    ? {
+                        id:
+                            user.florist.id,
+
+                        name:
+                            user.florist.name,
+                    }
+                    : null,
+
+            lastLoginAt:
+                user.lastLoginAt ??
+                undefined,
+
+            createdAt:
+                user.createdAt,
+
+            updatedAt:
+                user.updatedAt,
+        };
+    }
 }

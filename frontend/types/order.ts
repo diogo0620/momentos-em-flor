@@ -1,11 +1,27 @@
 export type OrderStatus =
-    | "PENDING"
-    | "PROCESSING"
-    | "ACCEPTED"
-    | "PREPARING"
-    | "OUT_FOR_DELIVERY"
+    | "CREATED"
+    | "WAITING_FOR_FLORISTS"
+    | "ASSIGNED"
+    | "IN_PRODUCTION"
+    | "READY_FOR_DELIVERY"
     | "DELIVERED"
     | "CANCELLED";
+
+export type OrderStatusHistory = {
+    id: number;
+    fromStatus: OrderStatus | null;
+    toStatus: OrderStatus;
+    changedByUserId: number | null;
+    changedByUser: {
+        id: number;
+        firstName: string;
+        lastName: string;
+        email: string;
+        role: "SYSTEM_ADMIN" | "FLORIST" | "CUSTOMER";
+    } | null;
+    reason: string | null;
+    createdAt: string;
+};
 
 export type OrderItem = {
     id: number;
@@ -90,6 +106,7 @@ export type Order = {
 
     items: OrderItem[];
     offers: OrderOffer[];
+    statusHistory: OrderStatusHistory[];
 
     createdAt: string;
     updatedAt: string;

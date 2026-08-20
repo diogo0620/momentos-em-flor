@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
     Eye,
     Package,
+    Plus,
 } from "lucide-react";
 
 import PageHeader from "@/components/admin/common/PageHeader";
@@ -25,20 +26,20 @@ function getStatusLabel(
     status: Order["status"],
 ) {
     switch (status) {
-        case "PENDING":
-            return "Pendente";
+        case "CREATED":
+            return "Criada";
 
-        case "PROCESSING":
-            return "Em processamento";
+        case "WAITING_FOR_FLORISTS":
+            return "À espera de florista";
 
-        case "ACCEPTED":
-            return "Aceite";
+        case "ASSIGNED":
+            return "Atribuída";
 
-        case "PREPARING":
+        case "IN_PRODUCTION":
             return "Em preparação";
 
-        case "OUT_FOR_DELIVERY":
-            return "Em entrega";
+        case "READY_FOR_DELIVERY":
+            return "Pronta para entrega";
 
         case "DELIVERED":
             return "Entregue";
@@ -61,15 +62,15 @@ function getStatusClass(
         case "CANCELLED":
             return "bg-red-100 text-red-700";
 
-        case "ACCEPTED":
-        case "PREPARING":
-        case "OUT_FOR_DELIVERY":
+        case "ASSIGNED":
+        case "IN_PRODUCTION":
+        case "READY_FOR_DELIVERY":
             return "bg-blue-100 text-blue-700";
 
-        case "PROCESSING":
+        case "WAITING_FOR_FLORISTS":
             return "bg-yellow-100 text-yellow-700";
 
-        case "PENDING":
+        case "CREATED":
         default:
             return "bg-gray-100 text-gray-600";
     }
@@ -116,6 +117,7 @@ export default function AdminOrdersPage() {
                 });
 
             setOrders(response.data);
+
             setPagination(
                 response.pagination,
             );
@@ -139,10 +141,44 @@ export default function AdminOrdersPage() {
     return (
         <div>
 
-            <PageHeader
-                title="Encomendas"
-                subtitle="Gerir as encomendas da Momentos em Flor."
-            />
+            {/* HEADER */}
+
+            <div className="flex items-start justify-between gap-6">
+
+                <div className="flex-1">
+                    <PageHeader
+                        title="Encomendas"
+                        subtitle="Gerir as encomendas da Momentos em Flor."
+                    />
+                </div>
+
+                <Link
+                    href="/admin/orders/new"
+                    className="
+                        mt-1
+                        inline-flex
+                        shrink-0
+                        items-center
+                        gap-2
+                        rounded-full
+                        bg-[#55624A]
+                        px-5
+                        py-3
+                        text-sm
+                        font-medium
+                        text-white
+                        shadow-sm
+                        transition
+                        hover:opacity-90
+                    "
+                >
+                    <Plus size={17} />
+                    Nova encomenda
+                </Link>
+
+            </div>
+
+            {/* FILTERS */}
 
             <div className="mt-8">
 
@@ -158,11 +194,15 @@ export default function AdminOrdersPage() {
 
             </div>
 
+            {/* ERROR */}
+
             {error && (
                 <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
                     {error}
                 </div>
             )}
+
+            {/* TABLE */}
 
             <div className="mt-8">
 

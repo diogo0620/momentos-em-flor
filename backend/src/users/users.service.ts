@@ -119,7 +119,7 @@ export class UsersService {
     id: number,
   ) {
     const user =
-      await this.getUserOrThrow(id);
+      await this.getUserWithFloristOrThrow(id);
 
     return ApiResponse.success(
       this.userMapper.toResponse(user),
@@ -253,6 +253,35 @@ export class UsersService {
 
     return user;
   }
+
+  private async getUserWithFloristOrThrow(
+    id: number,
+) {
+    const user =
+        await this.prisma.user.findFirst({
+            where: {
+                id,
+                deletedAt: null,
+            },
+
+            include: {
+                florist: {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                },
+            },
+        });
+
+    if (!user) {
+        Exceptions.notFound(
+            USER_MESSAGES.NOT_FOUND,
+        );
+    }
+
+    return user;
+}
 
   async changePassword(
     id: number,
