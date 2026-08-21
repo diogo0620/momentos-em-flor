@@ -1,19 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
 
 import {
     ChevronLeft,
     ChevronRight,
+    Eye,
     Package,
+    Pencil,
     Plus,
+    Search,
+    SlidersHorizontal,
 } from "lucide-react";
 
 import PageHeader from "@/components/admin/common/PageHeader";
-import StatusBadge from "@/components/admin/common/StatusBadge";
-import SearchInput from "@/components/admin/common/SearchInput";
 import FilterBar from "@/components/admin/common/FilterBar";
+import SearchInput from "@/components/admin/common/SearchInput";
 import DataTable from "@/components/admin/DataTable";
 
 import {
@@ -25,6 +33,63 @@ import type {
     Product,
     Pagination,
 } from "@/types/product";
+
+/* ========================================================================== */
+/* STATUS                                                                     */
+/* ========================================================================== */
+
+const statusConfig = {
+    ACTIVE: {
+        label: "Ativo",
+        className:
+            "bg-green-50 text-green-700 border-green-100",
+        dotClassName:
+            "bg-green-500",
+    },
+
+    INACTIVE: {
+        label: "Inativo",
+        className:
+            "bg-gray-100 text-gray-600 border-gray-200",
+        dotClassName:
+            "bg-gray-400",
+    },
+};
+
+/* ========================================================================== */
+/* HELPERS                                                                    */
+/* ========================================================================== */
+
+function formatPrice(
+    value: number,
+) {
+    return new Intl.NumberFormat(
+        "pt-PT",
+        {
+            style: "currency",
+            currency: "EUR",
+        },
+    ).format(value);
+}
+
+function getPricingTypeLabel(
+    pricingType: Product["pricingType"],
+) {
+    switch (pricingType) {
+        case "FIXED":
+            return "Preço fixo";
+
+        case "PER_UNIT":
+            return "Por unidade";
+
+        default:
+            return pricingType;
+    }
+}
+
+/* ========================================================================== */
+/* PAGE                                                                       */
+/* ========================================================================== */
 
 export default function AdminProductsPage() {
     const [products, setProducts] =
@@ -56,62 +121,67 @@ export default function AdminProductsPage() {
     const [error, setError] =
         useState<string | null>(null);
 
-    const loadProducts = useCallback(
-        async (
-            params: GetProductsParams = {},
-        ) => {
-            try {
-                setIsLoading(true);
-                setError(null);
+    /* ====================================================================== */
+    /* LOAD                                                                   */
+    /* ====================================================================== */
 
-                const response =
-                    await getProducts({
-                        page:
-                            params.page ??
-                            pagination.page,
+    const loadProducts =
+        useCallback(
+            async (
+                params: GetProductsParams = {},
+            ) => {
+                try {
+                    setIsLoading(true);
+                    setError(null);
 
-                        pageSize:
-                            params.pageSize ??
-                            pagination.pageSize,
+                    const response =
+                        await getProducts({
+                            page:
+                                params.page ??
+                                pagination.page,
 
-                        search:
-                            params.search ??
-                            search,
+                            pageSize:
+                                params.pageSize ??
+                                pagination.pageSize,
 
-                        sort:
-                            params.sort ??
-                            sort,
+                            search:
+                                params.search ??
+                                search,
 
-                        order:
-                            params.order ??
-                            order,
-                    });
+                            sort:
+                                params.sort ??
+                                sort,
 
-                setProducts(
-                    response.data,
-                );
+                            order:
+                                params.order ??
+                                order,
+                        });
 
-                setPagination(
-                    response.pagination,
-                );
-            } catch (err) {
-                setError(
-                    err instanceof Error
-                        ? err.message
-                        : "Não foi possível carregar os produtos.",
-                );
-            } finally {
-                setIsLoading(false);
-            }
-        },
-        [
-            pagination.page,
-            pagination.pageSize,
-            search,
-            sort,
-            order,
-        ],
-    );
+                    setProducts(
+                        response.data,
+                    );
+
+                    setPagination(
+                        response.pagination,
+                    );
+                } catch (err) {
+                    setError(
+                        err instanceof Error
+                            ? err.message
+                            : "Não foi possível carregar os produtos.",
+                    );
+                } finally {
+                    setIsLoading(false);
+                }
+            },
+            [
+                pagination.page,
+                pagination.pageSize,
+                search,
+                sort,
+                order,
+            ],
+        );
 
     useEffect(() => {
         loadProducts({
@@ -122,6 +192,10 @@ export default function AdminProductsPage() {
         sort,
         order,
     ]);
+
+    /* ====================================================================== */
+    /* SEARCH                                                                 */
+    /* ====================================================================== */
 
     function handleSearch(
         value: string,
@@ -134,8 +208,14 @@ export default function AdminProductsPage() {
     ) {
         event.preventDefault();
 
-        setSearch(searchInput);
+        setSearch(
+            searchInput.trim(),
+        );
     }
+
+    /* ====================================================================== */
+    /* SORT                                                                   */
+    /* ====================================================================== */
 
     function handleSort(
         field: string,
@@ -153,6 +233,10 @@ export default function AdminProductsPage() {
         }
     }
 
+    /* ====================================================================== */
+    /* PAGINATION                                                             */
+    /* ====================================================================== */
+
     function goToPage(
         page: number,
     ) {
@@ -168,122 +252,75 @@ export default function AdminProductsPage() {
         });
     }
 
+    /* ====================================================================== */
+    /* METRICS                                                                */
+    /* ====================================================================== */
+
+    const activeProducts =
+        useMemo(
+            () =>
+                products.filter(
+                    (product) =>
+                        product.active,
+                ).length,
+            [products],
+        );
+
+    const inactiveProducts =
+        products.length -
+        activeProducts;
+
+    const averagePrice =
+        products.length > 0
+            ? products.reduce(
+                  (
+                      sum,
+                      product,
+                  ) =>
+                      sum +
+                      Number(
+                          product.basePrice,
+                      ),
+                  0,
+              ) / products.length
+            : 0;
+
+    /* ====================================================================== */
+    /* PAGE                                                                   */
+    /* ====================================================================== */
+
     return (
-        <div>
+        <div className="space-y-8 pb-10">
 
-            <PageHeader
-                title="Produtos"
-                subtitle="Gestão dos produtos disponíveis no catálogo."
-            />
+            {/* ================================================================== */}
+            {/* HEADER                                                             */}
+            {/* ================================================================== */}
 
-            {/* FILTERS + ACTION */}
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
 
-            <div className="mt-8 flex flex-col gap-4 lg:flex-row lg:items-stretch">
-
-                <div className="flex-1">
-
-                    <FilterBar>
-
-                        <form
-                            onSubmit={
-                                submitSearch
-                            }
-                        >
-                            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-
-                                <div className="w-full xl:max-w-md">
-
-                                    <SearchInput
-                                        value={
-                                            searchInput
-                                        }
-                                        onChange={
-                                            handleSearch
-                                        }
-                                        placeholder="Pesquisar produtos..."
-                                    />
-
-                                </div>
-
-                                <div className="flex flex-wrap items-center gap-3">
-
-                                    <select
-                                        value={sort}
-                                        onChange={(e) =>
-                                            handleSort(
-                                                e.target
-                                                    .value,
-                                            )
-                                        }
-                                        className="
-                                            rounded-2xl
-                                            border
-                                            border-gray-200
-                                            bg-white
-                                            px-4
-                                            py-3
-                                            text-sm
-                                            outline-none
-                                            focus:border-[#55624A]
-                                            focus:ring-4
-                                            focus:ring-[#55624A]/10
-                                        "
-                                    >
-                                        <option value="name">
-                                            Nome
-                                        </option>
-
-                                        <option value="basePrice">
-                                            Preço base
-                                        </option>
-
-                                        <option value="createdAt">
-                                            Data de criação
-                                        </option>
-                                    </select>
-
-                                    <button
-                                        type="submit"
-                                        className="
-                                            rounded-2xl
-                                            bg-[#55624A]
-                                            px-5
-                                            py-3
-                                            text-sm
-                                            font-medium
-                                            text-white
-                                            transition
-                                            hover:opacity-90
-                                        "
-                                    >
-                                        Pesquisar
-                                    </button>
-
-                                </div>
-
-                            </div>
-                        </form>
-
-                    </FilterBar>
-
-                </div>
+                <PageHeader
+                    title="Produtos"
+                    subtitle="Gira o catálogo de produtos disponíveis na plataforma."
+                />
 
                 <Link
                     href="/admin/products/new"
                     className="
                         inline-flex
-                        min-h-[76px]
-                        shrink-0
                         items-center
                         justify-center
                         gap-2
-                        rounded-3xl
+                        rounded-2xl
                         bg-[#55624A]
-                        px-6
-                        font-medium
+                        px-5
+                        py-3
+                        text-sm
+                        font-semibold
                         text-white
+                        shadow-sm
                         transition
-                        hover:opacity-90
+                        hover:bg-[#46523C]
+                        hover:shadow-md
                     "
                 >
                     <Plus size={18} />
@@ -292,344 +329,295 @@ export default function AdminProductsPage() {
 
             </div>
 
-            {/* METRICS */}
+            {/* ================================================================== */}
+            {/* SUMMARY                                                            */}
+            {/* ================================================================== */}
 
-            <div className="mt-8 grid gap-6 md:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
-                <div className="rounded-3xl bg-white p-6 shadow-sm">
+                <SummaryCard
+                    icon={Package}
+                    label="Total de produtos"
+                    value={
+                        pagination.total
+                    }
+                    description="No catálogo"
+                />
 
-                    <div className="flex items-center gap-3">
+                <SummaryCard
+                    label="Produtos ativos"
+                    value={
+                        activeProducts
+                    }
+                    description="Nesta página"
+                    valueClassName="text-green-700"
+                />
 
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F3F5EE] text-[#55624A]">
-                            <Package size={21} />
-                        </div>
+                <SummaryCard
+                    label="Produtos inativos"
+                    value={
+                        inactiveProducts
+                    }
+                    description="Nesta página"
+                    valueClassName="text-gray-500"
+                />
 
-                        <div>
+                <SummaryCard
+                    label="Preço médio"
+                    value={formatPrice(
+                        averagePrice,
+                    )}
+                    description="Nesta página"
+                />
 
-                            <p className="text-sm text-gray-500">
-                                Total de produtos
-                            </p>
+            </div>
 
-                            <p className="mt-1 text-3xl font-bold text-[#2F3B2A]">
-                                {pagination.total}
-                            </p>
+            {/* ================================================================== */}
+            {/* FILTERS                                                            */}
+            {/* ================================================================== */}
 
-                        </div>
+            <div className="rounded-3xl bg-white p-5 shadow-sm sm:p-6">
+
+                <div className="flex items-center gap-3">
+
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]">
+                        <SlidersHorizontal
+                            size={19}
+                        />
+                    </div>
+
+                    <div>
+
+                        <h2 className="font-semibold text-[#2F3B2A]">
+                            Pesquisar e ordenar
+                        </h2>
+
+                        <p className="text-xs text-gray-400">
+                            Encontre rapidamente o produto que procura.
+                        </p>
 
                     </div>
 
                 </div>
 
-                <div className="rounded-3xl bg-white p-6 shadow-sm">
+                <div className="mt-5">
 
-                    <p className="text-sm text-gray-500">
-                        Produtos ativos
-                    </p>
-
-                    <p className="mt-2 text-3xl font-bold text-[#2F3B2A]">
-                        {
-                            products.filter(
-                                (product) =>
-                                    product.active,
-                            ).length
+                    <form
+                        onSubmit={
+                            submitSearch
                         }
-                    </p>
+                        className="flex flex-col gap-3 lg:flex-row"
+                    >
 
-                    <p className="mt-1 text-xs text-gray-400">
-                        Na página atual
-                    </p>
+                        <div className="flex-1">
 
-                </div>
+                            <SearchInput
+                                value={
+                                    searchInput
+                                }
+                                onChange={
+                                    handleSearch
+                                }
+                                placeholder="Pesquisar por nome ou produto..."
+                            />
 
-                <div className="rounded-3xl bg-white p-6 shadow-sm">
+                        </div>
 
-                    <p className="text-sm text-gray-500">
-                        Preço médio
-                    </p>
+                        <select
+                            value={sort}
+                            onChange={(event) =>
+                                handleSort(
+                                    event.target
+                                        .value,
+                                )
+                            }
+                            className="
+                                rounded-2xl
+                                border
+                                border-gray-200
+                                bg-white
+                                px-4
+                                py-3
+                                text-sm
+                                text-gray-700
+                                outline-none
+                                transition
+                                focus:border-[#55624A]
+                                focus:ring-4
+                                focus:ring-[#55624A]/10
+                            "
+                        >
+                            <option value="name">
+                                Ordenar por nome
+                            </option>
 
-                    <p className="mt-2 text-3xl font-bold text-[#2F3B2A]">
-                        {products.length > 0
-                            ? (
-                                  products.reduce(
-                                      (
-                                          sum,
-                                          product,
-                                      ) =>
-                                          sum +
-                                          product.basePrice,
-                                      0,
-                                  ) /
-                                  products.length
-                              ).toFixed(2)
-                            : "0.00"}{" "}
-                        €
-                    </p>
+                            <option value="basePrice">
+                                Ordenar por preço
+                            </option>
 
-                    <p className="mt-1 text-xs text-gray-400">
-                        Na página atual
-                    </p>
+                            <option value="createdAt">
+                                Ordenar por data
+                            </option>
+                        </select>
+
+                        <button
+                            type="submit"
+                            className="
+                                inline-flex
+                                items-center
+                                justify-center
+                                gap-2
+                                rounded-2xl
+                                bg-[#55624A]
+                                px-5
+                                py-3
+                                text-sm
+                                font-semibold
+                                text-white
+                                transition
+                                hover:bg-[#46523C]
+                            "
+                        >
+                            <Search
+                                size={17}
+                            />
+                            Pesquisar
+                        </button>
+
+                    </form>
 
                 </div>
 
             </div>
 
-            {/* ERROR */}
+            {/* ================================================================== */}
+            {/* ERROR                                                              */}
+            {/* ================================================================== */}
 
             {error && (
-                <div className="mt-8 rounded-2xl border border-red-100 bg-red-50 p-5 text-red-600">
+                <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-sm text-red-600">
                     {error}
                 </div>
             )}
 
-            {/* TABLE */}
+            {/* ================================================================== */}
+            {/* PRODUCTS                                                           */}
+            {/* ================================================================== */}
 
-            <div className="mt-8">
+            <DataTable>
 
-                <DataTable>
+                <div className="overflow-x-auto">
 
-                    <div className="overflow-x-auto">
+                    <table className="w-full">
 
-                        <table className="w-full">
+                        <thead>
 
-                            <thead>
+                            <tr className="border-b border-gray-100 bg-[#FAFBF8] text-left">
 
-                                <tr className="border-b border-gray-100 text-left">
+                                <th className="px-6 py-4">
 
-                                    <th className="px-6 py-5">
+                                    <SortButton
+                                        label="Produto"
+                                        field="name"
+                                        currentSort={
+                                            sort
+                                        }
+                                        order={
+                                            order
+                                        }
+                                        onSort={
+                                            handleSort
+                                        }
+                                    />
 
-                                        <SortButton
-                                            label="Produto"
-                                            field="name"
-                                            currentSort={
-                                                sort
+                                </th>
+
+                                <th className="px-6 py-4 font-semibold text-[#2F3B2A]">
+                                    Categoria
+                                </th>
+
+                                <th className="px-6 py-4 font-semibold text-[#2F3B2A]">
+                                    Tipo
+                                </th>
+
+                                <th className="px-6 py-4">
+
+                                    <SortButton
+                                        label="Preço"
+                                        field="basePrice"
+                                        currentSort={
+                                            sort
+                                        }
+                                        order={
+                                            order
+                                        }
+                                        onSort={
+                                            handleSort
+                                        }
+                                    />
+
+                                </th>
+
+                                <th className="px-6 py-4 font-semibold text-[#2F3B2A]">
+                                    Estado
+                                </th>
+
+                                <th className="px-6 py-4 text-right font-semibold text-[#2F3B2A]">
+                                    Ações
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            {isLoading ? (
+                                <LoadingRows />
+                            ) : products.length ===
+                              0 ? (
+                                <EmptyProducts />
+                            ) : (
+                                products.map(
+                                    (
+                                        product,
+                                    ) => (
+                                        <ProductRow
+                                            key={
+                                                product.id
                                             }
-                                            order={
-                                                order
-                                            }
-                                            onSort={
-                                                handleSort
+                                            product={
+                                                product
                                             }
                                         />
+                                    ),
+                                )
+                            )}
 
-                                    </th>
+                        </tbody>
 
-                                    <th className="px-6 py-5 font-semibold text-[#2F3B2A]">
-                                        Categoria
-                                    </th>
+                    </table>
 
-                                    <th className="px-6 py-5 font-semibold text-[#2F3B2A]">
-                                        Tipo
-                                    </th>
+                </div>
 
-                                    <th className="px-6 py-5">
+                {/* ================================================================== */}
+                {/* PAGINATION                                                         */}
+                {/* ================================================================== */}
 
-                                        <SortButton
-                                            label="Preço base"
-                                            field="basePrice"
-                                            currentSort={
-                                                sort
-                                            }
-                                            order={
-                                                order
-                                            }
-                                            onSort={
-                                                handleSort
-                                            }
-                                        />
+                {!isLoading &&
+                    pagination.pages >
+                        0 && (
+                        <div className="flex flex-col gap-4 border-t border-gray-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
 
-                                    </th>
-
-                                    <th className="px-6 py-5 font-semibold text-[#2F3B2A]">
-                                        Estado
-                                    </th>
-
-                                    <th className="px-6 py-5 text-right font-semibold text-[#2F3B2A]">
-                                        Ações
-                                    </th>
-
-                                </tr>
-
-                            </thead>
-
-                            <tbody>
-
-                                {isLoading ? (
-                                    <tr>
-
-                                        <td
-                                            colSpan={6}
-                                            className="px-6 py-16 text-center text-gray-500"
-                                        >
-                                            A carregar produtos...
-                                        </td>
-
-                                    </tr>
-                                ) : products.length ===
-                                  0 ? (
-                                    <tr>
-
-                                        <td
-                                            colSpan={6}
-                                            className="px-6 py-16 text-center"
-                                        >
-
-                                            <Package
-                                                size={36}
-                                                className="mx-auto text-gray-300"
-                                            />
-
-                                            <p className="mt-4 font-medium text-gray-600">
-                                                Nenhum produto encontrado.
-                                            </p>
-
-                                            <p className="mt-1 text-sm text-gray-400">
-                                                Tente alterar a pesquisa.
-                                            </p>
-
-                                        </td>
-
-                                    </tr>
-                                ) : (
-                                    products.map(
-                                        (
-                                            product,
-                                        ) => (
-                                            <tr
-                                                key={
-                                                    product.id
-                                                }
-                                                className="
-                                                    border-b
-                                                    border-gray-50
-                                                    transition
-                                                    hover:bg-[#FAFBF8]
-                                                "
-                                            >
-
-                                                <td className="px-6 py-5">
-
-                                                    <div>
-
-                                                        <p className="font-semibold text-[#2F3B2A]">
-                                                            {
-                                                                product.name
-                                                            }
-                                                        </p>
-
-                                                        <p className="mt-1 text-sm text-gray-400">
-                                                            /
-                                                            {
-                                                                product.slug
-                                                            }
-                                                        </p>
-
-                                                    </div>
-
-                                                </td>
-
-                                                <td className="px-6 py-5">
-
-                                                    <span className="rounded-full bg-[#D6DEC8] px-3 py-1 text-xs font-medium text-[#55624A]">
-                                                        {
-                                                            product
-                                                                .category
-                                                                .name
-                                                        }
-                                                    </span>
-
-                                                </td>
-
-                                                <td className="px-6 py-5">
-
-                                                    <span className="text-sm text-gray-600">
-                                                        {product.pricingType ===
-                                                        "FIXED"
-                                                            ? "Preço fixo"
-                                                            : "Por unidade"}
-                                                    </span>
-
-                                                </td>
-
-                                                <td className="px-6 py-5">
-
-                                                    <span className="font-semibold text-[#2F3B2A]">
-                                                        {product.basePrice.toFixed(
-                                                            2,
-                                                        )}{" "}
-                                                        €
-                                                    </span>
-
-                                                </td>
-
-                                                <td className="px-6 py-5">
-
-                                                    <StatusBadge
-                                                        status={
-                                                            product.active
-                                                                ? "ACTIVE"
-                                                                : "INACTIVE"
-                                                        }
-                                                    />
-
-                                                </td>
-
-                                                <td className="px-6 py-5">
-
-                                                    <div className="flex items-center justify-end gap-4">
-
-                                                        <Link
-                                                            href={`/admin/products/${product.id}`}
-                                                            className="
-                                                                text-sm
-                                                                font-medium
-                                                                text-[#55624A]
-                                                                hover:underline
-                                                            "
-                                                        >
-                                                            Ver
-                                                        </Link>
-
-                                                        <Link
-                                                            href={`/admin/products/${product.id}/edit`}
-                                                            className="
-                                                                text-sm
-                                                                font-medium
-                                                                text-gray-500
-                                                                hover:text-[#55624A]
-                                                            "
-                                                        >
-                                                            Editar
-                                                        </Link>
-
-                                                    </div>
-
-                                                </td>
-
-                                            </tr>
-                                        ),
-                                    )
-                                )}
-
-                            </tbody>
-
-                        </table>
-
-                    </div>
-
-                    {/* PAGINATION */}
-
-                    {!isLoading &&
-                        pagination.pages >
-                            0 && (
-                            <div className="flex flex-col gap-4 border-t border-gray-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
 
                                 <p className="text-sm text-gray-500">
 
-                                    Página{" "}
+                                    A mostrar{" "}
 
                                     <span className="font-semibold text-gray-700">
                                         {
-                                            pagination.page
+                                            products.length
                                         }
                                     </span>
 
@@ -637,94 +625,176 @@ export default function AdminProductsPage() {
 
                                     <span className="font-semibold text-gray-700">
                                         {
-                                            pagination.pages
+                                            pagination.total
                                         }
                                     </span>
 
-                                    <span className="ml-2 text-gray-400">
-                                        ({pagination.total} produtos)
-                                    </span>
+                                    {" "}produtos
 
                                 </p>
 
-                                <div className="flex items-center gap-2">
+                                <p className="mt-1 text-xs text-gray-400">
 
-                                    <button
-                                        type="button"
-                                        disabled={
-                                            pagination.page <=
-                                            1
-                                        }
-                                        onClick={() =>
-                                            goToPage(
-                                                pagination.page -
-                                                    1,
-                                            )
-                                        }
-                                        className="
-                                            flex
-                                            h-10
-                                            w-10
-                                            items-center
-                                            justify-center
-                                            rounded-xl
-                                            border
-                                            border-gray-200
-                                            transition
-                                            hover:bg-[#F5F7F2]
-                                            disabled:cursor-not-allowed
-                                            disabled:opacity-40
-                                        "
-                                    >
-                                        <ChevronLeft
-                                            size={18}
-                                        />
-                                    </button>
+                                    Página{" "}
+                                    {
+                                        pagination.page
+                                    }{" "}
+                                    de{" "}
+                                    {
+                                        pagination.pages
+                                    }
 
-                                    <span className="px-3 text-sm font-medium text-gray-600">
-                                        {
-                                            pagination.page
-                                        }
-                                    </span>
-
-                                    <button
-                                        type="button"
-                                        disabled={
-                                            pagination.page >=
-                                            pagination.pages
-                                        }
-                                        onClick={() =>
-                                            goToPage(
-                                                pagination.page +
-                                                    1,
-                                            )
-                                        }
-                                        className="
-                                            flex
-                                            h-10
-                                            w-10
-                                            items-center
-                                            justify-center
-                                            rounded-xl
-                                            border
-                                            border-gray-200
-                                            transition
-                                            hover:bg-[#F5F7F2]
-                                            disabled:cursor-not-allowed
-                                            disabled:opacity-40
-                                        "
-                                    >
-                                        <ChevronRight
-                                            size={18}
-                                        />
-                                    </button>
-
-                                </div>
+                                </p>
 
                             </div>
-                        )}
 
-                </DataTable>
+                            <div className="flex items-center gap-2">
+
+                                <button
+                                    type="button"
+                                    disabled={
+                                        pagination.page <=
+                                        1
+                                    }
+                                    onClick={() =>
+                                        goToPage(
+                                            pagination.page -
+                                                1,
+                                        )
+                                    }
+                                    className="
+                                        flex
+                                        h-10
+                                        w-10
+                                        items-center
+                                        justify-center
+                                        rounded-xl
+                                        border
+                                        border-gray-200
+                                        bg-white
+                                        text-gray-600
+                                        transition
+                                        hover:border-[#D6DEC8]
+                                        hover:bg-[#F5F7F2]
+                                        disabled:cursor-not-allowed
+                                        disabled:opacity-40
+                                    "
+                                >
+                                    <ChevronLeft
+                                        size={18}
+                                    />
+                                </button>
+
+                                <div className="flex h-10 min-w-10 items-center justify-center rounded-xl bg-[#55624A] px-3 text-sm font-semibold text-white">
+                                    {
+                                        pagination.page
+                                    }
+                                </div>
+
+                                <button
+                                    type="button"
+                                    disabled={
+                                        pagination.page >=
+                                        pagination.pages
+                                    }
+                                    onClick={() =>
+                                        goToPage(
+                                            pagination.page +
+                                                1,
+                                        )
+                                    }
+                                    className="
+                                        flex
+                                        h-10
+                                        w-10
+                                        items-center
+                                        justify-center
+                                        rounded-xl
+                                        border
+                                        border-gray-200
+                                        bg-white
+                                        text-gray-600
+                                        transition
+                                        hover:border-[#D6DEC8]
+                                        hover:bg-[#F5F7F2]
+                                        disabled:cursor-not-allowed
+                                        disabled:opacity-40
+                                    "
+                                >
+                                    <ChevronRight
+                                        size={18}
+                                    />
+                                </button>
+
+                            </div>
+
+                        </div>
+                    )}
+
+            </DataTable>
+
+        </div>
+    );
+}
+
+/* ========================================================================== */
+/* SUMMARY CARD                                                               */
+/* ========================================================================== */
+
+type SummaryCardProps = {
+    icon?: React.ElementType;
+    label: string;
+    value: string | number;
+    description: string;
+    valueClassName?: string;
+};
+
+function SummaryCard({
+    icon: Icon,
+    label,
+    value,
+    description,
+    valueClassName = "text-[#2F3B2A]",
+}: SummaryCardProps) {
+    return (
+        <div className="rounded-3xl bg-white p-5 shadow-sm">
+
+            <div className="flex items-start justify-between gap-4">
+
+                {Icon && (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]">
+                        <Icon size={19} />
+                    </div>
+                )}
+
+                <div
+                    className={
+                        Icon
+                            ? "text-right"
+                            : "w-full"
+                    }
+                >
+
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                        {label}
+                    </p>
+
+                    <p
+                        className={`
+                            mt-2
+                            text-2xl
+                            font-bold
+                            ${valueClassName}
+                        `}
+                    >
+                        {value}
+                    </p>
+
+                    <p className="mt-1 text-xs text-gray-400">
+                        {description}
+                    </p>
+
+                </div>
 
             </div>
 
@@ -732,12 +802,220 @@ export default function AdminProductsPage() {
     );
 }
 
+/* ========================================================================== */
+/* PRODUCT ROW                                                                */
+/* ========================================================================== */
+
+function ProductRow({
+    product,
+}: {
+    product: Product;
+}) {
+    const status =
+        product.active
+            ? statusConfig.ACTIVE
+            : statusConfig.INACTIVE;
+
+    return (
+        <tr
+            className="
+                group
+                border-b
+                border-gray-50
+                transition
+                hover:bg-[#FAFBF8]
+            "
+        >
+
+            {/* PRODUCT */}
+
+            <td className="px-6 py-5">
+
+                <div className="flex items-center gap-4">
+
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F3F5EE] text-[#55624A] transition group-hover:bg-[#E9EDE3]">
+                        <Package
+                            size={21}
+                        />
+                    </div>
+
+                    <div className="min-w-0">
+
+                        <p className="truncate font-semibold text-[#2F3B2A]">
+                            {
+                                product.name
+                            }
+                        </p>
+
+                        <p className="mt-1 truncate text-xs text-gray-400">
+                            /{
+                                product.slug
+                            }
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </td>
+
+            {/* CATEGORY */}
+
+            <td className="px-6 py-5">
+
+                <span className="inline-flex rounded-full bg-[#F3F5EE] px-3 py-1.5 text-xs font-medium text-[#55624A]">
+                    {
+                        product
+                            .category
+                            .name
+                    }
+                </span>
+
+            </td>
+
+            {/* PRICING TYPE */}
+
+            <td className="px-6 py-5">
+
+                <span className="text-sm text-gray-600">
+                    {
+                        getPricingTypeLabel(
+                            product.pricingType,
+                        )
+                    }
+                </span>
+
+            </td>
+
+            {/* PRICE */}
+
+            <td className="px-6 py-5">
+
+                <div>
+
+                    <p className="font-bold text-[#2F3B2A]">
+                        {formatPrice(
+                            Number(
+                                product.basePrice,
+                            ),
+                        )}
+                    </p>
+
+                    {product.pricingType ===
+                        "PER_UNIT" && (
+                        <p className="mt-1 text-xs text-gray-400">
+                            por unidade
+                        </p>
+                    )}
+
+                </div>
+
+            </td>
+
+            {/* STATUS */}
+
+            <td className="px-6 py-5">
+
+                <span
+                    className={`
+                        inline-flex
+                        items-center
+                        gap-2
+                        rounded-full
+                        border
+                        px-3
+                        py-1.5
+                        text-xs
+                        font-semibold
+                        ${status.className}
+                    `}
+                >
+
+                    <span
+                        className={`
+                            h-1.5
+                            w-1.5
+                            rounded-full
+                            ${status.dotClassName}
+                        `}
+                    />
+
+                    {status.label}
+
+                </span>
+
+            </td>
+
+            {/* ACTIONS */}
+
+            <td className="px-6 py-5">
+
+                <div className="flex items-center justify-end gap-2">
+
+                    <Link
+                        href={`/admin/products/${product.id}`}
+                        title="Ver produto"
+                        aria-label="Ver produto"
+                        className="
+                            flex
+                            h-9
+                            w-9
+                            items-center
+                            justify-center
+                            rounded-xl
+                            text-gray-400
+                            transition
+                            hover:bg-[#F3F5EE]
+                            hover:text-[#55624A]
+                        "
+                    >
+                        <Eye
+                            size={17}
+                        />
+                    </Link>
+
+                    <Link
+                        href={`/admin/products/${product.id}/edit`}
+                        title="Editar produto"
+                        aria-label="Editar produto"
+                        className="
+                            flex
+                            h-9
+                            w-9
+                            items-center
+                            justify-center
+                            rounded-xl
+                            text-gray-400
+                            transition
+                            hover:bg-[#F3F5EE]
+                            hover:text-[#55624A]
+                        "
+                    >
+                        <Pencil
+                            size={17}
+                        />
+                    </Link>
+
+                </div>
+
+            </td>
+
+        </tr>
+    );
+}
+
+/* ========================================================================== */
+/* SORT BUTTON                                                                */
+/* ========================================================================== */
+
 type SortButtonProps = {
     label: string;
     field: string;
     currentSort: string;
     order: "asc" | "desc";
-    onSort: (field: string) => void;
+    onSort: (
+        field: string,
+    ) => void;
 };
 
 function SortButton({
@@ -766,15 +1044,98 @@ function SortButton({
                 hover:text-[#55624A]
             "
         >
+
             {label}
 
-            <span className="text-xs text-gray-400">
+            <span
+                className={`
+                    text-xs
+                    ${
+                        active
+                            ? "text-[#55624A]"
+                            : "text-gray-300"
+                    }
+                `}
+            >
                 {active
                     ? order === "asc"
                         ? "↑"
                         : "↓"
                     : "↕"}
             </span>
+
         </button>
+    );
+}
+
+/* ========================================================================== */
+/* LOADING ROWS                                                               */
+/* ========================================================================== */
+
+function LoadingRows() {
+    return (
+        <>
+            {Array.from({
+                length: 6,
+            }).map((_, index) => (
+                <tr
+                    key={index}
+                    className="border-b border-gray-50"
+                >
+                    {Array.from({
+                        length: 6,
+                    }).map(
+                        (
+                            _,
+                            cellIndex,
+                        ) => (
+                            <td
+                                key={
+                                    cellIndex
+                                }
+                                className="px-6 py-5"
+                            >
+                                <div className="h-5 animate-pulse rounded-lg bg-gray-100" />
+                            </td>
+                        ),
+                    )}
+                </tr>
+            ))}
+        </>
+    );
+}
+
+/* ========================================================================== */
+/* EMPTY PRODUCTS                                                             */
+/* ========================================================================== */
+
+function EmptyProducts() {
+    return (
+        <tr>
+
+            <td
+                colSpan={6}
+                className="px-6 py-20 text-center"
+            >
+
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F5F7F2] text-[#55624A]">
+                    <Package
+                        size={27}
+                    />
+                </div>
+
+                <p className="mt-5 text-lg font-semibold text-[#2F3B2A]">
+                    Nenhum produto encontrado
+                </p>
+
+                <p className="mx-auto mt-2 max-w-sm text-sm text-gray-400">
+                    Não encontrámos produtos
+                    correspondentes aos filtros
+                    aplicados.
+                </p>
+
+            </td>
+
+        </tr>
     );
 }

@@ -116,6 +116,7 @@ model Florist {
   deletedAt                DateTime?
   orderOffers              OrderOffer[]
   floristCompensationRules FloristCompensationRule[]
+  orderReviews OrderReview[]
 
   assignedOrders Order[] @relation("OrderAssignedFlorist")
 
@@ -149,6 +150,7 @@ model User {
   florist   Florist? @relation(fields: [floristId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   orderStatusHistory OrderStatusHistory[]
+  orderReviews OrderReview[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -324,6 +326,8 @@ model Order {
   // Internal notes
   notes String?
 
+  review OrderReview?
+
   // Financials
   subtotal    Decimal @db.Decimal(10, 2)
   deliveryFee Decimal @db.Decimal(10, 2)
@@ -496,4 +500,46 @@ model FloristCompensationRule {
   @@index([floristId])
   @@index([active])
   @@index([deletedAt])
+}
+
+enum ReviewCategory {
+  FLOWER_QUALITY
+  PRESENTATION
+  DELIVERY
+  SERVICE
+}
+
+model OrderReview {
+  id Int @id @default(autoincrement())
+
+  orderId Int @unique
+  order Order @relation(fields: [orderId], references: [id])
+
+  customerId Int
+  customer User @relation(fields: [customerId], references: [id])
+
+  floristId Int
+  florist Florist @relation(fields: [floristId], references: [id])
+
+  comment String?
+
+  ratings OrderReviewRating[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrderReviewRating {
+  id Int @id @default(autoincrement())
+
+  reviewId Int
+  review OrderReview @relation(fields: [reviewId],references: [id],onDelete: Cascade)
+
+  category ReviewCategory
+
+  rating Int
+
+  createdAt DateTime @default(now())
+
+  @@unique([reviewId, category])
 }

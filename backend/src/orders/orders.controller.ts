@@ -34,6 +34,7 @@ import { OrderQueryDto } from './query/order-query.dto';
 
 import { OrdersService } from './orders.service';
 import { OrderStatusService } from './services/order-status.service';
+import { OptionalJwtAuthGuard } from '@/auth/guards/optional-jwt-guard';
 
 @ApiTags('Orders')
 @ApiBearerAuth('JWT')
@@ -59,18 +60,19 @@ export class OrdersController {
      *   customerId = null
      */
     @Post()
-    create(
-        @CurrentUser()
-        user: AuthenticatedUser | null,
+@UseGuards(OptionalJwtAuthGuard)
+create(
+    @CurrentUser()
+    user: AuthenticatedUser | null,
 
-        @Body()
-        dto: CreateOrderDto,
-    ) {
-        return this.ordersService.create(
-            user,
-            dto,
-        );
-    }
+    @Body()
+    dto: CreateOrderDto,
+) {
+    return this.ordersService.create(
+        user,
+        dto,
+    );
+}
 
     /**
      * Update order.

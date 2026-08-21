@@ -20,6 +20,7 @@ import { getPagination } from '@/common/database/pagination';
 import { getPaginationResponse } from '@/common/database/pagination-response';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { AuthenticatedUser } from '@/auth/interfaces/authenticated-user.interface';
 
 @Injectable()
 export class UsersService {
@@ -166,6 +167,55 @@ export class UsersService {
 
     return this.userMapper.toResponse(user);
   }
+
+  async updateMe(
+    user: AuthenticatedUser,
+    dto: UpdateUserDto,
+) {
+    const currentUser =
+        await this.getUserOrThrow(
+            user.id,
+        );
+
+    /*
+     * Only allow fields that a user is
+     * allowed to change themselves.
+     */
+    const updatedUser =
+        await this.prisma.user.update({
+            where: {
+                id: currentUser.id,
+            },
+
+            data: {
+                ...(dto.firstName !== undefined && {
+                    firstName:
+                        dto.firstName,
+                }),
+
+                ...(dto.lastName !== undefined && {
+                    lastName:
+                        dto.lastName,
+                }),
+
+                ...(dto.phone !== undefined && {
+                    phone:
+                        dto.phone,
+                }),
+
+                ...(dto.avatarUrl !== undefined && {
+                    avatarUrl:
+                        dto.avatarUrl,
+                }),
+            },
+        });
+
+    return ApiResponse.success(
+        this.userMapper.toResponse(
+            updatedUser,
+        ),
+    );
+}
 
   async update(
     id: number,

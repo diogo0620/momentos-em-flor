@@ -27,6 +27,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrderCreatedEvent } from '@/events/order/order-created.event';
 import { OrderCreateResponseDto } from './dto/order-create-response.dto';
 import { GeocodingService } from '@/geocoding/geocoding.service';
+import { log } from 'console';
 
 
 
@@ -261,6 +262,13 @@ export class OrdersService {
         let customerLastName: string | null;
         let customerEmail: string | null;
         let customerPhone: string | null;
+
+        console.log("Teste")
+
+        console.log(
+    'CREATE ORDER USER:',
+    user,
+);
 
         /*
          * Authenticated CUSTOMER

@@ -21,12 +21,20 @@ import type {
 
 interface AuthContextValue {
     user: AuthenticatedUser | null;
+
     isAuthenticated: boolean;
+
     isLoading: boolean;
+
     login: (
         email: string,
         password: string,
     ) => Promise<AuthenticatedUser>;
+
+    updateUser: (
+        user: AuthenticatedUser,
+    ) => void;
+
     logout: () => Promise<void>;
 }
 
@@ -41,13 +49,19 @@ export function AuthProvider({
     children: React.ReactNode;
 }) {
     const [user, setUser] =
-        useState<AuthenticatedUser | null>(null);
+        useState<AuthenticatedUser | null>(
+            null,
+        );
 
     const [isLoading, setIsLoading] =
         useState(true);
 
-    const restoreSession = useCallback(
-        async () => {
+    /* ====================================================================== */
+    /* RESTORE SESSION                                                        */
+    /* ====================================================================== */
+
+    const restoreSession =
+        useCallback(async () => {
             try {
                 const response =
                     await apiFetch<LoginResponse>(
@@ -62,83 +76,121 @@ export function AuthProvider({
                     response.accessToken,
                 );
 
-                setUser(response.user);
+                setUser(
+                    response.user,
+                );
             } catch {
                 setAccessToken(null);
                 setUser(null);
             } finally {
                 setIsLoading(false);
             }
-        },
-        [],
-    );
+        }, []);
 
     useEffect(() => {
         restoreSession();
     }, [restoreSession]);
 
-    const login = useCallback(
-        async (
-            email: string,
-            password: string,
-        ) => {
-            const response =
-                await apiFetch<LoginResponse>(
-                    "/auth/login",
+    /* ====================================================================== */
+    /* LOGIN                                                                  */
+    /* ====================================================================== */
+
+    const login =
+        useCallback(
+            async (
+                email: string,
+                password: string,
+            ) => {
+                const response =
+                    await apiFetch<LoginResponse>(
+                        "/auth/login",
+                        {
+                            method: "POST",
+                            body: JSON.stringify({
+                                email,
+                                password,
+                            }),
+                            skipRefresh: true,
+                        },
+                    );
+
+                setAccessToken(
+                    response.accessToken,
+                );
+
+                setUser(
+                    response.user,
+                );
+
+                return response.user;
+            },
+            [],
+        );
+
+    /* ====================================================================== */
+    /* UPDATE USER                                                             */
+    /* ====================================================================== */
+
+    const updateUser =
+        useCallback(
+            (
+                updatedUser: AuthenticatedUser,
+            ) => {
+                setUser(
+                    updatedUser,
+                );
+            },
+            [],
+        );
+
+    /* ====================================================================== */
+    /* LOGOUT                                                                 */
+    /* ====================================================================== */
+
+    const logout =
+        useCallback(async () => {
+            try {
+                await apiFetch(
+                    "/auth/logout",
                     {
                         method: "POST",
-                        body: JSON.stringify({
-                            email,
-                            password,
-                        }),
                         skipRefresh: true,
                     },
                 );
+            } finally {
+                setAccessToken(null);
+                setUser(null);
+            }
+        }, []);
 
-            setAccessToken(
-                response.accessToken,
-            );
+    /* ====================================================================== */
+    /* CONTEXT VALUE                                                           */
+    /* ====================================================================== */
 
-            setUser(response.user);
-
-            return response.user;
-        },
-        [],
-    );
-
-    const logout = useCallback(async () => {
-        try {
-            await apiFetch(
-                "/auth/logout",
-                {
-                    method: "POST",
-                    skipRefresh: true,
-                },
-            );
-        } finally {
-            setAccessToken(null);
-            setUser(null);
-        }
-    }, []);
-
-    const value = useMemo(
-        () => ({
-            user,
-            isAuthenticated: !!user,
-            isLoading,
-            login,
-            logout,
-        }),
-        [
-            user,
-            isLoading,
-            login,
-            logout,
-        ],
-    );
+    const value =
+        useMemo(
+            () => ({
+                user,
+                isAuthenticated:
+                    !!user,
+                isLoading,
+                login,
+                updateUser,
+                logout,
+            }),
+            [
+                user,
+                isLoading,
+                login,
+                updateUser,
+                logout,
+            ],
+        );
 
     return (
-        <AuthContext.Provider value={value}>
+        <AuthContext.Provider
+            value={value}
+        >
             {children}
         </AuthContext.Provider>
     );
@@ -146,7 +198,9 @@ export function AuthProvider({
 
 export function useAuth() {
     const context =
-        useContext(AuthContext);
+        useContext(
+            AuthContext,
+        );
 
     if (!context) {
         throw new Error(

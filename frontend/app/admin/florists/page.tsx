@@ -17,6 +17,8 @@ import {
     Pencil,
     Phone,
     Plus,
+    Search,
+    SlidersHorizontal,
 } from "lucide-react";
 
 import SearchInput from "@/components/admin/common/SearchInput";
@@ -65,7 +67,7 @@ export default function AdminFloristsPage() {
         useState<string | null>(null);
 
     /* ---------------------------------------------------------------------- */
-    /* LOAD FLORISTS                                                          */
+    /* LOAD                                                                   */
     /* ---------------------------------------------------------------------- */
 
     const loadFlorists = useCallback(
@@ -144,7 +146,9 @@ export default function AdminFloristsPage() {
     ) {
         event.preventDefault();
 
-        setSearch(searchInput);
+        setSearch(
+            searchInput.trim(),
+        );
     }
 
     /* ---------------------------------------------------------------------- */
@@ -187,187 +191,41 @@ export default function AdminFloristsPage() {
     }
 
     /* ---------------------------------------------------------------------- */
-    /* METRICS                                                                */
-    /* ---------------------------------------------------------------------- */
-
-    const activeCount =
-        florists.filter(
-            (florist) =>
-                florist.active,
-        ).length;
-
-    const acceptingOrdersCount =
-        florists.filter(
-            (florist) =>
-                florist.acceptingOrders,
-        ).length;
-
-    const averageRadius =
-        florists.length > 0
-            ? florists.reduce(
-                  (
-                      total,
-                      florist,
-                  ) =>
-                      total +
-                      florist.deliveryRadiusKm,
-                  0,
-              ) /
-              florists.length
-            : 0;
-
-    /* ---------------------------------------------------------------------- */
     /* RENDER                                                                 */
     /* ---------------------------------------------------------------------- */
 
     return (
-        <div>
+        <div className="space-y-8 pb-10">
 
             {/* ================================================================== */}
             {/* HEADER                                                             */}
             {/* ================================================================== */}
 
-            <PageHeader
-                title="Floristas"
-                subtitle="Gestão das floristas parceiras do Momentos em Flor."
-            />
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
 
-            {/* ================================================================== */}
-            {/* SEARCH + ACTION                                                    */}
-            {/* ================================================================== */}
-
-            <div className="mt-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-
-                <div className="flex-1">
-
-                    <FilterBar>
-
-                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-
-                            <div className="w-full lg:max-w-md">
-
-                                <SearchInput
-                                    value={
-                                        searchInput
-                                    }
-                                    onChange={
-                                        setSearchInput
-                                    }
-                                    placeholder="Pesquisar floristas..."
-                                />
-
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-3">
-
-                                <select
-                                    value={
-                                        sort
-                                    }
-                                    onChange={(
-                                        e,
-                                    ) =>
-                                        setSort(
-                                            e
-                                                .target
-                                                .value,
-                                        )
-                                    }
-                                    className="
-                                        rounded-2xl
-                                        border
-                                        border-gray-200
-                                        bg-white
-                                        px-4
-                                        py-3
-                                        text-sm
-                                        outline-none
-                                        focus:border-[#55624A]
-                                        focus:ring-4
-                                        focus:ring-[#55624A]/10
-                                    "
-                                >
-
-                                    <option value="name">
-                                        Nome
-                                    </option>
-
-                                    <option value="deliveryRadiusKm">
-                                        Raio de entrega
-                                    </option>
-
-                                    <option value="createdAt">
-                                        Data de criação
-                                    </option>
-
-                                </select>
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setOrder(
-                                            (
-                                                current,
-                                            ) =>
-                                                current ===
-                                                "asc"
-                                                    ? "desc"
-                                                    : "asc",
-                                        )
-                                    }
-                                    title={
-                                        order ===
-                                        "asc"
-                                            ? "Ordenação ascendente"
-                                            : "Ordenação descendente"
-                                    }
-                                    className="
-                                        flex
-                                        h-[46px]
-                                        w-[46px]
-                                        items-center
-                                        justify-center
-                                        rounded-2xl
-                                        border
-                                        border-gray-200
-                                        bg-white
-                                        text-lg
-                                        text-gray-600
-                                        transition
-                                        hover:bg-[#F5F7F2]
-                                        hover:text-[#55624A]
-                                    "
-                                >
-                                    {order ===
-                                    "asc"
-                                        ? "↑"
-                                        : "↓"}
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                    </FilterBar>
-
-                </div>
+                <PageHeader
+                    title="Floristas"
+                    subtitle="Gere a rede de floristas parceiras do Momentos em Flor."
+                />
 
                 <Link
                     href="/admin/florists/new"
                     className="
                         inline-flex
-                        h-[50px]
-                        shrink-0
                         items-center
                         justify-center
                         gap-2
                         rounded-2xl
                         bg-[#55624A]
                         px-5
-                        font-medium
+                        py-3
+                        text-sm
+                        font-semibold
                         text-white
+                        shadow-sm
                         transition
                         hover:bg-[#46523C]
+                        hover:shadow-md
                     "
                 >
                     <Plus size={18} />
@@ -377,91 +235,166 @@ export default function AdminFloristsPage() {
             </div>
 
             {/* ================================================================== */}
-            {/* METRICS                                                            */}
+            {/* OVERVIEW                                                           */}
             {/* ================================================================== */}
 
-            <div className="mt-8 grid gap-6 md:grid-cols-4">
+            <div className="rounded-3xl bg-white p-6 shadow-sm">
 
-                <div className="rounded-3xl bg-white p-6 shadow-sm">
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
 
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F3F5EE] text-[#55624A]">
-                            <Flower2 size={21} />
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F3F5EE] text-[#55624A]">
+                            <Flower2 size={23} />
                         </div>
 
                         <div>
 
                             <p className="text-sm text-gray-500">
-                                Total
+                                Rede de floristas
                             </p>
 
-                            <p className="mt-1 text-3xl font-bold text-[#2F3B2A]">
-                                {
-                                    pagination.total
-                                }
-                            </p>
+                            <div className="mt-1 flex items-baseline gap-2">
+
+                                <span className="text-3xl font-bold text-[#2F3B2A]">
+                                    {
+                                        pagination.total
+                                    }
+                                </span>
+
+                                <span className="text-sm text-gray-400">
+                                    floristas registadas
+                                </span>
+
+                            </div>
 
                         </div>
 
                     </div>
 
+                    <div className="rounded-2xl bg-[#F5F7F2] px-5 py-3">
+
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                            A mostrar
+                        </p>
+
+                        <p className="mt-1 text-sm font-semibold text-[#55624A]">
+                            {florists.length} nesta página
+                        </p>
+
+                    </div>
+
                 </div>
 
-                <div className="rounded-3xl bg-white p-6 shadow-sm">
+            </div>
 
-                    <p className="text-sm text-gray-500">
-                        Ativas
-                    </p>
+            {/* ================================================================== */}
+            {/* FILTERS                                                            */}
+            {/* ================================================================== */}
 
-                    <p className="mt-2 text-3xl font-bold text-[#2F3B2A]">
-                        {
-                            activeCount
+            <div className="rounded-3xl bg-white p-5 shadow-sm sm:p-6">
+
+                <div className="flex items-center gap-3">
+
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]">
+                        <SlidersHorizontal
+                            size={19}
+                        />
+                    </div>
+
+                    <div>
+
+                        <h2 className="font-semibold text-[#2F3B2A]">
+                            Pesquisar e ordenar
+                        </h2>
+
+                        <p className="text-xs text-gray-400">
+                            Encontre rapidamente uma florista.
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <form
+                    onSubmit={handleSearch}
+                    className="mt-5 flex flex-col gap-3 lg:flex-row"
+                >
+
+                    <div className="flex-1">
+
+                        <SearchInput
+                            value={
+                                searchInput
+                            }
+                            onChange={
+                                setSearchInput
+                            }
+                            placeholder="Pesquisar por nome, email ou NIF..."
+                        />
+
+                    </div>
+
+                    <select
+                        value={sort}
+                        onChange={(event) =>
+                            handleSort(
+                                event.target
+                                    .value,
+                            )
                         }
-                    </p>
+                        className="
+                            rounded-2xl
+                            border
+                            border-gray-200
+                            bg-white
+                            px-4
+                            py-3
+                            text-sm
+                            text-gray-700
+                            outline-none
+                            transition
+                            focus:border-[#55624A]
+                            focus:ring-4
+                            focus:ring-[#55624A]/10
+                        "
+                    >
+                        <option value="name">
+                            Ordenar por nome
+                        </option>
 
-                    <p className="mt-1 text-xs text-gray-400">
-                        Na página atual
-                    </p>
+                        <option value="deliveryRadiusKm">
+                            Ordenar por raio
+                        </option>
 
-                </div>
+                        <option value="createdAt">
+                            Ordenar por data
+                        </option>
+                    </select>
 
-                <div className="rounded-3xl bg-white p-6 shadow-sm">
+                    <button
+                        type="submit"
+                        className="
+                            inline-flex
+                            items-center
+                            justify-center
+                            gap-2
+                            rounded-2xl
+                            bg-[#55624A]
+                            px-5
+                            py-3
+                            text-sm
+                            font-semibold
+                            text-white
+                            transition
+                            hover:bg-[#46523C]
+                        "
+                    >
+                        <Search size={17} />
+                        Pesquisar
+                    </button>
 
-                    <p className="text-sm text-gray-500">
-                        A aceitar encomendas
-                    </p>
-
-                    <p className="mt-2 text-3xl font-bold text-[#2F3B2A]">
-                        {
-                            acceptingOrdersCount
-                        }
-                    </p>
-
-                    <p className="mt-1 text-xs text-gray-400">
-                        Na página atual
-                    </p>
-
-                </div>
-
-                <div className="rounded-3xl bg-white p-6 shadow-sm">
-
-                    <p className="text-sm text-gray-500">
-                        Raio médio
-                    </p>
-
-                    <p className="mt-2 text-3xl font-bold text-[#2F3B2A]">
-                        {averageRadius.toFixed(
-                            1,
-                        )}{" "}
-                        km
-                    </p>
-
-                    <p className="mt-1 text-xs text-gray-400">
-                        Na página atual
-                    </p>
-
-                </div>
+                </form>
 
             </div>
 
@@ -470,7 +403,7 @@ export default function AdminFloristsPage() {
             {/* ================================================================== */}
 
             {error && (
-                <div className="mt-8 rounded-2xl border border-red-100 bg-red-50 p-5 text-red-600">
+                <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-sm text-red-600">
                     {error}
                 </div>
             )}
@@ -479,7 +412,7 @@ export default function AdminFloristsPage() {
             {/* TABLE                                                              */}
             {/* ================================================================== */}
 
-            <div className="mt-8 overflow-hidden rounded-3xl bg-white shadow-sm">
+            <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
 
                 <div className="overflow-x-auto">
 
@@ -487,63 +420,53 @@ export default function AdminFloristsPage() {
 
                         <thead>
 
-                            <tr className="border-b border-gray-100 text-left">
+                            <tr className="border-b border-gray-100 bg-[#FAFBF8] text-left">
 
-                                <th className="px-6 py-5">
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            handleSort(
-                                                "name",
-                                            )
+                                <th className="px-6 py-4">
+                                    <SortButton
+                                        label="Florista"
+                                        field="name"
+                                        currentSort={
+                                            sort
                                         }
-                                        className="
-                                            font-semibold
-                                            text-[#2F3B2A]
-                                            transition
-                                            hover:text-[#55624A]
-                                        "
-                                    >
-                                        Florista
-                                    </button>
-
+                                        order={
+                                            order
+                                        }
+                                        onSort={
+                                            handleSort
+                                        }
+                                    />
                                 </th>
 
-                                <th className="px-6 py-5 font-semibold text-[#2F3B2A]">
+                                <th className="px-6 py-4 font-semibold text-[#2F3B2A]">
                                     Contacto
                                 </th>
 
-                                <th className="px-6 py-5 font-semibold text-[#2F3B2A]">
+                                <th className="px-6 py-4 font-semibold text-[#2F3B2A]">
                                     Localização
                                 </th>
 
-                                <th className="px-6 py-5">
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            handleSort(
-                                                "deliveryRadiusKm",
-                                            )
+                                <th className="px-6 py-4">
+                                    <SortButton
+                                        label="Raio"
+                                        field="deliveryRadiusKm"
+                                        currentSort={
+                                            sort
                                         }
-                                        className="
-                                            font-semibold
-                                            text-[#2F3B2A]
-                                            transition
-                                            hover:text-[#55624A]
-                                        "
-                                    >
-                                        Raio
-                                    </button>
-
+                                        order={
+                                            order
+                                        }
+                                        onSort={
+                                            handleSort
+                                        }
+                                    />
                                 </th>
 
-                                <th className="px-6 py-5 font-semibold text-[#2F3B2A]">
+                                <th className="px-6 py-4 font-semibold text-[#2F3B2A]">
                                     Estado
                                 </th>
 
-                                <th className="px-6 py-5 text-right font-semibold text-[#2F3B2A]">
+                                <th className="px-6 py-4 text-right font-semibold text-[#2F3B2A]">
                                     Ações
                                 </th>
 
@@ -554,295 +477,23 @@ export default function AdminFloristsPage() {
                         <tbody>
 
                             {isLoading ? (
-                                <tr>
-
-                                    <td
-                                        colSpan={6}
-                                        className="px-6 py-16 text-center text-gray-500"
-                                    >
-                                        A carregar floristas...
-                                    </td>
-
-                                </tr>
+                                <LoadingRows />
                             ) : florists.length ===
                               0 ? (
-                                <tr>
-
-                                    <td
-                                        colSpan={6}
-                                        className="px-6 py-16 text-center"
-                                    >
-
-                                        <Flower2
-                                            size={36}
-                                            className="mx-auto text-gray-300"
-                                        />
-
-                                        <p className="mt-4 font-medium text-gray-600">
-                                            Nenhuma florista encontrada.
-                                        </p>
-
-                                        <p className="mt-1 text-sm text-gray-400">
-                                            Tente alterar a pesquisa.
-                                        </p>
-
-                                    </td>
-
-                                </tr>
+                                <EmptyFlorists />
                             ) : (
                                 florists.map(
                                     (
                                         florist,
                                     ) => (
-                                        <tr
+                                        <FloristRow
                                             key={
                                                 florist.id
                                             }
-                                            className="
-                                                border-b
-                                                border-gray-50
-                                                transition
-                                                last:border-0
-                                                hover:bg-[#FAFBF8]
-                                            "
-                                        >
-
-                                            {/* ====================================================== */}
-                                            {/* FLORIST                                              */}
-                                            {/* ====================================================== */}
-
-                                            <td className="px-6 py-5">
-
-                                                <div>
-
-                                                    <p className="font-semibold text-[#2F3B2A]">
-                                                        {
-                                                            florist.name
-                                                        }
-                                                    </p>
-
-                                                    {florist.legalName && (
-                                                        <p className="mt-1 text-sm text-gray-400">
-                                                            {
-                                                                florist.legalName
-                                                            }
-                                                        </p>
-                                                    )}
-
-                                                    <p className="mt-1 text-xs text-gray-400">
-                                                        NIF:{" "}
-                                                        {
-                                                            florist.taxNumber
-                                                        }
-                                                    </p>
-
-                                                </div>
-
-                                            </td>
-
-                                            {/* ====================================================== */}
-                                            {/* CONTACT                                               */}
-                                            {/* ====================================================== */}
-
-                                            <td className="px-6 py-5">
-
-                                                <div className="space-y-2">
-
-                                                    <div className="flex items-center gap-2 text-sm text-gray-600">
-
-                                                        <Mail
-                                                            size={15}
-                                                            className="shrink-0 text-gray-400"
-                                                        />
-
-                                                        <span className="max-w-[220px] truncate">
-                                                            {
-                                                                florist.email
-                                                            }
-                                                        </span>
-
-                                                    </div>
-
-                                                    <div className="flex items-center gap-2 text-sm text-gray-600">
-
-                                                        <Phone
-                                                            size={15}
-                                                            className="shrink-0 text-gray-400"
-                                                        />
-
-                                                        <span>
-                                                            {
-                                                                florist.phone
-                                                            }
-                                                        </span>
-
-                                                    </div>
-
-                                                </div>
-
-                                            </td>
-
-                                            {/* ====================================================== */}
-                                            {/* LOCATION                                              */}
-                                            {/* ====================================================== */}
-
-                                            <td className="px-6 py-5">
-
-                                                <div className="flex items-start gap-2">
-
-                                                    <MapPin
-                                                        size={17}
-                                                        className="mt-0.5 shrink-0 text-gray-400"
-                                                    />
-
-                                                    <div>
-
-                                                        <p className="font-medium text-gray-700">
-                                                            {
-                                                                florist
-                                                                    .address
-                                                                    .city
-                                                            }
-                                                        </p>
-
-                                                        <p className="mt-1 text-sm text-gray-400">
-                                                            {
-                                                                florist
-                                                                    .address
-                                                                    .postalCode
-                                                            }
-                                                        </p>
-
-                                                    </div>
-
-                                                </div>
-
-                                            </td>
-
-                                            {/* ====================================================== */}
-                                            {/* RADIUS                                                */}
-                                            {/* ====================================================== */}
-
-                                            <td className="px-6 py-5">
-
-                                                <span className="font-semibold text-[#2F3B2A]">
-                                                    {
-                                                        florist.deliveryRadiusKm
-                                                    }{" "}
-                                                    km
-                                                </span>
-
-                                            </td>
-
-                                            {/* ====================================================== */}
-                                            {/* STATUS                                                */}
-                                            {/* ====================================================== */}
-
-                                            <td className="px-6 py-5">
-
-                                                <div className="space-y-2">
-
-                                                    <StatusBadge
-                                                        status={
-                                                            florist.active
-                                                                ? "Ativa"
-                                                                : "Inativa"
-                                                        }
-                                                    />
-
-                                                    <div>
-
-                                                        <span
-                                                            className={`
-                                                                inline-flex
-                                                                rounded-full
-                                                                px-3
-                                                                py-1
-                                                                text-xs
-                                                                font-medium
-                                                                ${
-                                                                    florist.acceptingOrders
-                                                                        ? "bg-[#D6DEC8] text-[#55624A]"
-                                                                        : "bg-gray-100 text-gray-500"
-                                                                }
-                                                            `}
-                                                        >
-                                                            {florist.acceptingOrders
-                                                                ? "Aceita encomendas"
-                                                                : "Não aceita encomendas"}
-                                                        </span>
-
-                                                    </div>
-
-                                                </div>
-
-                                            </td>
-
-                                            {/* ====================================================== */}
-                                            {/* ACTIONS                                               */}
-                                            {/* ====================================================== */}
-
-                                            <td className="px-6 py-5">
-
-                                                <div className="flex items-center justify-end gap-2">
-
-                                                    <Link
-                                                        href={`/admin/florists/${florist.id}`}
-                                                        title="Ver florista"
-                                                        aria-label={`Ver ${florist.name}`}
-                                                        className="
-                                                            flex
-                                                            h-10
-                                                            w-10
-                                                            items-center
-                                                            justify-center
-                                                            rounded-xl
-                                                            border
-                                                            border-gray-200
-                                                            bg-white
-                                                            text-gray-500
-                                                            transition
-                                                            hover:border-[#D6DEC8]
-                                                            hover:bg-[#F5F7F2]
-                                                            hover:text-[#55624A]
-                                                        "
-                                                    >
-                                                        <Eye
-                                                            size={18}
-                                                        />
-                                                    </Link>
-
-                                                    <Link
-                                                        href={`/admin/florists/${florist.id}/edit`}
-                                                        title="Editar florista"
-                                                        aria-label={`Editar ${florist.name}`}
-                                                        className="
-                                                            flex
-                                                            h-10
-                                                            w-10
-                                                            items-center
-                                                            justify-center
-                                                            rounded-xl
-                                                            border
-                                                            border-gray-200
-                                                            bg-white
-                                                            text-gray-500
-                                                            transition
-                                                            hover:border-[#D6DEC8]
-                                                            hover:bg-[#F5F7F2]
-                                                            hover:text-[#55624A]
-                                                        "
-                                                    >
-                                                        <Pencil
-                                                            size={17}
-                                                        />
-                                                    </Link>
-
-                                                </div>
-
-                                            </td>
-
-                                        </tr>
+                                            florist={
+                                                florist
+                                            }
+                                        />
                                     ),
                                 )
                             )}
@@ -862,35 +513,44 @@ export default function AdminFloristsPage() {
                         0 && (
                         <div className="flex flex-col gap-4 border-t border-gray-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
 
-                            <p className="text-sm text-gray-500">
+                            <div>
 
-                                Página{" "}
+                                <p className="text-sm text-gray-500">
 
-                                <span className="font-semibold text-gray-700">
+                                    A mostrar{" "}
+
+                                    <span className="font-semibold text-gray-700">
+                                        {
+                                            florists.length
+                                        }
+                                    </span>
+
+                                    {" "}de{" "}
+
+                                    <span className="font-semibold text-gray-700">
+                                        {
+                                            pagination.total
+                                        }
+                                    </span>
+
+                                    {" "}floristas
+
+                                </p>
+
+                                <p className="mt-1 text-xs text-gray-400">
+
+                                    Página{" "}
                                     {
                                         pagination.page
-                                    }
-                                </span>{" "}
-
-                                de{" "}
-
-                                <span className="font-semibold text-gray-700">
+                                    }{" "}
+                                    de{" "}
                                     {
                                         pagination.pages
                                     }
-                                </span>
 
-                                <span className="ml-2 text-gray-400">
+                                </p>
 
-                                    (
-                                    {
-                                        pagination.total
-                                    }{" "}
-                                    floristas)
-
-                                </span>
-
-                            </p>
+                            </div>
 
                             <div className="flex items-center gap-2">
 
@@ -916,7 +576,10 @@ export default function AdminFloristsPage() {
                                         rounded-xl
                                         border
                                         border-gray-200
+                                        bg-white
+                                        text-gray-600
                                         transition
+                                        hover:border-[#D6DEC8]
                                         hover:bg-[#F5F7F2]
                                         hover:text-[#55624A]
                                         disabled:cursor-not-allowed
@@ -928,11 +591,11 @@ export default function AdminFloristsPage() {
                                     />
                                 </button>
 
-                                <span className="px-3 text-sm font-medium text-gray-600">
+                                <div className="flex h-10 min-w-10 items-center justify-center rounded-xl bg-[#55624A] px-3 text-sm font-semibold text-white">
                                     {
                                         pagination.page
                                     }
-                                </span>
+                                </div>
 
                                 <button
                                     type="button"
@@ -956,7 +619,10 @@ export default function AdminFloristsPage() {
                                         rounded-xl
                                         border
                                         border-gray-200
+                                        bg-white
+                                        text-gray-600
                                         transition
+                                        hover:border-[#D6DEC8]
                                         hover:bg-[#F5F7F2]
                                         hover:text-[#55624A]
                                         disabled:cursor-not-allowed
@@ -976,5 +642,451 @@ export default function AdminFloristsPage() {
             </div>
 
         </div>
+    );
+}
+
+/* ========================================================================== */
+/* FLORIST ROW                                                                */
+/* ========================================================================== */
+
+function FloristRow({
+    florist,
+}: {
+    florist: Florist;
+}) {
+    return (
+        <tr
+            className="
+                group
+                border-b
+                border-gray-50
+                transition
+                last:border-0
+                hover:bg-[#FAFBF8]
+            "
+        >
+
+            {/* ================================================================ */}
+            {/* FLORIST                                                          */}
+            {/* ================================================================ */}
+
+            <td className="px-6 py-5">
+
+                <div className="flex items-center gap-4">
+
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F3F5EE] text-[#55624A] transition group-hover:bg-[#E9EDE3]">
+                        <Flower2
+                            size={21}
+                        />
+                    </div>
+
+                    <div className="min-w-0">
+
+                        <p className="truncate font-semibold text-[#2F3B2A]">
+                            {
+                                florist.name
+                            }
+                        </p>
+
+                        {florist.legalName && (
+                            <p className="mt-1 truncate text-sm text-gray-400">
+                                {
+                                    florist.legalName
+                                }
+                            </p>
+                        )}
+
+                        <p className="mt-1 text-xs text-gray-400">
+                            NIF:{" "}
+                            {
+                                florist.taxNumber
+                            }
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </td>
+
+            {/* ================================================================ */}
+            {/* CONTACT                                                          */}
+            {/* ================================================================ */}
+
+            <td className="px-6 py-5">
+
+                <div className="space-y-2">
+
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+
+                        <Mail
+                            size={15}
+                            className="shrink-0 text-gray-400"
+                        />
+
+                        <span className="max-w-[220px] truncate">
+                            {
+                                florist.email
+                            }
+                        </span>
+
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+
+                        <Phone
+                            size={15}
+                            className="shrink-0 text-gray-400"
+                        />
+
+                        <span>
+                            {
+                                florist.phone
+                            }
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </td>
+
+            {/* ================================================================ */}
+            {/* LOCATION                                                          */}
+            {/* ================================================================ */}
+
+            <td className="px-6 py-5">
+
+                <div className="flex items-start gap-2">
+
+                    <MapPin
+                        size={17}
+                        className="mt-0.5 shrink-0 text-gray-400"
+                    />
+
+                    <div>
+
+                        <p className="font-medium text-gray-700">
+                            {
+                                florist
+                                    .address
+                                    .city
+                            }
+                        </p>
+
+                        <p className="mt-1 text-sm text-gray-400">
+                            {
+                                florist
+                                    .address
+                                    .postalCode
+                            }
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </td>
+
+            {/* ================================================================ */}
+            {/* RADIUS                                                            */}
+            {/* ================================================================ */}
+
+            <td className="px-6 py-5">
+
+                <div className="inline-flex items-center rounded-xl bg-[#F5F7F2] px-3 py-2">
+
+                    <span className="font-semibold text-[#55624A]">
+                        {
+                            florist.deliveryRadiusKm
+                        }{" "}
+                        km
+                    </span>
+
+                </div>
+
+            </td>
+
+            {/* ================================================================ */}
+            {/* STATUS                                                            */}
+            {/* ================================================================ */}
+
+            <td className="px-6 py-5">
+
+                <div className="space-y-2">
+
+                    <StatusBadge
+                        status={
+                            florist.active
+                                ? "Ativa"
+                                : "Inativa"
+                        }
+                    />
+
+                    <div>
+
+                        <span
+                            className={`
+                                inline-flex
+                                items-center
+                                gap-2
+                                rounded-full
+                                px-3
+                                py-1
+                                text-xs
+                                font-medium
+                                ${
+                                    florist.acceptingOrders
+                                        ? "bg-[#D6DEC8] text-[#55624A]"
+                                        : "bg-gray-100 text-gray-500"
+                                }
+                            `}
+                        >
+
+                            <span
+                                className={`
+                                    h-1.5
+                                    w-1.5
+                                    rounded-full
+                                    ${
+                                        florist.acceptingOrders
+                                            ? "bg-[#55624A]"
+                                            : "bg-gray-400"
+                                    }
+                                `}
+                            />
+
+                            {florist.acceptingOrders
+                                ? "Aceita encomendas"
+                                : "Não aceita encomendas"}
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </td>
+
+            {/* ================================================================ */}
+            {/* ACTIONS                                                           */}
+            {/* ================================================================ */}
+
+            <td className="px-6 py-5">
+
+                <div className="flex items-center justify-end gap-2">
+
+                    <Link
+                        href={`/admin/florists/${florist.id}`}
+                        title="Ver florista"
+                        aria-label={`Ver ${florist.name}`}
+                        className="
+                            flex
+                            h-10
+                            w-10
+                            items-center
+                            justify-center
+                            rounded-xl
+                            border
+                            border-gray-200
+                            bg-white
+                            text-gray-500
+                            transition
+                            hover:border-[#D6DEC8]
+                            hover:bg-[#F5F7F2]
+                            hover:text-[#55624A]
+                        "
+                    >
+                        <Eye
+                            size={18}
+                        />
+                    </Link>
+
+                    <Link
+                        href={`/admin/florists/${florist.id}/edit`}
+                        title="Editar florista"
+                        aria-label={`Editar ${florist.name}`}
+                        className="
+                            flex
+                            h-10
+                            w-10
+                            items-center
+                            justify-center
+                            rounded-xl
+                            border
+                            border-gray-200
+                            bg-white
+                            text-gray-500
+                            transition
+                            hover:border-[#D6DEC8]
+                            hover:bg-[#F5F7F2]
+                            hover:text-[#55624A]
+                        "
+                    >
+                        <Pencil
+                            size={17}
+                        />
+                    </Link>
+
+                </div>
+
+            </td>
+
+        </tr>
+    );
+}
+
+/* ========================================================================== */
+/* SORT BUTTON                                                                */
+/* ========================================================================== */
+
+type SortButtonProps = {
+    label: string;
+    field: string;
+    currentSort: string;
+    order: "asc" | "desc";
+    onSort: (
+        field: string,
+    ) => void;
+};
+
+function SortButton({
+    label,
+    field,
+    currentSort,
+    order,
+    onSort,
+}: SortButtonProps) {
+    const active =
+        currentSort === field;
+
+    return (
+        <button
+            type="button"
+            onClick={() =>
+                onSort(field)
+            }
+            className="
+                inline-flex
+                items-center
+                gap-2
+                font-semibold
+                text-[#2F3B2A]
+                transition
+                hover:text-[#55624A]
+            "
+        >
+
+            {label}
+
+            <span
+                className={
+                    active
+                        ? "text-[#55624A]"
+                        : "text-gray-300"
+                }
+            >
+                {active
+                    ? order === "asc"
+                        ? "↑"
+                        : "↓"
+                    : "↕"}
+            </span>
+
+        </button>
+    );
+}
+
+/* ========================================================================== */
+/* LOADING                                                                    */
+/* ========================================================================== */
+
+function LoadingRows() {
+    return (
+        <>
+            {Array.from({
+                length: 6,
+            }).map((_, index) => (
+                <tr
+                    key={index}
+                    className="border-b border-gray-50"
+                >
+                    {Array.from({
+                        length: 6,
+                    }).map(
+                        (
+                            _,
+                            cellIndex,
+                        ) => (
+                            <td
+                                key={
+                                    cellIndex
+                                }
+                                className="px-6 py-5"
+                            >
+                                <div className="h-5 animate-pulse rounded-lg bg-gray-100" />
+                            </td>
+                        ),
+                    )}
+                </tr>
+            ))}
+        </>
+    );
+}
+
+/* ========================================================================== */
+/* EMPTY                                                                      */
+/* ========================================================================== */
+
+function EmptyFlorists() {
+    return (
+        <tr>
+
+            <td
+                colSpan={6}
+                className="px-6 py-20 text-center"
+            >
+
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F5F7F2] text-[#55624A]">
+                    <Flower2
+                        size={27}
+                    />
+                </div>
+
+                <p className="mt-5 text-lg font-semibold text-[#2F3B2A]">
+                    Nenhuma florista encontrada
+                </p>
+
+                <p className="mx-auto mt-2 max-w-sm text-sm text-gray-400">
+                    Não encontrámos floristas
+                    correspondentes à pesquisa
+                    atual.
+                </p>
+
+                <Link
+                    href="/admin/florists/new"
+                    className="
+                        mt-6
+                        inline-flex
+                        items-center
+                        gap-2
+                        rounded-2xl
+                        bg-[#55624A]
+                        px-5
+                        py-3
+                        text-sm
+                        font-semibold
+                        text-white
+                        transition
+                        hover:bg-[#46523C]
+                    "
+                >
+                    <Plus size={17} />
+                    Adicionar florista
+                </Link>
+
+            </td>
+
+        </tr>
     );
 }

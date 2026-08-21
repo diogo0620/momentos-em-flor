@@ -44,7 +44,10 @@ export type CreateUserData = {
     password: string;
     phone?: string;
     avatarUrl?: string;
-    role: "SYSTEM_ADMIN" | "FLORIST" | "CUSTOMER";
+    role:
+        | "SYSTEM_ADMIN"
+        | "FLORIST"
+        | "CUSTOMER";
     floristId?: number;
 };
 
@@ -67,4 +70,22 @@ export async function getUser(
         success: boolean;
         data: User;
     }>(`/users/${id}`);
+}
+
+export type UpdateMyProfileData = {
+    firstName: string;
+    lastName: string;
+    phone?: string;
+};
+
+export async function updateMyProfile(
+    data: UpdateMyProfileData,
+) {
+    return apiFetch<{
+        success: boolean;
+        data: User;
+    }>("/users/me", {
+        method: "PATCH",
+        body: JSON.stringify(data),
+    });
 }

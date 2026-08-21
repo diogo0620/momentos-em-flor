@@ -64,6 +64,21 @@ export class UsersController {
         );
     }
 
+    @Patch('me')
+@UseGuards(JwtAuthGuard)
+updateMe(
+    @CurrentUser()
+    user: AuthenticatedUser,
+
+    @Body()
+    dto: UpdateUserDto,
+) {
+    return this.usersService.updateMe(
+        user,
+        dto,
+    );
+}
+
     @Get(':id')
     @Roles(UserRole.SYSTEM_ADMIN)
     findOne(
@@ -96,6 +111,8 @@ export class UsersController {
             dto,
         );
     }
+
+    
 
     @Patch('me/password')
     changePassword(
