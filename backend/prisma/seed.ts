@@ -1,7 +1,6 @@
 
 import {
   PrismaClient,
-  ProductPricingType,
   ProductVariantType,
   FileProvider,
 } from '@prisma/client';
@@ -18,10 +17,6 @@ const prisma = new PrismaClient();
 
 async function cleanDatabase() {
   console.log('🧹 Cleaning database...');
-
-  /*
-   * Delete children before parents because of foreign keys.
-   */
 
   await prisma.orderReviewRating.deleteMany();
   await prisma.orderReview.deleteMany();
@@ -290,8 +285,7 @@ async function createProductVariant(
       code: data.code,
 
       price: data.price,
-      floristCompensation:
-        data.floristCompensation,
+      floristCompensation: data.floristCompensation,
 
       sortOrder: data.sortOrder ?? 0,
     },
@@ -316,15 +310,10 @@ async function createProducts(
   console.log('🌸 Creating products...');
 
   /*
-   * ----------------------------------------------------------
-   * PRODUCT 1
-   *
-   * Simple product:
-   * - no components
-   * - no variants
-   *
-   * Uses basePrice and baseFloristCompensation.
-   * ----------------------------------------------------------
+   * ==========================================================
+   * 1. ORQUÍDEA BRANCA
+   * Simple
+   * ==========================================================
    */
 
   const orchid = await prisma.product.create({
@@ -332,10 +321,7 @@ async function createProducts(
       name: 'Orquídea Branca',
       slug: 'orquidea-branca',
       description:
-        'Orquídea branca em vaso decorativo.',
-
-      pricingType:
-        ProductPricingType.FIXED,
+        'Orquídea branca em vaso decorativo, perfeita para oferecer ou decorar a casa.',
 
       basePrice: 34.90,
       baseFloristCompensation: 25.00,
@@ -358,28 +344,18 @@ async function createProducts(
 
 
   /*
-   * ----------------------------------------------------------
-   * PRODUCT 2
-   *
-   * Configurable product:
-   * - components
-   * - no variants
-   *
-   * The minimum quantity of each component is included
-   * in the base price.
-   * ----------------------------------------------------------
+   * ==========================================================
+   * 2. RAMO PRIMAVERA
+   * Components
+   * ==========================================================
    */
 
   const primavera = await prisma.product.create({
     data: {
       name: 'Ramo Primavera',
       slug: 'ramo-primavera',
-
       description:
         'Ramo colorido de flores da estação, personalizável em quantidade.',
-
-      pricingType:
-        ProductPricingType.FIXED,
 
       basePrice: 39.90,
       baseFloristCompensation: 30.00,
@@ -400,71 +376,40 @@ async function createProducts(
     },
   });
 
-  /*
-   * Roses
-   *
-   * 6 included
-   * 12 recommended
-   * 24 maximum
-   */
+  await createProductComponent(primavera.id, {
+    name: 'Rosas',
+    minQuantity: 6,
+    recommendedQuantity: 12,
+    maxQuantity: 24,
+    customerPricePerAdditionalUnit: 2.50,
+    floristCompensationPerAdditionalUnit: 1.50,
+    sortOrder: 0,
+  });
 
-  await createProductComponent(
-    primavera.id,
-    {
-      name: 'Rosas',
-      minQuantity: 6,
-      recommendedQuantity: 12,
-      maxQuantity: 24,
-
-      customerPricePerAdditionalUnit: 2.50,
-      floristCompensationPerAdditionalUnit: 1.50,
-
-      sortOrder: 0,
-    },
-  );
-
-  /*
-   * Peonies
-   *
-   * 3 included
-   * 6 recommended
-   * 12 maximum
-   */
-
-  await createProductComponent(
-    primavera.id,
-    {
-      name: 'Peónias',
-      minQuantity: 3,
-      recommendedQuantity: 6,
-      maxQuantity: 12,
-
-      customerPricePerAdditionalUnit: 3.50,
-      floristCompensationPerAdditionalUnit: 2.00,
-
-      sortOrder: 1,
-    },
-  );
+  await createProductComponent(primavera.id, {
+    name: 'Peónias',
+    minQuantity: 3,
+    recommendedQuantity: 6,
+    maxQuantity: 12,
+    customerPricePerAdditionalUnit: 3.50,
+    floristCompensationPerAdditionalUnit: 2.00,
+    sortOrder: 1,
+  });
 
 
   /*
-   * ----------------------------------------------------------
-   * PRODUCT 3
-   *
-   * Configurable product with one component.
-   * ----------------------------------------------------------
+   * ==========================================================
+   * 3. ROSAS VERMELHAS
+   * Components
+   * ==========================================================
    */
 
   const redRoses = await prisma.product.create({
     data: {
       name: 'Rosas Vermelhas',
       slug: 'rosas-vermelhas',
-
       description:
-        'Bouquet de rosas vermelhas frescas, personalizável em quantidade.',
-
-      pricingType:
-        ProductPricingType.FIXED,
+        'Bouquet de rosas vermelhas frescas, ideal para momentos românticos.',
 
       basePrice: 39.90,
       baseFloristCompensation: 30.00,
@@ -485,55 +430,37 @@ async function createProducts(
     },
   });
 
-  await createProductComponent(
-    redRoses.id,
-    {
-      name: 'Rosas Vermelhas',
-
-      minQuantity: 6,
-      recommendedQuantity: 12,
-      maxQuantity: 24,
-
-      customerPricePerAdditionalUnit: 2.50,
-      floristCompensationPerAdditionalUnit: 1.50,
-
-      sortOrder: 0,
-    },
-  );
+  await createProductComponent(redRoses.id, {
+    name: 'Rosas Vermelhas',
+    minQuantity: 6,
+    recommendedQuantity: 12,
+    maxQuantity: 24,
+    customerPricePerAdditionalUnit: 2.50,
+    floristCompensationPerAdditionalUnit: 1.50,
+    sortOrder: 0,
+  });
 
 
   /*
-   * ----------------------------------------------------------
-   * PRODUCT 4
-   *
-   * Product with VARIANTS.
-   *
-   * Important:
-   * This product does NOT have components.
-   *
-   * Prices and florist compensation are defined
-   * independently for each variant.
-   * ----------------------------------------------------------
+   * ==========================================================
+   * 4. COROA FLORAL
+   * Variants
+   * ==========================================================
    */
 
   const crown = await prisma.product.create({
     data: {
       name: 'Coroa Floral',
       slug: 'coroa-floral',
-
       description:
         'Coroa floral disponível em diferentes tamanhos.',
 
-      pricingType:
-        ProductPricingType.FIXED,
-
       /*
-       * No base price because variants define
-       * their own prices.
+       * Base price must always be the lowest variant price.
        */
 
-      basePrice: null,
-      baseFloristCompensation: null,
+      basePrice: 59.90,
+      baseFloristCompensation: 45.00,
 
       taxCode: {
         connect: {
@@ -551,75 +478,614 @@ async function createProducts(
     },
   });
 
+  const crownSmall = await createProductVariant(crown.id, {
+    type: ProductVariantType.SIZE,
+    name: 'Pequena',
+    code: 'COROA-S',
+    price: 59.90,
+    floristCompensation: 45.00,
+    sortOrder: 0,
+  });
 
-  /*
-   * Small
-   */
+  const crownMedium = await createProductVariant(crown.id, {
+    type: ProductVariantType.SIZE,
+    name: 'Média',
+    code: 'COROA-M',
+    price: 79.90,
+    floristCompensation: 60.00,
+    sortOrder: 1,
+  });
 
-  const crownSmall =
-    await createProductVariant(
-      crown.id,
-      {
-        type: ProductVariantType.SIZE,
-
-        name: 'Pequena',
-        code: 'COROA-S',
-
-        price: 59.90,
-        floristCompensation: 45.00,
-
-        sortOrder: 0,
-      },
-    );
-
-
-  /*
-   * Medium
-   */
-
-  const crownMedium =
-    await createProductVariant(
-      crown.id,
-      {
-        type: ProductVariantType.SIZE,
-
-        name: 'Média',
-        code: 'COROA-M',
-
-        price: 79.90,
-        floristCompensation: 60.00,
-
-        sortOrder: 1,
-      },
-    );
+  const crownLarge = await createProductVariant(crown.id, {
+    type: ProductVariantType.SIZE,
+    name: 'Grande',
+    code: 'COROA-L',
+    price: 109.90,
+    floristCompensation: 82.00,
+    sortOrder: 2,
+  });
 
 
   /*
-   * Large
+   * ==========================================================
+   * 5. BOUQUET ROMÂNTICO
+   * Simple
+   * ==========================================================
    */
 
-  const crownLarge =
-    await createProductVariant(
-      crown.id,
-      {
-        type: ProductVariantType.SIZE,
+  const romantic = await prisma.product.create({
+    data: {
+      name: 'Bouquet Romântico',
+      slug: 'bouquet-romantico',
+      description:
+        'Bouquet elegante de rosas e flores delicadas em tons românticos.',
 
-        name: 'Grande',
-        code: 'COROA-L',
+      basePrice: 49.90,
+      baseFloristCompensation: 37.00,
 
-        price: 109.90,
-        floristCompensation: 82.00,
-
-        sortOrder: 2,
+      taxCode: {
+        connect: {
+          id: taxCodes.vat23.id,
+        },
       },
-    );
 
+      category: {
+        connect: {
+          id: categories.bouquets.id,
+        },
+      },
+
+      sortOrder: 4,
+    },
+  });
+
+
+  /*
+   * ==========================================================
+   * 6. LÍRIOS BRANCOS
+   * Components
+   * ==========================================================
+   */
+
+  const lilies = await prisma.product.create({
+    data: {
+      name: 'Lírios Brancos',
+      slug: 'lirios-brancos',
+      description:
+        'Arranjo de lírios brancos frescos e perfumados.',
+
+      basePrice: 44.90,
+      baseFloristCompensation: 33.00,
+
+      taxCode: {
+        connect: {
+          id: taxCodes.vat23.id,
+        },
+      },
+
+      category: {
+        connect: {
+          id: categories.bouquets.id,
+        },
+      },
+
+      sortOrder: 5,
+    },
+  });
+
+  await createProductComponent(lilies.id, {
+    name: 'Lírios',
+    minQuantity: 5,
+    recommendedQuantity: 8,
+    maxQuantity: 16,
+    customerPricePerAdditionalUnit: 3.00,
+    floristCompensationPerAdditionalUnit: 1.80,
+    sortOrder: 0,
+  });
+
+  await createProductComponent(lilies.id, {
+    name: 'Eucalipto',
+    minQuantity: 2,
+    recommendedQuantity: 4,
+    maxQuantity: 8,
+    customerPricePerAdditionalUnit: 1.50,
+    floristCompensationPerAdditionalUnit: 0.80,
+    sortOrder: 1,
+  });
+
+
+  /*
+   * ==========================================================
+   * 7. TULIPAS COLORIDAS
+   * Variants
+   * ==========================================================
+   */
+
+  const tulips = await prisma.product.create({
+    data: {
+      name: 'Tulipas Coloridas',
+      slug: 'tulipas-coloridas',
+      description:
+        'Bouquet de tulipas disponível em diferentes tamanhos.',
+
+      basePrice: 29.90,
+      baseFloristCompensation: 22.00,
+
+      taxCode: {
+        connect: {
+          id: taxCodes.vat23.id,
+        },
+      },
+
+      category: {
+        connect: {
+          id: categories.bouquets.id,
+        },
+      },
+
+      sortOrder: 6,
+    },
+  });
+
+  await createProductVariant(tulips.id, {
+    type: ProductVariantType.SIZE,
+    name: 'Pequeno',
+    code: 'TULIP-S',
+    price: 29.90,
+    floristCompensation: 22.00,
+    sortOrder: 0,
+  });
+
+  await createProductVariant(tulips.id, {
+    type: ProductVariantType.SIZE,
+    name: 'Médio',
+    code: 'TULIP-M',
+    price: 39.90,
+    floristCompensation: 29.00,
+    sortOrder: 1,
+  });
+
+  await createProductVariant(tulips.id, {
+    type: ProductVariantType.SIZE,
+    name: 'Grande',
+    code: 'TULIP-L',
+    price: 54.90,
+    floristCompensation: 40.00,
+    sortOrder: 2,
+  });
+
+
+  /*
+   * ==========================================================
+   * 8. SUCULENTA DECORATIVA
+   * Simple
+   * ==========================================================
+   */
+
+  const succulent = await prisma.product.create({
+    data: {
+      name: 'Suculenta Decorativa',
+      slug: 'suculenta-decorativa',
+      description:
+        'Pequena suculenta em vaso decorativo, fácil de cuidar.',
+
+      basePrice: 19.90,
+      baseFloristCompensation: 14.00,
+
+      taxCode: {
+        connect: {
+          id: taxCodes.vat6.id,
+        },
+      },
+
+      category: {
+        connect: {
+          id: categories.plants.id,
+        },
+      },
+
+      sortOrder: 7,
+    },
+  });
+
+
+  /*
+   * ==========================================================
+   * 9. CAIXA DE FLORES ROMÂNTICA
+   * Components
+   * ==========================================================
+   */
+
+  const flowerBox = await prisma.product.create({
+    data: {
+      name: 'Caixa de Flores Romântica',
+      slug: 'caixa-flores-romantica',
+      description:
+        'Caixa floral elegante com flores frescas e complementos personalizáveis.',
+
+      basePrice: 54.90,
+      baseFloristCompensation: 41.00,
+
+      taxCode: {
+        connect: {
+          id: taxCodes.vat23.id,
+        },
+      },
+
+      category: {
+        connect: {
+          id: categories.bouquets.id,
+        },
+      },
+
+      sortOrder: 8,
+    },
+  });
+
+  await createProductComponent(flowerBox.id, {
+    name: 'Rosas',
+    minQuantity: 6,
+    recommendedQuantity: 10,
+    maxQuantity: 18,
+    customerPricePerAdditionalUnit: 2.80,
+    floristCompensationPerAdditionalUnit: 1.70,
+    sortOrder: 0,
+  });
+
+  await createProductComponent(flowerBox.id, {
+    name: 'Chocolate',
+    minQuantity: 1,
+    recommendedQuantity: 2,
+    maxQuantity: 4,
+    customerPricePerAdditionalUnit: 5.00,
+    floristCompensationPerAdditionalUnit: 3.00,
+    sortOrder: 1,
+  });
+
+  await createProductComponent(flowerBox.id, {
+    name: 'Cartão',
+    minQuantity: 0,
+    recommendedQuantity: 1,
+    maxQuantity: 1,
+    customerPricePerAdditionalUnit: 2.50,
+    floristCompensationPerAdditionalUnit: 1.00,
+    sortOrder: 2,
+  });
+
+
+  /*
+   * ==========================================================
+   * 10. GIRASSÓIS
+   * Simple
+   * ==========================================================
+   */
+
+  const sunflowers = await prisma.product.create({
+    data: {
+      name: 'Bouquet de Girassóis',
+      slug: 'bouquet-girassois',
+      description:
+        'Bouquet alegre de girassóis frescos.',
+
+      basePrice: 42.90,
+      baseFloristCompensation: 32.00,
+
+      taxCode: {
+        connect: {
+          id: taxCodes.vat23.id,
+        },
+      },
+
+      category: {
+        connect: {
+          id: categories.bouquets.id,
+        },
+      },
+
+      sortOrder: 9,
+    },
+  });
+
+
+  /*
+   * ==========================================================
+   * 11. ARRANJO CAMPO
+   * Components
+   * ==========================================================
+   */
+
+  const fieldArrangement = await prisma.product.create({
+    data: {
+      name: 'Arranjo Campo',
+      slug: 'arranjo-campo',
+      description:
+        'Arranjo descontraído inspirado nas flores do campo.',
+
+      basePrice: 45.90,
+      baseFloristCompensation: 34.00,
+
+      taxCode: {
+        connect: {
+          id: taxCodes.vat23.id,
+        },
+      },
+
+      category: {
+        connect: {
+          id: categories.bouquets.id,
+        },
+      },
+
+      sortOrder: 10,
+    },
+  });
+
+  await createProductComponent(fieldArrangement.id, {
+    name: 'Flores do Campo',
+    minQuantity: 8,
+    recommendedQuantity: 12,
+    maxQuantity: 24,
+    customerPricePerAdditionalUnit: 2.00,
+    floristCompensationPerAdditionalUnit: 1.20,
+    sortOrder: 0,
+  });
+
+  await createProductComponent(fieldArrangement.id, {
+    name: 'Eucalipto',
+    minQuantity: 2,
+    recommendedQuantity: 4,
+    maxQuantity: 8,
+    customerPricePerAdditionalUnit: 1.50,
+    floristCompensationPerAdditionalUnit: 0.80,
+    sortOrder: 1,
+  });
+
+
+  /*
+   * ==========================================================
+   * 12. ORQUÍDEA ROSA
+   * Variants
+   * ==========================================================
+   */
+
+  const pinkOrchid = await prisma.product.create({
+    data: {
+      name: 'Orquídea Rosa',
+      slug: 'orquidea-rosa',
+      description:
+        'Orquídea rosa elegante disponível em diferentes tamanhos.',
+
+      basePrice: 32.90,
+      baseFloristCompensation: 24.00,
+
+      taxCode: {
+        connect: {
+          id: taxCodes.vat23.id,
+        },
+      },
+
+      category: {
+        connect: {
+          id: categories.plants.id,
+        },
+      },
+
+      sortOrder: 11,
+    },
+  });
+
+  await createProductVariant(pinkOrchid.id, {
+    type: ProductVariantType.SIZE,
+    name: 'Pequena',
+    code: 'ORQ-ROSA-S',
+    price: 32.90,
+    floristCompensation: 24.00,
+    sortOrder: 0,
+  });
+
+  await createProductVariant(pinkOrchid.id, {
+    type: ProductVariantType.SIZE,
+    name: 'Média',
+    code: 'ORQ-ROSA-M',
+    price: 44.90,
+    floristCompensation: 33.00,
+    sortOrder: 1,
+  });
+
+  await createProductVariant(pinkOrchid.id, {
+    type: ProductVariantType.SIZE,
+    name: 'Grande',
+    code: 'ORQ-ROSA-L',
+    price: 59.90,
+    floristCompensation: 44.00,
+    sortOrder: 2,
+  });
+
+
+  /*
+   * ==========================================================
+   * 13. CENTRO DE MESA FLORAL
+   * Components
+   * ==========================================================
+   */
+
+  const centerpiece = await prisma.product.create({
+    data: {
+      name: 'Centro de Mesa Floral',
+      slug: 'centro-mesa-floral',
+      description:
+        'Arranjo floral elegante para mesas de jantar e ocasiões especiais.',
+
+      basePrice: 49.90,
+      baseFloristCompensation: 37.00,
+
+      taxCode: {
+        connect: {
+          id: taxCodes.vat23.id,
+        },
+      },
+
+      category: {
+        connect: {
+          id: categories.bouquets.id,
+        },
+      },
+
+      sortOrder: 12,
+    },
+  });
+
+  await createProductComponent(centerpiece.id, {
+    name: 'Rosas',
+    minQuantity: 5,
+    recommendedQuantity: 8,
+    maxQuantity: 15,
+    customerPricePerAdditionalUnit: 2.50,
+    floristCompensationPerAdditionalUnit: 1.50,
+    sortOrder: 0,
+  });
+
+  await createProductComponent(centerpiece.id, {
+    name: 'Velas',
+    minQuantity: 0,
+    recommendedQuantity: 2,
+    maxQuantity: 4,
+    customerPricePerAdditionalUnit: 3.50,
+    floristCompensationPerAdditionalUnit: 2.00,
+    sortOrder: 1,
+  });
+
+
+  /*
+   * ==========================================================
+   * 14. BOUQUET PREMIUM
+   * Variants
+   * ==========================================================
+   */
+
+  const premium = await prisma.product.create({
+    data: {
+      name: 'Bouquet Premium',
+      slug: 'bouquet-premium',
+      description:
+        'Bouquet premium composto por flores selecionadas e apresentação sofisticada.',
+
+      basePrice: 69.90,
+      baseFloristCompensation: 52.00,
+
+      taxCode: {
+        connect: {
+          id: taxCodes.vat23.id,
+        },
+      },
+
+      category: {
+        connect: {
+          id: categories.bouquets.id,
+        },
+      },
+
+      sortOrder: 13,
+    },
+  });
+
+  await createProductVariant(premium.id, {
+    type: ProductVariantType.SIZE,
+    name: 'Clássico',
+    code: 'PREMIUM-S',
+    price: 69.90,
+    floristCompensation: 52.00,
+    sortOrder: 0,
+  });
+
+  await createProductVariant(premium.id, {
+    type: ProductVariantType.SIZE,
+    name: 'Elegante',
+    code: 'PREMIUM-M',
+    price: 89.90,
+    floristCompensation: 67.00,
+    sortOrder: 1,
+  });
+
+  await createProductVariant(premium.id, {
+    type: ProductVariantType.SIZE,
+    name: 'Luxo',
+    code: 'PREMIUM-L',
+    price: 119.90,
+    floristCompensation: 89.00,
+    sortOrder: 2,
+  });
+
+
+  /*
+   * ==========================================================
+   * 15. COROA DE ROSAS BRANCAS
+   * Simple
+   * ==========================================================
+   */
+
+  const whiteFuneral = await prisma.product.create({
+    data: {
+      name: 'Coroa de Rosas Brancas',
+      slug: 'coroa-rosas-brancas',
+      description:
+        'Coroa floral de rosas brancas para cerimónias e homenagens.',
+
+      basePrice: 89.90,
+      baseFloristCompensation: 67.00,
+
+      taxCode: {
+        connect: {
+          id: taxCodes.vat23.id,
+        },
+      },
+
+      category: {
+        connect: {
+          id: categories.funeral.id,
+        },
+      },
+
+      sortOrder: 14,
+    },
+  });
+
+
+  console.log('');
+  console.log('🌸 15 products created:');
+  console.log('  1. Orquídea Branca');
+  console.log('  2. Ramo Primavera (components)');
+  console.log('  3. Rosas Vermelhas (component)');
+  console.log('  4. Coroa Floral (variants)');
+  console.log('  5. Bouquet Romântico');
+  console.log('  6. Lírios Brancos (components)');
+  console.log('  7. Tulipas Coloridas (variants)');
+  console.log('  8. Suculenta Decorativa');
+  console.log('  9. Caixa de Flores Romântica (components)');
+  console.log(' 10. Bouquet de Girassóis');
+  console.log(' 11. Arranjo Campo (components)');
+  console.log(' 12. Orquídea Rosa (variants)');
+  console.log(' 13. Centro de Mesa Floral (components)');
+  console.log(' 14. Bouquet Premium (variants)');
+  console.log(' 15. Coroa de Rosas Brancas');
 
   return {
     orchid,
     primavera,
     redRoses,
     crown,
+    romantic,
+    lilies,
+    tulips,
+    succulent,
+    flowerBox,
+    sunflowers,
+    fieldArrangement,
+    pinkOrchid,
+    centerpiece,
+    premium,
+    whiteFuneral,
+
     crownSmall,
     crownMedium,
     crownLarge,
@@ -640,196 +1106,144 @@ async function createProductImages(
 ) {
   console.log('🖼️ Creating product images...');
 
-
-  /*
-   * ----------------------------------------------------------
-   * Ramo Primavera
-   *
-   * Product-wide image.
-   * ----------------------------------------------------------
-   */
-
-  const primaveraFile =
-    await createFile(
-      'ramo-primavera.jpg',
-      'ramo-primavera.jpg',
-      '/products/ramo-primavera.jpg',
-      'Ramo Primavera',
-    );
-
-  await createProductImage(
-    products.primavera.id,
-    primaveraFile.id,
+  const productImages = [
     {
-      altText: 'Ramo Primavera',
-      sortOrder: 0,
-      isPrimary: true,
+      productId: products.orchid.id,
+      name: 'orquidea-branca',
+      alt: 'Orquídea Branca',
     },
-  );
-
-
-  /*
-   * ----------------------------------------------------------
-   * Orquídea
-   * ----------------------------------------------------------
-   */
-
-  const orchidFile =
-    await createFile(
-      'orquidea-branca.jpg',
-      'orquidea-branca.jpg',
-      '/products/orquidea-branca.jpg',
-      'Orquídea Branca',
-    );
-
-  await createProductImage(
-    products.orchid.id,
-    orchidFile.id,
     {
-      altText: 'Orquídea Branca',
-      sortOrder: 0,
-      isPrimary: true,
+      productId: products.primavera.id,
+      name: 'ramo-primavera',
+      alt: 'Ramo Primavera',
     },
-  );
-
-
-  /*
-   * ----------------------------------------------------------
-   * Rosas Vermelhas
-   * ----------------------------------------------------------
-   */
-
-  const rosesFile =
-    await createFile(
-      'rosas-vermelhas.jpg',
-      'rosas-vermelhas.jpg',
-      '/products/rosas-vermelhas.jpg',
-      'Rosas Vermelhas',
-    );
-
-  await createProductImage(
-    products.redRoses.id,
-    rosesFile.id,
     {
-      altText: 'Rosas Vermelhas',
-      sortOrder: 0,
-      isPrimary: true,
+      productId: products.redRoses.id,
+      name: 'rosas-vermelhas',
+      alt: 'Rosas Vermelhas',
     },
-  );
-
-
-  /*
-   * ----------------------------------------------------------
-   * Coroa Floral
-   *
-   * Product-wide image.
-   * ----------------------------------------------------------
-   */
-
-  const crownGeneralFile =
-    await createFile(
-      'coroa-floral.jpg',
-      'coroa-floral.jpg',
-      '/products/coroa-floral.jpg',
-      'Coroa Floral',
-    );
-
-  await createProductImage(
-    products.crown.id,
-    crownGeneralFile.id,
     {
-      altText: 'Coroa Floral',
-      sortOrder: 0,
-      isPrimary: true,
+      productId: products.crown.id,
+      name: 'coroa-floral',
+      alt: 'Coroa Floral',
     },
-  );
+    {
+      productId: products.romantic.id,
+      name: 'bouquet-romantico',
+      alt: 'Bouquet Romântico',
+    },
+    {
+      productId: products.lilies.id,
+      name: 'lirios-brancos',
+      alt: 'Lírios Brancos',
+    },
+    {
+      productId: products.tulips.id,
+      name: 'tulipas-coloridas',
+      alt: 'Tulipas Coloridas',
+    },
+    {
+      productId: products.succulent.id,
+      name: 'suculenta-decorativa',
+      alt: 'Suculenta Decorativa',
+    },
+    {
+      productId: products.flowerBox.id,
+      name: 'caixa-flores-romantica',
+      alt: 'Caixa de Flores Romântica',
+    },
+    {
+      productId: products.sunflowers.id,
+      name: 'bouquet-girassois',
+      alt: 'Bouquet de Girassóis',
+    },
+    {
+      productId: products.fieldArrangement.id,
+      name: 'arranjo-campo',
+      alt: 'Arranjo Campo',
+    },
+    {
+      productId: products.pinkOrchid.id,
+      name: 'orquidea-rosa',
+      alt: 'Orquídea Rosa',
+    },
+    {
+      productId: products.centerpiece.id,
+      name: 'centro-mesa-floral',
+      alt: 'Centro de Mesa Floral',
+    },
+    {
+      productId: products.premium.id,
+      name: 'bouquet-premium',
+      alt: 'Bouquet Premium',
+    },
+    {
+      productId: products.whiteFuneral.id,
+      name: 'coroa-rosas-brancas',
+      alt: 'Coroa de Rosas Brancas',
+    },
+  ];
 
-
-  /*
-   * ----------------------------------------------------------
-   * Coroa Pequena
-   * ----------------------------------------------------------
-   */
-
-  const crownSmallFile =
-    await createFile(
-      'coroa-pequena.jpg',
-      'coroa-pequena.jpg',
-      '/products/coroa-pequena.jpg',
-      'Coroa Floral Pequena',
+  for (const image of productImages) {
+    const file = await createFile(
+      `${image.name}.jpg`,
+      `${image.name}.jpg`,
+      `/products/${image.name}.jpg`,
+      image.alt,
     );
 
-  await createProductImage(
-    products.crown.id,
-    crownSmallFile.id,
+    await createProductImage(
+      image.productId,
+      file.id,
+      {
+        altText: image.alt,
+        sortOrder: 0,
+        isPrimary: true,
+      },
+    );
+  }
+
+  /*
+   * Variant-specific images for Coroa Floral.
+   */
+
+  const crownVariants = [
     {
       variantId: products.crownSmall.id,
-
-      altText:
-        'Coroa Floral Pequena',
-
-      sortOrder: 0,
-      isPrimary: true,
+      name: 'coroa-floral-pequena',
+      alt: 'Coroa Floral Pequena',
     },
-  );
-
-
-  /*
-   * ----------------------------------------------------------
-   * Coroa Média
-   * ----------------------------------------------------------
-   */
-
-  const crownMediumFile =
-    await createFile(
-      'coroa-media.jpg',
-      'coroa-media.jpg',
-      '/products/coroa-media.jpg',
-      'Coroa Floral Média',
-    );
-
-  await createProductImage(
-    products.crown.id,
-    crownMediumFile.id,
     {
       variantId: products.crownMedium.id,
-
-      altText:
-        'Coroa Floral Média',
-
-      sortOrder: 0,
-      isPrimary: true,
+      name: 'coroa-floral-media',
+      alt: 'Coroa Floral Média',
     },
-  );
-
-
-  /*
-   * ----------------------------------------------------------
-   * Coroa Grande
-   * ----------------------------------------------------------
-   */
-
-  const crownLargeFile =
-    await createFile(
-      'coroa-grande.jpg',
-      'coroa-grande.jpg',
-      '/products/coroa-grande.jpg',
-      'Coroa Floral Grande',
-    );
-
-  await createProductImage(
-    products.crown.id,
-    crownLargeFile.id,
     {
       variantId: products.crownLarge.id,
-
-      altText:
-        'Coroa Floral Grande',
-
-      sortOrder: 0,
-      isPrimary: true,
+      name: 'coroa-floral-grande',
+      alt: 'Coroa Floral Grande',
     },
-  );
+  ];
+
+  for (const image of crownVariants) {
+    const file = await createFile(
+      `${image.name}.jpg`,
+      `${image.name}.jpg`,
+      `/products/${image.name}.jpg`,
+      image.alt,
+    );
+
+    await createProductImage(
+      products.crown.id,
+      file.id,
+      {
+        variantId: image.variantId,
+        altText: image.alt,
+        sortOrder: 1,
+        isPrimary: false,
+      },
+    );
+  }
 }
 
 
@@ -853,8 +1267,7 @@ async function createAddress() {
       latitude: 41.545400,
       longitude: -8.426500,
 
-      notes:
-        'Morada de teste da florista.',
+      notes: 'Morada de teste da florista.',
     },
   });
 }
@@ -871,20 +1284,16 @@ async function createFlorist(addressId: number) {
 
   return prisma.florist.create({
     data: {
-      name:
-        'Momentos em Flor Braga',
+      name: 'Momentos em Flor Braga',
 
       legalName:
         'Momentos em Flor Braga, Lda.',
 
-      taxNumber:
-        '999999990',
+      taxNumber: '999999990',
 
-      email:
-        'braga@momentosemflor.pt',
+      email: 'braga@momentosemflor.pt',
 
-      phone:
-        '+351253000000',
+      phone: '+351253000000',
 
       website:
         'https://momentosemflor.pt',
@@ -892,8 +1301,7 @@ async function createFlorist(addressId: number) {
       description:
         'Florista parceira de Braga.',
 
-      deliveryRadiusKm:
-        20,
+      deliveryRadiusKm: 20,
 
       address: {
         connect: {
@@ -913,11 +1321,6 @@ async function createFlorist(addressId: number) {
 
 async function createUsers(floristId: number) {
   console.log('👤 Creating users...');
-
-
-  /*
-   * System Admin
-   */
 
   const adminPasswordHash =
     await bcrypt.hash(
@@ -946,10 +1349,6 @@ async function createUsers(floristId: number) {
       },
     });
 
-
-  /*
-   * Florist Admin
-   */
 
   const floristPasswordHash =
     await bcrypt.hash(
@@ -982,10 +1381,6 @@ async function createUsers(floristId: number) {
       },
     });
 
-
-  /*
-   * Customer
-   */
 
   const customerPasswordHash =
     await bcrypt.hash(
@@ -1035,32 +1430,13 @@ async function main() {
   console.log('🌱 Starting database seed...');
   console.log('');
 
-  /*
-   * 1. Clean
-   */
-
   await cleanDatabase();
-
-
-  /*
-   * 2. Tax codes
-   */
 
   const taxCodes =
     await createTaxCodes();
 
-
-  /*
-   * 3. Categories
-   */
-
   const categories =
     await createCategories();
-
-
-  /*
-   * 4. Products
-   */
 
   const products =
     await createProducts(
@@ -1068,42 +1444,21 @@ async function main() {
       categories,
     );
 
-
-  /*
-   * 5. Product images
-   */
-
   await createProductImages(
     products,
   );
 
-
-  /*
-   * 6. Address
-   */
-
   const address =
     await createAddress();
-
-
-  /*
-   * 7. Florist
-   */
 
   const florist =
     await createFlorist(
       address.id,
     );
 
-
-  /*
-   * 8. Users
-   */
-
   await createUsers(
     florist.id,
   );
-
 
   console.log('');
   console.log(
@@ -1118,23 +1473,19 @@ async function main() {
   console.log('');
 
   console.log(
-    'Products:',
+    'Products: 15',
   );
 
   console.log(
-    `  - ${products.orchid.name}`,
+    '  - 6 simple products',
   );
 
   console.log(
-    `  - ${products.primavera.name} (components)`,
+    '  - 5 products with components',
   );
 
   console.log(
-    `  - ${products.redRoses.name} (component)`,
-  );
-
-  console.log(
-    `  - ${products.crown.name} (variants)`,
+    '  - 4 products with variants',
   );
 
   console.log('');

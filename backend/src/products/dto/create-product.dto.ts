@@ -3,8 +3,6 @@ import {
     ApiPropertyOptional,
 } from '@nestjs/swagger';
 
-import { ProductPricingType } from '@prisma/client';
-
 import { CreateProductComponentDto } from './create-product-component.dto';
 import { CreateProductVariantDto } from './create-product-variant.dto';
 import { CreateProductImageDto } from './create-product-image.dto';
@@ -21,12 +19,6 @@ export class CreateProductDto {
             'Ramo composto por rosas vermelhas frescas.',
     })
     description?: string;
-
-    @ApiProperty({
-        enum: ProductPricingType,
-        example: ProductPricingType.FIXED,
-    })
-    pricingType: ProductPricingType;
 
     @ApiProperty({
         example: 29.90,

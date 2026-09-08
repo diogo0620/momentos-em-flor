@@ -156,30 +156,53 @@ export type ProductAdminVariant = {
     active: boolean;
 };
 
+export type ProductAdminTaxCode = {
+    id: number;
+    code: string;
+    name: string;
+    rate: number;
+};
+
 export type ProductAdminDetail = {
     id: number;
     name: string;
     slug: string;
     description: string | null;
-    pricingType: "FIXED" | "PER_UNIT";
-    basePrice: number | null;
-    baseFloristCompensation: number | null;
+
+    basePrice: number;
+    baseFloristCompensation: number;
+
+    /**
+     * Final customer price:
+     * basePrice + VAT
+     */
     price: number;
+
+    taxCode: ProductAdminTaxCode;
+
     category: {
         id: number;
         name: string;
     };
+
     images: ProductAdminImage[];
+
     components: ProductAdminComponent[];
+
     variants: ProductAdminVariant[];
+
     sortOrder: number;
     active: boolean;
     createdAt: string;
     updatedAt: string;
 };
 
-export async function getAdminProduct(id: number) {
-  return apiFetch<ProductAdminDetail>(`/admin/products/${id}`);
+export async function getAdminProduct(
+    id: number,
+) {
+    return apiFetch<ProductAdminDetail>(
+        `/admin/products/${id}`,
+    );
 }
 
 // =========================================================
@@ -189,7 +212,6 @@ export async function getAdminProduct(id: number) {
 export type CreateProductData = {
     name: string;
     description?: string;
-    pricingType: "FIXED" | "PER_UNIT";
     basePrice: number;
     baseFloristCompensation: number;
     categoryId: number;

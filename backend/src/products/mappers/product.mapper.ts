@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
     Prisma,
-    ProductPricingType,
     ProductVariantType,
 } from '@prisma/client';
 
@@ -48,12 +47,6 @@ type ProductWithListRelations =
                 };
             };
 
-            variants: {
-                select: {
-                    price: true;
-                };
-            };
-
             images: {
                 select: {
                     file: {
@@ -80,7 +73,6 @@ type ProductWithDetailRelations =
             name: true;
             slug: true;
             description: true;
-            pricingType: true;
             basePrice: true;
 
             taxCode: {
@@ -151,7 +143,6 @@ type ProductWithAdminDetailRelations =
             slug: true;
             description: true;
             active: true;
-            pricingType: true;
             basePrice: true;
             baseFloristCompensation: true;
             sortOrder: true;
@@ -325,7 +316,7 @@ toAdminListResponse(
         id: number;
         name: string;
         slug: string;
-        basePrice: Prisma.Decimal | null;
+        basePrice: Prisma.Decimal;
         active: boolean;
         category: {
             id: number;
@@ -334,9 +325,6 @@ toAdminListResponse(
         taxCode: {
             rate: Prisma.Decimal;
         };
-        variants: {
-            price: Prisma.Decimal;
-        }[];
         images: {
             id: number;
             altText: string | null;
@@ -346,19 +334,9 @@ toAdminListResponse(
         }[];
     },
 ): ProductAdminListResponseDto {
-    const netPrice =
-        product.basePrice ??
-        product.variants[0]?.price ??
-        new Prisma.Decimal(0);
-
-    const taxRate = product.taxCode.rate;
-
-    const grossPrice =
-        netPrice.mul(
-            new Prisma.Decimal(1).add(
-                taxRate.div(100),
-            ),
-        );
+    const taxRate = product.taxCode.rate.toNumber();
+    const netPrice = product.basePrice.toNumber();
+    const grossPrice = this.calculateGrossAmount(netPrice, taxRate);
 
     const image = product.images[0]
         ? {
@@ -370,7 +348,7 @@ toAdminListResponse(
         id: product.id,
         name: product.name,
         slug: product.slug,
-        price: this.toNumber(grossPrice),
+        price: grossPrice,
         active: product.active,
 
         image,
@@ -383,6 +361,10 @@ toAdminListResponse(
 }
 
 toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDetailResponseDto {
+    const taxRate = product.taxCode.rate.toNumber();
+    const netPrice = product.basePrice.toNumber();
+    const grossPrice = this.calculateGrossAmount(netPrice, taxRate);
+
     return {
         // Product
         id: product.id,
@@ -390,18 +372,11 @@ toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDe
         slug: product.slug,
         description: product.description,
         active: product.active,
-        pricingType: product.pricingType,
 
-        basePrice: product.basePrice
-            ? this.toNumber(product.basePrice)
-            : null,
+        basePrice: this.toNumber(product.basePrice),
 
-        baseFloristCompensation:
-            product.baseFloristCompensation
-                ? this.toNumber(
-                      product.baseFloristCompensation,
-                  )
-                : null,
+        baseFloristCompensation: this.toNumber(product.baseFloristCompensation),
+        price: grossPrice,
         sortOrder: product.sortOrder,
         createdAt: product.createdAt,
         updatedAt: product.updatedAt,
@@ -660,8 +635,7 @@ toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDe
     const taxRate =
         product.taxCode.rate.toNumber();
 
-    const netPrice =
-        this.getProductNetPrice(product);
+    const netPrice = product.basePrice?.toNumber() ?? 0;
 
     const grossPrice =
         this.calculateGrossAmount(
@@ -787,8 +761,6 @@ toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDe
             description:
                 product.description,
 
-            pricingType:
-                product.pricingType,
 
             price:
                 grossPrice,

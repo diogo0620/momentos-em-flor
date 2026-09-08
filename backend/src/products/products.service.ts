@@ -29,6 +29,7 @@ import { getPaginationResponse } from '@/common/database/pagination-response';
 
 import { ProductAdminDetailResponseDto } from './dto/admin/product-admin-detail-response.dto';
 import { ProductAdminListResponseDto } from './dto/admin/product-admin-list-response.dto';
+import { Decimal } from '@prisma/client/runtime/library';
 
 
 @Injectable()
@@ -77,20 +78,6 @@ export class ProductsService {
             taxCode: {
                 select: {
                     rate: true,
-                },
-            },
-
-            variants: {
-                where: {
-                    active: true,
-                    deletedAt: null,
-                },
-                orderBy: {
-                    price: 'asc',
-                },
-                take: 1,
-                select: {
-                    price: true,
                 },
             },
 
@@ -155,7 +142,6 @@ export class ProductsService {
             slug: true,
             description: true,
             active: true,
-            pricingType: true,
             basePrice: true,
             baseFloristCompensation: true,
             taxCodeId: true,
@@ -337,20 +323,6 @@ export class ProductsService {
                         },
                     },
 
-                    variants: {
-                        where: {
-                            active: true,
-                            deletedAt: null,
-                        },
-                        orderBy: {
-                            price: 'asc',
-                        },
-                        take: 1,
-                        select: {
-                            price: true,
-                        },
-                    },
-
                     images: {
                         where: {
                             variantId: null,
@@ -445,7 +417,6 @@ export class ProductsService {
                     name: true,
                     slug: true,
                     description: true,
-                    pricingType: true,
                     basePrice: true,
 
                     taxCode: {
@@ -706,36 +677,45 @@ export class ProductsService {
 
 
     private validateCreatePricing(
-        dto: CreateProductDto,
-    ): void {
+    dto: CreateProductDto,
+): void {
 
-        const hasVariants =
-            this.hasItems(
-                dto.variants,
-            );
+    this.validateBasePricing(
+        dto.basePrice,
+        dto.baseFloristCompensation,
+    );
 
-        /*
-         * Products with variants don't use
-         * product-level pricing.
-         */
-        if (hasVariants) {
-
-            this.validateVariantsPricing(
-                dto.variants!,
-            );
-
-            return;
-        }
-
-        /*
-         * Products without variants must
-         * have valid product-level pricing.
-         */
-        this.validateBasePricing(
+    if (this.hasItems(dto.variants)) {
+        this.validateVariantsAgainstBasePrice(
             dto.basePrice,
-            dto.baseFloristCompensation,
+            dto.variants!,
+        );
+
+        this.validateVariantsPricing(
+            dto.variants!,
         );
     }
+}
+
+private validateVariantsAgainstBasePrice(
+    basePrice: number,
+    variants: Array<{
+        price: number | Decimal;
+    }>,
+): void {
+    for (const variant of variants) {
+        const variantPrice =
+            typeof variant.price === 'number'
+                ? variant.price
+                : variant.price.toNumber();
+
+        if (variantPrice < basePrice) {
+            Exceptions.badRequest(
+                'Base price must be less than or equal to every variant price.',
+            );
+        }
+    }
+}
 
 
     private validateBasePricing(
@@ -756,29 +736,29 @@ export class ProductsService {
 
 
     private validateVariantsPricing(
-        variants: CreateProductDto['variants'],
-    ): void {
+    variants: Array<{
+        price: number | Decimal;
+        floristCompensation: number | Decimal;
+    }>,
+): void {
+    for (const variant of variants) {
+        const price =
+            typeof variant.price === 'number'
+                ? variant.price
+                : variant.price.toNumber();
 
-        if (!variants) {
-            return;
-        }
+        const floristCompensation =
+            typeof variant.floristCompensation === 'number'
+                ? variant.floristCompensation
+                : variant.floristCompensation.toNumber();
 
-        for (
-            const variant
-            of variants
-        ) {
-
-            if (
-                variant.floristCompensation >=
-                variant.price
-            ) {
-                Exceptions.badRequest(
-                    PRODUCT_MESSAGES
-                        .COMPENSATION_MUST_BE_LESS_THAN_PRICE,
-                );
-            }
+        if (floristCompensation >= price) {
+            Exceptions.badRequest(
+                PRODUCT_MESSAGES.COMPENSATION_MUST_BE_LESS_THAN_PRICE,
+            );
         }
     }
+}
 
 
     // =========================================================
@@ -786,79 +766,63 @@ export class ProductsService {
     // =========================================================
 
     private buildCreateData(
-        dto: CreateProductDto,
-        slug: string,
-    ): Prisma.ProductCreateInput {
+    dto: CreateProductDto,
+    slug: string,
+): Prisma.ProductCreateInput {
 
-        const hasVariants =
-            this.hasItems(
-                dto.variants,
-            );
+    return {
 
-        return {
+        name:
+            dto.name,
 
-            name:
-                dto.name,
+        slug,
 
-            slug,
+        description:
+            dto.description,
 
-            description:
-                dto.description,
+        basePrice:
+            dto.basePrice,
 
-            pricingType:
-                dto.pricingType,
+        baseFloristCompensation:
+            dto.baseFloristCompensation,
 
-            /*
-             * Product-level prices are null
-             * when variants exist.
-             */
-            basePrice:
-                hasVariants
-                    ? null
-                    : dto.basePrice,
-
-            baseFloristCompensation:
-                hasVariants
-                    ? null
-                    : dto.baseFloristCompensation,
-
-            category: {
-                connect: {
-                    id:
-                        dto.categoryId,
-                },
+        category: {
+            connect: {
+                id:
+                    dto.categoryId,
             },
+        },
 
-            taxCode: {
-                connect: {
-                    id:
-                        dto.taxCodeId,
-                },
+        taxCode: {
+            connect: {
+                id:
+                    dto.taxCodeId,
             },
+        },
 
-            active:
-                dto.active ??
-                true,
+        active:
+            dto.active ??
+            true,
 
-            ...(this.hasItems(dto.components) && {
-                components: {
-                    create:
-                        this.buildComponentCreateData(
-                            dto.components!,
-                        ),
-                },
-            }),
+        ...(this.hasItems(dto.components) && {
+            components: {
+                create:
+                    this.buildComponentCreateData(
+                        dto.components!,
+                    ),
+            },
+        }),
 
-            ...(this.hasItems(dto.variants) && {
-                variants: {
-                    create:
-                        this.buildVariantCreateData(
-                            dto.variants!,
-                        ),
-                },
-            }),
-        };
-    }
+        ...(this.hasItems(dto.variants) && {
+            variants: {
+                create:
+                    this.buildVariantCreateData(
+                        dto.variants!,
+                    ),
+            },
+        }),
+    };
+}
 
 
     private buildComponentCreateData(
@@ -1162,65 +1126,48 @@ export class ProductsService {
     }
 
 
-    // =========================================================
-    // UPDATE - PRICING
-    // =========================================================
+private validateUpdatePricing(
+    currentProduct: Awaited<
+        ReturnType<
+            ProductsService['getProductForUpdate']
+        >
+    >,
+    dto: UpdateProductDto,
+    hasVariants: boolean,
+): void {
 
-    private validateUpdatePricing(
-        currentProduct: Awaited<
-            ReturnType<
-                ProductsService['getProductForUpdate']
-            >
-        >,
-        dto: UpdateProductDto,
-        hasVariants: boolean,
-    ): void {
+    const basePrice =
+        dto.basePrice !== undefined
+            ? dto.basePrice
+            : currentProduct.basePrice.toNumber();
 
-        /*
-         * If the final product has variants,
-         * product-level price is irrelevant.
-         */
-        if (hasVariants) {
+    const baseFloristCompensation =
+        dto.baseFloristCompensation !== undefined
+            ? dto.baseFloristCompensation
+            : currentProduct.baseFloristCompensation.toNumber();
 
-            if (
-                dto.variants !== undefined
-            ) {
-                this.validateVariantsPricing(
-                    dto.variants,
-                );
-            }
+    this.validateBasePricing(
+        basePrice,
+        baseFloristCompensation,
+    );
 
-            return;
-        }
+    if (hasVariants) {
 
-        const basePrice =
-            dto.basePrice !== undefined
-                ? dto.basePrice
-                : currentProduct.basePrice
-                    ?.toNumber() ?? null;
+        const variants =
+            dto.variants !== undefined
+                ? dto.variants
+                : currentProduct.variants;
 
-        const baseFloristCompensation =
-            dto.baseFloristCompensation !== undefined
-                ? dto.baseFloristCompensation
-                : currentProduct.baseFloristCompensation
-                    ?.toNumber() ?? null;
+        this.validateVariantsPricing(
+            variants,
+        );
 
-        /*
-         * If neither exists, there is nothing
-         * to compare.
-         */
-        if (
-            basePrice === null ||
-            baseFloristCompensation === null
-        ) {
-            return;
-        }
-
-        this.validateBasePricing(
+        this.validateVariantsAgainstBasePrice(
             basePrice,
-            baseFloristCompensation,
+            variants,
         );
     }
+}
 
 
     // =========================================================
@@ -1239,81 +1186,55 @@ export class ProductsService {
         const data: Prisma.ProductUpdateInput = {
 
             ...(dto.name !== undefined && {
-                name:
-                    dto.name,
-            }),
+            name:
+                dto.name,
+        }),
 
-            ...(slug !== undefined && {
-                slug,
-            }),
+        ...(slug !== undefined && {
+            slug,
+        }),
 
-            ...(dto.description !== undefined && {
-                description:
-                    dto.description,
-            }),
+        ...(dto.description !== undefined && {
+            description:
+                dto.description,
+        }),
 
-            ...(dto.pricingType !== undefined && {
-                pricingType:
-                    dto.pricingType,
-            }),
-
-            ...(dto.categoryId !== undefined && {
-                category: {
-                    connect: {
-                        id:
-                            dto.categoryId,
-                    },
+        ...(dto.categoryId !== undefined && {
+            category: {
+                connect: {
+                    id:
+                        dto.categoryId,
                 },
-            }),
+            },
+        }),
 
-            ...(dto.taxCodeId !== undefined && {
-                taxCode: {
-                    connect: {
-                        id:
-                            dto.taxCodeId,
-                    },
+        ...(dto.taxCodeId !== undefined && {
+            taxCode: {
+                connect: {
+                    id:
+                        dto.taxCodeId,
                 },
-            }),
+            },
+        }),
 
-            ...(dto.active !== undefined && {
-                active:
-                    dto.active,
-            }),
-        };
+        ...(dto.active !== undefined && {
+            active:
+                dto.active,
+        }),
+
+        ...(dto.basePrice !== undefined && {
+            basePrice:
+                dto.basePrice,
+        }),
+
+        ...(dto.baseFloristCompensation !== undefined && {
+            baseFloristCompensation:
+                dto.baseFloristCompensation,
+        }),
+    };
 
 
-        /*
-         * Product-level prices.
-         *
-         * Variants => null
-         * No variants => supplied values.
-         */
-
-        if (
-            configuration.hasVariants
-        ) {
-
-            data.basePrice = null;
-
-            data.baseFloristCompensation =
-                null;
-
-        } else {
-
-            if (
-                dto.basePrice !== undefined
-            ) {
-                data.basePrice =
-                    dto.basePrice;
-            }
-
-            if (
-                dto.baseFloristCompensation !== undefined
-            ) {
-                data.baseFloristCompensation =
-                    dto.baseFloristCompensation;
-            }
-        }
+   
 
 
         /*

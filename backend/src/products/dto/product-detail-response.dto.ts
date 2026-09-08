@@ -4,7 +4,6 @@ import {
 } from '@nestjs/swagger';
 
 import {
-    ProductPricingType,
     ProductVariantType,
 } from '@prisma/client';
 
@@ -154,12 +153,6 @@ export class ProductDetailResponseDto {
         nullable: true,
     })
     description: string | null;
-
-    @ApiProperty({
-        enum: ProductPricingType,
-        example: ProductPricingType.FIXED,
-    })
-    pricingType: ProductPricingType;
 
     @ApiProperty({
         example: 59.90,

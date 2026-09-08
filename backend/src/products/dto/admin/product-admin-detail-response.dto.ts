@@ -166,13 +166,14 @@ export class ProductAdminDetailResponseDto {
     active: boolean;
 
     @ApiProperty()
-    pricingType: string;
+    basePrice: number;
 
-    @ApiPropertyOptional()
-    basePrice: number | null;
+    @ApiProperty()
+    baseFloristCompensation: number;
 
-    @ApiPropertyOptional()
-    baseFloristCompensation: number | null;
+    @ApiProperty()
+    price: number;
+
 
     @ApiProperty()
     sortOrder: number;

@@ -24,11 +24,6 @@ enum FileProvider {
   CLOUDINARY
 }
 
-enum ProductPricingType {
-  FIXED
-  PER_UNIT
-}
-
 enum PricingMarginType {
   FIXED_AMOUNT
   PERCENTAGE
@@ -341,23 +336,15 @@ model Product {
 
   active Boolean @default(true)
 
-  pricingType ProductPricingType
-
   /**
    * Base price BEFORE VAT.
-   * Used when the product has no variants.
-   * Products with variants use the price defined
-   * on each variant instead.
    */
-  basePrice Decimal? @db.Decimal(10, 2)
+  basePrice Decimal @db.Decimal(10, 2)
 
   /**
    * Default florist compensation BEFORE VAT.
-   * Used when the product has no variants.
-   * Products with variants use the compensation
-   * defined on each variant instead.
    */
-  baseFloristCompensation Decimal? @db.Decimal(10, 2)
+  baseFloristCompensation Decimal @db.Decimal(10, 2)
 
   //
   // TAX

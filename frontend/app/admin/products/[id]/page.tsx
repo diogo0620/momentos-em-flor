@@ -5,6 +5,7 @@ import {
     Image as ImageIcon,
     Package,
     Pencil,
+    Receipt,
     Tag,
     Users,
 } from "lucide-react";
@@ -23,8 +24,8 @@ import {
    HELPERS
    ========================================================================== */
 
-function formatPrice(value: number | null) {
-    if (value === null) {
+function formatPrice(value: number | null | undefined) {
+    if (value === null || value === undefined) {
         return "—";
     }
 
@@ -34,19 +35,22 @@ function formatPrice(value: number | null) {
     }).format(Number(value));
 }
 
+function formatRate(value: number | null | undefined) {
+    if (value === null || value === undefined) {
+        return "—";
+    }
+
+    return new Intl.NumberFormat("pt-PT", {
+        style: "percent",
+        maximumFractionDigits: 2,
+    }).format(Number(value) / 100);
+}
+
 function formatDate(value: string) {
     return new Date(value).toLocaleString("pt-PT", {
         dateStyle: "medium",
         timeStyle: "short",
     });
-}
-
-function pricingTypeLabel(
-    type: ProductAdminDetail["pricingType"],
-) {
-    return type === "FIXED"
-        ? "Preço fixo"
-        : "Por unidade";
 }
 
 function variantTypeLabel(type: string) {
@@ -121,6 +125,9 @@ export default async function ProductDetailPage({
 
     const hasVariants = product.variants.length > 0;
     const hasComponents = product.components.length > 0;
+
+    const vatAmount =
+        product.price - product.basePrice;
 
     return (
         <div className="space-y-8 pb-10">
@@ -200,18 +207,22 @@ export default async function ProductDetailPage({
                 <SummaryCard
                     icon={Tag}
                     label="Categoria"
-                    value={product.category?.name}
+                    value={product.category?.name || "—"}
+                />
+
+                <SummaryCard
+                    icon={Receipt}
+                    label="Tax Code"
+                    value={product.taxCode.code}
+                    description={`${product.taxCode.name} · IVA ${formatRate(
+                        product.taxCode.rate,
+                    )}`}
                 />
 
                 <SummaryCard
                     label="Preço final"
                     value={formatPrice(product.price)}
                     description="Preço apresentado ao cliente"
-                />
-
-                <SummaryCard
-                    label="Tipo de preço"
-                    value={pricingTypeLabel(product.pricingType)}
                 />
             </div>
 
@@ -238,18 +249,17 @@ export default async function ProductDetailPage({
 
                     <InfoItem
                         label="Categoria"
-                        value={product.category?.name}
+                        value={product.category?.name || "—"}
                     />
 
                     <InfoItem
-                        label="Tipo de preço"
-                        value={pricingTypeLabel(product.pricingType)}
+                        label="Tax Code"
+                        value={product.taxCode.code}
                     />
 
                     <InfoItem
-                        label="Preço final"
-                        value={formatPrice(product.price)}
-                        highlight
+                        label="Taxa de IVA"
+                        value={formatRate(product.taxCode.rate)}
                     />
 
                     <InfoItem
@@ -279,11 +289,26 @@ export default async function ProductDetailPage({
                     description="Valores comerciais configurados para este produto."
                 />
 
-                <div className="mt-8 grid gap-4 md:grid-cols-3">
+                <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <PriceCard
                         label="Preço base"
                         value={formatPrice(product.basePrice)}
-                        description="Preço do produto antes de IVA"
+                        description="Preço antes de IVA"
+                    />
+
+                    <PriceCard
+                        label="IVA"
+                        value={formatPrice(vatAmount)}
+                        description={`Taxa ${formatRate(
+                            product.taxCode.rate,
+                        )}`}
+                    />
+
+                    <PriceCard
+                        label="Preço final"
+                        value={formatPrice(product.price)}
+                        description="Preço final para o cliente"
+                        highlight
                     />
 
                     <PriceCard
@@ -293,13 +318,31 @@ export default async function ProductDetailPage({
                         )}
                         description="Valor pago ao florista"
                     />
+                </div>
 
-                    <PriceCard
-                        label="Preço final"
-                        value={formatPrice(product.price)}
-                        description="Preço final para o cliente"
-                        highlight
-                    />
+                <div className="mt-6 rounded-2xl border border-gray-100 bg-[#FAFBF8] p-5">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p className="text-sm font-semibold text-[#2F3B2A]">
+                                Configuração fiscal
+                            </p>
+
+                            <p className="mt-1 text-sm text-gray-400">
+                                {product.taxCode.code} ·{" "}
+                                {product.taxCode.name}
+                            </p>
+                        </div>
+
+                        <div className="text-left sm:text-right">
+                            <p className="text-xs uppercase tracking-wide text-gray-400">
+                                IVA aplicado
+                            </p>
+
+                            <p className="mt-1 text-lg font-bold text-[#55624A]">
+                                {formatRate(product.taxCode.rate)}
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -311,9 +354,13 @@ export default async function ProductDetailPage({
                 <SectionHeader
                     title="Imagens"
                     description={`${product.images.length} imagem${
-                        product.images.length === 1 ? "" : "ns"
+                        product.images.length === 1
+                            ? ""
+                            : "ns"
                     } associada${
-                        product.images.length === 1 ? "" : "s"
+                        product.images.length === 1
+                            ? ""
+                            : "s"
                     } ao produto.`}
                     icon={ImageIcon}
                 />
@@ -395,8 +442,7 @@ export default async function ProductDetailPage({
                                                 {variant.image ? (
                                                     <img
                                                         src={
-                                                            variant.image
-                                                                .url
+                                                            variant.image.url
                                                         }
                                                         alt={
                                                             variant.image
@@ -418,9 +464,7 @@ export default async function ProductDetailPage({
 
                                                     <p className="mt-1 text-xs text-gray-400">
                                                         Ordem{" "}
-                                                        {
-                                                            variant.sortOrder
-                                                        }
+                                                        {variant.sortOrder}
                                                     </p>
                                                 </div>
                                             </div>
@@ -549,9 +593,7 @@ export default async function ProductDetailPage({
                                         </td>
 
                                         <td className="px-5 py-5 text-center font-semibold text-[#55624A]">
-                                            {
-                                                component.recommendedQuantity
-                                            }
+                                            {component.recommendedQuantity}
                                         </td>
 
                                         <td className="px-5 py-5 text-center font-medium text-gray-600">
@@ -586,8 +628,8 @@ export default async function ProductDetailPage({
                                             <StatusBadge
                                                 status={
                                                     component.active
-                                                        ? "ACTIVE"
-                                                        : "INACTIVE"
+                                                        ? "Ativo"
+                                                        : "Inativo"
                                                 }
                                             />
                                         </td>
