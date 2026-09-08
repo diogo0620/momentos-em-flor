@@ -1,304 +1,217 @@
-import {
-    ApiProperty,
-    ApiPropertyOptional,
-} from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-import {
-    ProductPricingType,
-    ProductVariantType,
-} from '@prisma/client';
-
-import { CategoryResponseDto } from '@/categories/dto/category-response.dto';
-
-
-/*
- * ============================================================
- * IMAGE
- * ============================================================
- */
-
-export class ProductAdminImageDto {
-
-    @ApiProperty({
-        example: 1,
-    })
+export class ProductAdminTaxCodeDto {
+    @ApiProperty()
     id: number;
 
-    @ApiProperty({
-        example: 10,
-    })
-    fileId: number;
+    @ApiProperty()
+    code: string;
 
-    @ApiProperty({
-        example: '/uploads/products/ramo-primavera.jpg',
-    })
-    url: string;
-
-    @ApiPropertyOptional({
-        example: 'Ramo Primavera',
-        nullable: true,
-    })
-    altText: string | null;
-
-    @ApiProperty({
-        example: true,
-    })
-    isPrimary: boolean;
-
-    @ApiProperty({
-        example: 0,
-    })
-    sortOrder: number;
-
-    @ApiProperty({
-        nullable: true,
-        example: null,
-        description: 'Product variant associated with the image, if any.',
-    })
-    variantId: number | null;
-}
-
-
-/*
- * ============================================================
- * COMPONENT
- * ============================================================
- */
-
-export class ProductAdminComponentDto {
-
-    @ApiProperty({
-        example: 1,
-    })
-    id: number;
-
-    @ApiProperty({
-        example: 'Rosas',
-    })
+    @ApiProperty()
     name: string;
 
-    @ApiProperty({
-        example: 6,
-    })
-    minQuantity: number;
+    @ApiProperty()
+    rate: number;
 
-    @ApiProperty({
-        example: 12,
-    })
-    recommendedQuantity: number;
-
-    @ApiProperty({
-        example: 24,
-    })
-    maxQuantity: number;
-
-    @ApiProperty({
-        example: 2.50,
-        description:
-            'Additional amount charged to the customer per unit.',
-    })
-    customerPricePerAdditionalUnit: number;
-
-    @ApiProperty({
-        example: 1.50,
-        description:
-            'Additional compensation paid to the florist per unit.',
-    })
-    floristCompensationPerAdditionalUnit: number;
-
-    @ApiProperty({
-        example: 0,
-    })
-    sortOrder: number;
-
-    @ApiProperty({
-        example: true,
-    })
+    @ApiProperty()
     active: boolean;
 }
 
-
-/*
- * ============================================================
- * VARIANT
- * ============================================================
- */
-
-export class ProductAdminVariantDto {
-
-    @ApiProperty({
-        example: 1,
-    })
+export class ProductAdminCategoryDto {
+    @ApiProperty()
     id: number;
 
-    @ApiProperty({
-        enum: ProductVariantType,
-        example: ProductVariantType.SIZE,
-    })
-    type: ProductVariantType;
-
-    @ApiProperty({
-        example: 'Média',
-    })
+    @ApiProperty()
     name: string;
 
-    @ApiPropertyOptional({
-        example: 'COROA-M',
-        nullable: true,
-    })
+    @ApiProperty()
+    slug: string;
+
+    @ApiPropertyOptional()
+    description: string | null;
+
+    @ApiProperty()
+    active: boolean;
+}
+
+export class ProductAdminImageDto {
+    @ApiProperty()
+    id: number;
+
+    @ApiProperty()
+    fileId: number;
+
+    @ApiProperty()
+    url: string;
+
+    @ApiPropertyOptional()
+    altText: string | null;
+
+    @ApiProperty()
+    sortOrder: number;
+
+    @ApiProperty()
+    isPrimary: boolean;
+
+    @ApiPropertyOptional()
+    variantId: number | null;
+
+    @ApiProperty()
+    createdAt: Date;
+
+    @ApiProperty()
+    updatedAt: Date;
+
+    @ApiPropertyOptional()
+    deletedAt: Date | null;
+}
+
+export class ProductAdminComponentDto {
+    @ApiProperty()
+    id: number;
+
+    @ApiProperty()
+    name: string;
+
+    @ApiProperty()
+    minQuantity: number;
+
+    @ApiProperty()
+    recommendedQuantity: number;
+
+    @ApiProperty()
+    maxQuantity: number;
+
+    @ApiProperty()
+    customerPricePerAdditionalUnit: number;
+
+    @ApiProperty()
+    floristCompensationPerAdditionalUnit: number;
+
+    @ApiProperty()
+    sortOrder: number;
+
+    @ApiProperty()
+    active: boolean;
+
+    @ApiProperty()
+    createdAt: Date;
+
+    @ApiProperty()
+    updatedAt: Date;
+
+    @ApiPropertyOptional()
+    deletedAt: Date | null;
+}
+
+export class ProductAdminVariantDto {
+    @ApiProperty()
+    id: number;
+
+    @ApiProperty()
+    type: string;
+
+    @ApiProperty()
+    name: string;
+
+    @ApiPropertyOptional()
     code: string | null;
 
-    @ApiProperty({
-        example: 59.90,
-        description:
-            'Final customer price including VAT.',
-    })
+    @ApiProperty()
     price: number;
 
-    @ApiProperty({
-        example: 42.00,
-        description:
-            'Compensation paid to the florist for this variant.',
-    })
+    @ApiProperty()
     floristCompensation: number;
 
-    @ApiProperty({
-        type: ProductAdminImageDto,
+    @ApiProperty()
+    sortOrder: number;
+
+    @ApiProperty()
+    active: boolean;
+
+    @ApiPropertyOptional({
+        type: () => ProductAdminImageDto,
         nullable: true,
     })
     image: ProductAdminImageDto | null;
 
-    @ApiProperty({
-        example: 0,
-    })
-    sortOrder: number;
+    @ApiProperty()
+    createdAt: Date;
 
-    @ApiProperty({
-        example: true,
-    })
-    active: boolean;
+    @ApiProperty()
+    updatedAt: Date;
+
+    @ApiPropertyOptional()
+    deletedAt: Date | null;
 }
 
-
-/*
- * ============================================================
- * PRODUCT DETAIL
- * ============================================================
- */
-
 export class ProductAdminDetailResponseDto {
+    // -------------------------------------------------------------------------
+    // Product — mirror of Product scalar fields
+    // -------------------------------------------------------------------------
 
-    @ApiProperty({
-        example: 1,
-    })
+    @ApiProperty()
     id: number;
 
-    @ApiProperty({
-        example: 'Coroa de Flores',
-    })
+    @ApiProperty()
     name: string;
 
-    @ApiProperty({
-        example: 'coroa-de-flores',
-    })
+    @ApiProperty()
     slug: string;
 
-    @ApiPropertyOptional({
-        example:
-            'Coroa de flores frescas para cerimónias.',
-        nullable: true,
-    })
+    @ApiPropertyOptional()
     description: string | null;
 
-    @ApiProperty({
-        enum: ProductPricingType,
-        example: ProductPricingType.FIXED,
-    })
-    pricingType: ProductPricingType;
+    @ApiProperty()
+    active: boolean;
 
-    /*
-     * Product-level pricing.
-     *
-     * When the product uses variants, basePrice and
-     * baseFloristCompensation may be null.
-     */
+    @ApiProperty()
+    pricingType: string;
 
-    @ApiProperty({
-        example: 39.90,
-        nullable: true,
-        description:
-            'Product base price before VAT.',
-    })
+    @ApiPropertyOptional()
     basePrice: number | null;
 
-    @ApiProperty({
-        example: 30.00,
-        nullable: true,
-        description:
-            'Base compensation paid to the florist.',
-    })
+    @ApiPropertyOptional()
     baseFloristCompensation: number | null;
 
+    @ApiProperty()
+    sortOrder: number;
+
+    @ApiProperty()
+    createdAt: Date;
+
+    @ApiProperty()
+    updatedAt: Date;
+
+    @ApiPropertyOptional()
+    deletedAt: Date | null;
+
+    // -------------------------------------------------------------------------
+    // Relations
+    // -------------------------------------------------------------------------
+
     @ApiProperty({
-        example: 49.08,
-        description:
-            'Final customer price including VAT. ' +
-            'For products with variants, this is the lowest active variant price.',
+        type: () => ProductAdminTaxCodeDto,
     })
-    price: number;
+    taxCode: ProductAdminTaxCodeDto;
 
     @ApiProperty({
-        type: CategoryResponseDto,
+        type: () => ProductAdminCategoryDto,
     })
-    category: CategoryResponseDto;
-
-    /*
-     * Product-wide images.
-     */
+    category: ProductAdminCategoryDto;
 
     @ApiProperty({
-        type: ProductAdminImageDto,
-        isArray: true,
+        type: () => [ProductAdminImageDto],
     })
     images: ProductAdminImageDto[];
 
-    /*
-     * Configurable components.
-     */
-
     @ApiProperty({
-        type: ProductAdminComponentDto,
-        isArray: true,
+        type: () => [ProductAdminComponentDto],
     })
     components: ProductAdminComponentDto[];
 
-    /*
-     * Product variants.
-     */
-
     @ApiProperty({
-        type: ProductAdminVariantDto,
-        isArray: true,
+        type: () => [ProductAdminVariantDto],
     })
     variants: ProductAdminVariantDto[];
-
-    @ApiProperty({
-        example: 0,
-    })
-    sortOrder: number;
-
-    @ApiProperty({
-        example: true,
-    })
-    active: boolean;
-
-    @ApiProperty({
-        example: '2026-09-02T12:00:00.000Z',
-    })
-    createdAt: Date;
-
-    @ApiProperty({
-        example: '2026-09-02T12:00:00.000Z',
-    })
-    updatedAt: Date;
 }

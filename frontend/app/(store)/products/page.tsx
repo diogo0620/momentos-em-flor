@@ -11,12 +11,12 @@ import { getProducts } from "@/lib/api/products";
 
 import type {
     Pagination,
-    Product,
+    ProductListItem,
 } from "@/types/product";
 
 export default function ProductsPage() {
     const [products, setProducts] =
-        useState<Product[]>([]);
+        useState<ProductListItem[]>([]);
 
     const [pagination, setPagination] =
         useState<Pagination>({
@@ -61,12 +61,7 @@ export default function ProductsPage() {
                         order,
                     });
 
-                setProducts(
-                    response.data.filter(
-                        (product) =>
-                            product.active,
-                    ),
-                );
+                setProducts(response.data);
 
                 setPagination(
                     response.pagination,
@@ -107,21 +102,6 @@ export default function ProductsPage() {
     function handleSort(
         value: string,
     ) {
-        if (
-            value === "price-asc"
-        ) {
-            setSort("basePrice");
-            setOrder("asc");
-            return;
-        }
-
-        if (
-            value === "price-desc"
-        ) {
-            setSort("basePrice");
-            setOrder("desc");
-            return;
-        }
 
         setSort("name");
         setOrder("asc");

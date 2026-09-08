@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import {
+    Prisma,
+    ProductPricingType,
+    ProductVariantType,
+} from '@prisma/client';
 
 import { BaseMapper } from '@/common/mappers/base.mapper';
 import { CategoryMapper } from '@/categories/mappers/category.mapper';
@@ -12,6 +16,7 @@ import {
     ProductDetailResponseDto,
 } from '../dto/product-detail-response.dto';
 import { ProductAdminDetailResponseDto } from '../dto/admin/product-admin-detail-response.dto';
+import { ProductAdminListResponseDto } from '../dto/admin/product-admin-list-response.dto';
 
 
 /*
@@ -37,32 +42,25 @@ type ProductWithListRelations =
             name: true;
             basePrice: true;
 
-            category: {
-                select: {
-                    id: true;
-                    name: true;
-                };
-            };
-
             taxCode: {
                 select: {
                     rate: true;
                 };
             };
 
+            variants: {
+                select: {
+                    price: true;
+                };
+            };
+
             images: {
-                include: {
+                select: {
                     file: {
                         select: {
                             path: true;
                         };
                     };
-                };
-            };
-
-            variants: {
-                select: {
-                    price: true
                 };
             };
         };
@@ -72,15 +70,18 @@ type ProductWithListRelations =
 /**
  * Product used by the detail endpoint.
  */
+/**
+ * Product used by the detail endpoint.
+ */
 type ProductWithDetailRelations =
     Prisma.ProductGetPayload<{
-        include: {
-            category: {
-                select: {
-                    id: true;
-                    name: true;
-                };
-            };
+        select: {
+            id: true;
+            name: true;
+            slug: true;
+            description: true;
+            pricingType: true;
+            basePrice: true;
 
             taxCode: {
                 select: {
@@ -88,8 +89,15 @@ type ProductWithDetailRelations =
                 };
             };
 
+            category: {
+                select: {
+                    id: true;
+                    name: true;
+                };
+            };
+
             images: {
-                include: {
+                select: {
                     file: {
                         select: {
                             path: true;
@@ -98,12 +106,142 @@ type ProductWithDetailRelations =
                 };
             };
 
-            components: true;
+            components: {
+                select: {
+                    id: true;
+                    name: true;
+                    minQuantity: true;
+                    recommendedQuantity: true;
+                    maxQuantity: true;
+                    customerPricePerAdditionalUnit: true;
+                };
+            };
 
             variants: {
-                include: {
+                select: {
+                    id: true;
+                    type: true;
+                    name: true;
+                    code: true;
+                    price: true;
+                    active: true;
+
                     image: {
-                        include: {
+                        select: {
+                            file: {
+                                select: {
+                                    path: true;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+    }>;
+
+    /**
+ * Product used by the admin detail endpoint.
+ */
+type ProductWithAdminDetailRelations =
+    Prisma.ProductGetPayload<{
+        select: {
+            id: true;
+            name: true;
+            slug: true;
+            description: true;
+            active: true;
+            pricingType: true;
+            basePrice: true;
+            baseFloristCompensation: true;
+            sortOrder: true;
+            createdAt: true;
+            updatedAt: true;
+            deletedAt: true;
+
+            taxCode: {
+                select: {
+                    id: true;
+                    code: true;
+                    name: true;
+                    rate: true;
+                    active: true;
+                };
+            };
+
+            category: {
+                select: {
+                    id: true;
+                    name: true;
+                    slug: true;
+                    description: true;
+                    active: true;
+                };
+            };
+
+            images: {
+                select: {
+                    id: true;
+                    fileId: true;
+                    altText: true;
+                    sortOrder: true;
+                    isPrimary: true;
+                    variantId: true;
+                    createdAt: true;
+                    updatedAt: true;
+                    deletedAt: true;
+
+                    file: {
+                        select: {
+                            path: true;
+                        };
+                    };
+                };
+            };
+
+            components: {
+                select: {
+                    id: true;
+                    name: true;
+                    minQuantity: true;
+                    recommendedQuantity: true;
+                    maxQuantity: true;
+                    customerPricePerAdditionalUnit: true;
+                    floristCompensationPerAdditionalUnit: true;
+                    sortOrder: true;
+                    active: true;
+                    createdAt: true;
+                    updatedAt: true;
+                    deletedAt: true;
+                };
+            };
+
+            variants: {
+                select: {
+                    id: true;
+                    type: true;
+                    name: true;
+                    code: true;
+                    price: true;
+                    floristCompensation: true;
+                    sortOrder: true;
+                    active: true;
+                    createdAt: true;
+                    updatedAt: true;
+                    deletedAt: true;
+
+                    image: {
+                        select: {
+                            id: true;
+                            fileId: true;
+                            altText: true;
+                            sortOrder: true;
+                            isPrimary: true;
+                            variantId: true;
+                            createdAt: true;
+                            updatedAt: true;
+                            deletedAt: true;
+
                             file: {
                                 select: {
                                     path: true;
@@ -165,16 +303,7 @@ export class ProductMapper extends BaseMapper<
     }
 
 
-    /**
-     * Gets the product net price.
-     *
-     * Product without variants:
-     *   basePrice
-     *
-     * Product with variants:
-     *   lowest active variant price
-     */
-    private getProductNetPrice(
+private getProductNetPrice(
     product: {
         basePrice: Prisma.Decimal | null;
         variants?: Array<{
@@ -182,17 +311,10 @@ export class ProductMapper extends BaseMapper<
         }>;
     },
 ): number {
+    const variantPrice = product.variants?.[0]?.price;
 
-    if (
-        product.variants &&
-        product.variants.length > 0
-    ) {
-        return Math.min(
-            ...product.variants.map(
-                variant =>
-                    variant.price.toNumber(),
-            ),
-        );
+    if (variantPrice) {
+        return variantPrice.toNumber();
     }
 
     return product.basePrice?.toNumber() ?? 0;
@@ -260,110 +382,15 @@ toAdminListResponse(
     };
 }
 
-toAdminDetailResponse(
-    product: {
-        id: number;
-        name: string;
-        slug: string;
-        description: string | null;
-        pricingType: ProductPricingType;
-        basePrice: Prisma.Decimal | null;
-        baseFloristCompensation: Prisma.Decimal | null;
-        active: boolean;
-        sortOrder: number;
-        createdAt: Date;
-        updatedAt: Date;
-
-        taxCode: {
-            rate: Prisma.Decimal;
-        };
-
-        category: {
-            id: number;
-            name: string;
-        };
-
-        images: {
-            id: number;
-            altText: string | null;
-            file: {
-                path: string;
-            };
-        }[];
-
-        components: {
-            id: number;
-            name: string;
-            minQuantity: number;
-            recommendedQuantity: number;
-            maxQuantity: number;
-            customerPricePerAdditionalUnit: Prisma.Decimal;
-            floristCompensationPerAdditionalUnit: Prisma.Decimal;
-            sortOrder: number;
-            active: boolean;
-        }[];
-
-        variants: {
-            id: number;
-            type: ProductVariantType;
-            name: string;
-            code: string | null;
-            price: Prisma.Decimal;
-            floristCompensation: Prisma.Decimal;
-            sortOrder: number;
-            active: boolean;
-
-            image: {
-                id: number;
-                altText: string | null;
-                file: {
-                    path: string;
-                };
-            } | null;
-        }[];
-    },
-): ProductAdminDetailResponseDto {
-    const taxRate = product.taxCode.rate;
-
-    /*
-     * Determine the customer price displayed for the product.
-     *
-     * No variants:
-     *   basePrice
-     *
-     * With variants:
-     *   lowest active variant price
-     */
-    const variantPrices = product.variants
-        .filter((variant) => variant.active)
-        .map((variant) => variant.price);
-
-    const netPrice =
-        variantPrices.length > 0
-            ? variantPrices.reduce((lowest, current) =>
-                  current.lessThan(lowest)
-                      ? current
-                      : lowest,
-              )
-            : product.basePrice ?? new Prisma.Decimal(0);
-
-    const taxAmount =
-        netPrice.mul(taxRate).div(100);
-
-    const grossPrice =
-        netPrice.add(taxAmount);
-
+toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDetailResponseDto {
     return {
+        // Product
         id: product.id,
         name: product.name,
         slug: product.slug,
         description: product.description,
+        active: product.active,
         pricingType: product.pricingType,
-
-        netPrice: this.toNumber(netPrice),
-        taxAmount: this.toNumber(taxAmount),
-        grossPrice: this.toNumber(grossPrice),
-        taxRate: this.toNumber(taxRate),
 
         basePrice: product.basePrice
             ? this.toNumber(product.basePrice)
@@ -375,36 +402,77 @@ toAdminDetailResponse(
                       product.baseFloristCompensation,
                   )
                 : null,
+        sortOrder: product.sortOrder,
+        createdAt: product.createdAt,
+        updatedAt: product.updatedAt,
+        deletedAt: product.deletedAt,
 
-        categoryId: product.category.id,
-        categoryName: product.category.name,
+        // Tax code
+        taxCode: {
+            id: product.taxCode.id,
+            code: product.taxCode.code,
+            name: product.taxCode.name,
+            rate: this.toNumber(
+                product.taxCode.rate,
+            ),
+            active: product.taxCode.active,
+        },
 
+        // Category
+        category: {
+            id: product.category.id,
+            name: product.category.name,
+            slug: product.category.slug,
+            description:
+                product.category.description,
+            active: product.category.active,
+        },
+
+        // Product images
         images: product.images.map((image) => ({
+            id: image.id,
+            fileId: image.fileId,
             url: image.file.path,
+            altText: image.altText,
+            sortOrder: image.sortOrder,
+            isPrimary: image.isPrimary,
+            variantId: image.variantId,
+            createdAt: image.createdAt,
+            updatedAt: image.updatedAt,
+            deletedAt: image.deletedAt,
         })),
 
+        // Components
         components: product.components.map(
             (component) => ({
                 id: component.id,
                 name: component.name,
-                minQuantity: component.minQuantity,
+                minQuantity:
+                    component.minQuantity,
                 recommendedQuantity:
                     component.recommendedQuantity,
                 maxQuantity:
                     component.maxQuantity,
+
                 customerPricePerAdditionalUnit:
                     this.toNumber(
                         component.customerPricePerAdditionalUnit,
                     ),
+
                 floristCompensationPerAdditionalUnit:
                     this.toNumber(
                         component.floristCompensationPerAdditionalUnit,
                     ),
+
                 sortOrder: component.sortOrder,
                 active: component.active,
+                createdAt: component.createdAt,
+                updatedAt: component.updatedAt,
+                deletedAt: component.deletedAt,
             }),
         ),
 
+        // Variants
         variants: product.variants.map(
             (variant) => ({
                 id: variant.id,
@@ -412,85 +480,61 @@ toAdminDetailResponse(
                 name: variant.name,
                 code: variant.code,
 
-                netPrice: this.toNumber(
+                // Persisted value — NO VAT calculation
+                price: this.toNumber(
                     variant.price,
                 ),
 
-                grossPrice: this.toNumber(
-                    variant.price
-                        .mul(
-                            new Prisma.Decimal(1).add(
-                                taxRate.div(100),
-                            ),
-                        ),
-                ),
-
+                // Persisted value — NO calculation
                 floristCompensation:
                     this.toNumber(
                         variant.floristCompensation,
                     ),
 
+                sortOrder: variant.sortOrder,
+                active: variant.active,
+
                 image: variant.image
                     ? {
+                          id: variant.image.id,
+                          fileId:
+                              variant.image.fileId,
                           url:
                               variant.image.file.path,
+                          altText:
+                              variant.image.altText,
+                          sortOrder:
+                              variant.image.sortOrder,
+                          isPrimary:
+                              variant.image.isPrimary,
+                          variantId:
+                              variant.image.variantId,
+                          createdAt:
+                              variant.image.createdAt,
+                          updatedAt:
+                              variant.image.updatedAt,
+                          deletedAt:
+                              variant.image.deletedAt,
                       }
                     : null,
 
-                sortOrder: variant.sortOrder,
-                active: variant.active,
+                createdAt: variant.createdAt,
+                updatedAt: variant.updatedAt,
+                deletedAt: variant.deletedAt,
             }),
         ),
-
-        active: product.active,
-        sortOrder: product.sortOrder,
-        createdAt: product.createdAt,
-        updatedAt: product.updatedAt,
     };
 }
 
 
-    /*
-     * ============================================================
-     * IMAGES
-     * ============================================================
-     */
 
-    /**
-     * Gets the first product-level image.
-     *
-     * Variant images are ignored.
-     */
-    private getFirstProductImage(
-        images: ProductWithListRelations['images'],
-    ) {
-
-        return (
-            images
-                .filter(
-                    image =>
-                        image.variantId === null,
-                )
-                .sort(
-                    (a, b) =>
-                        a.sortOrder -
-                        b.sortOrder,
-                )[0] ?? null
-        );
-    }
-
-
-    /**
-     * Maps a list image.
-     */
     private mapListImage(
-        image: ProductWithListRelations['images'][number],
-    ) {
-
-        return {
-            url: image.file.path,
-        };
-    }
+    image: ProductWithListRelations['images'][number],
+) {
+    return {
+        url: image.file.path,
+    };
+}
 
 
     /**
@@ -517,11 +561,6 @@ toAdminDetailResponse(
     ) {
 
         return components
-            .sort(
-                (a, b) =>
-                    a.sortOrder -
-                    b.sortOrder,
-            )
             .map(
                 component => ({
                     id:
@@ -563,11 +602,6 @@ toAdminDetailResponse(
             .filter(
                 variant =>
                     variant.active,
-            )
-            .sort(
-                (a, b) =>
-                    a.sortOrder -
-                    b.sortOrder,
             )
             .map(
                 variant => {
@@ -621,56 +655,35 @@ toAdminDetailResponse(
      */
 
     toListResponse(
-        product: ProductWithListRelations,
-    ): ProductListResponseDto {
+    product: ProductWithListRelations,
+): ProductListResponseDto {
+    const taxRate =
+        product.taxCode.rate.toNumber();
 
-        const taxRate =
-            product.taxCode.rate.toNumber();
+    const netPrice =
+        this.getProductNetPrice(product);
 
-        const netPrice =
-            this.getProductNetPrice(
-                product,
-            );
+    const grossPrice =
+        this.calculateGrossAmount(
+            netPrice,
+            taxRate,
+        );
 
-        const grossPrice =
-            this.calculateGrossAmount(
-                netPrice,
-                taxRate,
-            );
+    const image =
+        product.images[0] ?? null;
 
-        const firstImage =
-            this.getFirstProductImage(
-                product.images,
-            );
+    return {
+        id: product.id,
 
-        return {
+        name: product.name,
 
-            id:
-                product.id,
+        price: grossPrice,
 
-            name:
-                product.name,
-
-            price:
-                grossPrice,
-
-            image:
-                firstImage
-                    ? this.mapListImage(
-                        firstImage,
-                    )
-                    : null,
-
-            category: {
-
-                id:
-                    product.category.id,
-
-                name:
-                    product.category.name,
-            },
-        };
-    }
+        image: image
+            ? this.mapListImage(image)
+            : null,
+    };
+}
 
 
     /*
@@ -721,15 +734,6 @@ toAdminDetailResponse(
 
         const productImages =
             product.images
-                .filter(
-                    image =>
-                        image.variantId === null,
-                )
-                .sort(
-                    (a, b) =>
-                        a.sortOrder -
-                        b.sortOrder,
-                )
                 .map(
                     image =>
                         this.mapDetailImage(

@@ -1,10 +1,11 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
-import type { Product } from "@/types/product";
+import type { ProductListItem } from "@/types/product";
 
 type Props = {
-    product: Product;
+    product: ProductListItem;
 };
 
 export default function ProductCard({
@@ -28,102 +29,79 @@ export default function ProductCard({
                     hover:shadow-xl
                 "
             >
-                {/* IMAGE */}
-
                 <div
                     className="
                         relative
-                        flex
                         h-80
-                        items-center
-                        justify-center
                         overflow-hidden
                         bg-[#FAFAF7]
                     "
                 >
+                    {product.image ? (
+                        <Image
+                            src={product.image.url}
+                            alt={product.name}
+                            fill
+                            sizes="
+                                (max-width: 768px) 100vw,
+                                (max-width: 1200px) 50vw,
+                                33vw
+                            "
+                            className="
+                                object-cover
+                                transition-transform
+                                duration-500
+                                group-hover:scale-105
+                            "
+                        />
+                    ) : (
+                        <div
+                            className="
+                                flex
+                                h-full
+                                items-center
+                                justify-center
+                                text-7xl
+                            "
+                        >
+                            🌸
+                        </div>
+                    )}
+                </div>
+
+                <div className="p-6">
                     <div
                         className="
                             flex
-                            h-full
-                            w-full
-                            items-center
-                            justify-center
-                            text-8xl
-                            transition-transform
-                            duration-500
-                            group-hover:scale-110
+                            items-start
+                            justify-between
+                            gap-4
                         "
                     >
-                        🌸
-                    </div>
+                        <div className="min-w-0">
+                            <h2
+                                className="
+                                    text-xl
+                                    font-semibold
+                                    text-[#2F3B2A]
+                                    transition-colors
+                                    duration-300
+                                    group-hover:text-[#55624A]
+                                "
+                            >
+                                {product.name}
+                            </h2>
 
-                    {/* CATEGORY */}
-
-                    <span
-                        className="
-                            absolute
-                            left-5
-                            top-5
-                            rounded-full
-                            bg-white/90
-                            px-3
-                            py-1.5
-                            text-xs
-                            font-medium
-                            text-[#55624A]
-                            shadow-sm
-                            backdrop-blur
-                        "
-                    >
-                        {product.category.name}
-                    </span>
-                </div>
-
-                {/* CONTENT */}
-
-                <div className="p-6">
-
-                    <h2
-                        className="
-                            text-xl
-                            font-semibold
-                            text-[#2F3B2A]
-                            transition-colors
-                            duration-300
-                            group-hover:text-[#55624A]
-                        "
-                    >
-                        {product.name}
-                    </h2>
-
-                    {product.description && (
-                        <p
-                            className="
-                                mt-2
-                                line-clamp-2
-                                text-sm
-                                leading-6
-                                text-gray-500
-                            "
-                        >
-                            {product.description}
-                        </p>
-                    )}
-
-                    <div className="mt-6 flex items-end justify-between">
-
-                        <div>
-
-                            <p className="text-xs text-gray-400">
-                                {product.pricingType === "PER_UNIT"
-                                    ? "A partir de"
-                                    : "Preço"}
+                            <p
+                                className="
+                                    mt-2
+                                    text-sm
+                                    text-gray-400
+                                "
+                            >
+                                Flores preparadas
+                                por floristas locais
                             </p>
-
-                            <p className="mt-1 text-2xl font-bold text-[#55624A]">
-                                {product.basePrice.toFixed(2)} €
-                            </p>
-
                         </div>
 
                         <div
@@ -131,6 +109,7 @@ export default function ProductCard({
                                 flex
                                 h-11
                                 w-11
+                                shrink-0
                                 items-center
                                 justify-center
                                 rounded-full
@@ -144,23 +123,31 @@ export default function ProductCard({
                         >
                             <ArrowUpRight size={20} />
                         </div>
-
                     </div>
 
-                    <div
-                        className="
-                            mt-5
-                            border-t
-                            border-gray-100
-                            pt-4
-                            text-sm
-                            font-medium
-                            text-[#55624A]
-                        "
-                    >
-                        Ver produto
-                    </div>
+                    <div className="mt-6">
+                        <p
+                            className="
+                                text-xs
+                                uppercase
+                                tracking-wide
+                                text-gray-400
+                            "
+                        >
+                            A partir de
+                        </p>
 
+                        <p
+                            className="
+                                mt-1
+                                text-2xl
+                                font-bold
+                                text-[#55624A]
+                            "
+                        >
+                            {product.price.toFixed(2)} €
+                        </p>
+                    </div>
                 </div>
             </article>
         </Link>

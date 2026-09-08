@@ -3,11 +3,34 @@ import { apiFetch } from "@/lib/api/client";
 import type {
     Pagination,
     Product,
+    ProductListItem,
+    ProductDetail,
 } from "@/types/product";
 
 export type ProductListResponse = {
     success: boolean;
-    data: Product[];
+    data: ProductListItem[];
+    pagination: Pagination;
+};
+
+export type ProductAdminListItem = {
+    id: number;
+    name: string;
+    slug: string;
+    price: number;
+    active: boolean;
+    image: {
+        url: string;
+    } | null;
+    category: {
+        id: number;
+        name: string;
+    };
+};
+
+export type ProductAdminListResponse = {
+    success: boolean;
+    data: ProductAdminListItem[];
     pagination: Pagination;
 };
 
@@ -19,20 +42,10 @@ export type GetProductsParams = {
     order?: "asc" | "desc";
 };
 
-export async function getProduct(
-    id: number,
+function buildProductQuery(
+    params: GetProductsParams,
 ) {
-    return apiFetch<{
-        success: boolean;
-        data: Product;
-    }>(`/products/${id}`);
-}
-
-export async function getProducts(
-    params: GetProductsParams = {},
-) {
-    const searchParams =
-        new URLSearchParams();
+    const searchParams = new URLSearchParams();
 
     if (params.page !== undefined) {
         searchParams.set(
@@ -69,13 +82,109 @@ export async function getProducts(
         );
     }
 
-    const query =
-        searchParams.toString();
+    return searchParams.toString();
+}
+
+// =========================================================
+// PUBLIC
+// =========================================================
+
+export async function getProducts(
+    params: GetProductsParams = {},
+) {
+    const query = buildProductQuery(params);
 
     return apiFetch<ProductListResponse>(
         `/products${query ? `?${query}` : ""}`,
     );
 }
+
+export async function getProduct(
+    id: number,
+) {
+    return apiFetch<{
+        success: boolean;
+        data: ProductDetail;
+    }>(`/products/${id}`);
+}
+
+// =========================================================
+// ADMIN
+// =========================================================
+
+export async function getAdminProducts(
+    params: GetProductsParams = {},
+) {
+    const query = buildProductQuery(params);
+
+    return apiFetch<ProductAdminListResponse>(
+        `/admin/products${query ? `?${query}` : ""}`,
+    );
+}
+
+export type ProductAdminImage = {
+    id: number;
+    fileId: number;
+    url: string;
+    altText: string | null;
+    isPrimary: boolean;
+    sortOrder: number;
+    variantId: number | null;
+};
+
+export type ProductAdminComponent = {
+    id: number;
+    name: string;
+    minQuantity: number;
+    recommendedQuantity: number;
+    maxQuantity: number;
+    customerPricePerAdditionalUnit: number;
+    floristCompensationPerAdditionalUnit: number;
+    sortOrder: number;
+    active: boolean;
+};
+
+export type ProductAdminVariant = {
+    id: number;
+    type: string;
+    name: string;
+    code: string | null;
+    price: number;
+    floristCompensation: number;
+    image: ProductAdminImage | null;
+    sortOrder: number;
+    active: boolean;
+};
+
+export type ProductAdminDetail = {
+    id: number;
+    name: string;
+    slug: string;
+    description: string | null;
+    pricingType: "FIXED" | "PER_UNIT";
+    basePrice: number | null;
+    baseFloristCompensation: number | null;
+    price: number;
+    category: {
+        id: number;
+        name: string;
+    };
+    images: ProductAdminImage[];
+    components: ProductAdminComponent[];
+    variants: ProductAdminVariant[];
+    sortOrder: number;
+    active: boolean;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export async function getAdminProduct(id: number) {
+  return apiFetch<ProductAdminDetail>(`/admin/products/${id}`);
+}
+
+// =========================================================
+// CREATE / UPDATE / DELETE
+// =========================================================
 
 export type CreateProductData = {
     name: string;
@@ -92,7 +201,7 @@ export async function createProduct(
 ) {
     return apiFetch<{
         success: boolean;
-        data: Product;
+        data: ProductDetail;
     }>("/products", {
         method: "POST",
         body: JSON.stringify(data),
@@ -105,7 +214,7 @@ export async function updateProduct(
 ) {
     return apiFetch<{
         success: boolean;
-        data: Product;
+        data: ProductDetail;
     }>(`/products/${id}`, {
         method: "PATCH",
         body: JSON.stringify(data),

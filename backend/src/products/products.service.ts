@@ -1,3 +1,4 @@
+
 import {
     Injectable,
     NotFoundException,
@@ -23,6 +24,9 @@ import { CATEGORY_MESSAGES } from '@/categories/constants/category.messages';
 import { PRODUCT_MESSAGES } from './constants/product.messages';
 
 import { ApiResponse } from '@/common/responses/api-response';
+import { getPagination } from '@/common/database/pagination';
+import { getPaginationResponse } from '@/common/database/pagination-response';
+
 import { ProductAdminDetailResponseDto } from './dto/admin/product-admin-detail-response.dto';
 import { ProductAdminListResponseDto } from './dto/admin/product-admin-list-response.dto';
 
@@ -37,11 +41,24 @@ export class ProductsService {
 
     async findAllAdmin(
     query: ProductQueryDto,
-): Promise<ProductAdminListResponseDto[]> {
-    const where = this.buildProductWhere(query);
+) {
+    const where = this.buildListWhere(query);
+
+    const orderBy = query.sort
+        ? {
+            [query.sort]: query.order,
+        }
+        : {
+            sortOrder: 'asc' as const,
+        };
 
     const products = await this.prisma.product.findMany({
         where,
+
+        ...getPagination(
+            query.page,
+            query.pageSize,
+        ),
 
         select: {
             id: true,
@@ -103,17 +120,27 @@ export class ProductsService {
             },
         },
 
-        orderBy: {
-            sortOrder: 'asc',
-        },
+        orderBy,
     });
 
-    return products.map((product) =>
-        this.productMapper.toAdminListResponse(product),
+    const total = await this.prisma.product.count({
+        where,
+    });
+
+    return ApiResponse.paginated(
+        products.map((product) =>
+            this.productMapper.toAdminListResponse(product),
+        ),
+        getPaginationResponse(
+            query.page,
+            query.pageSize,
+            total,
+        ),
     );
 }
 
-async findOneAdmin(
+
+    async findOneAdmin(
     id: number,
 ): Promise<ProductAdminDetailResponseDto> {
     const product = await this.prisma.product.findFirst({
@@ -127,17 +154,24 @@ async findOneAdmin(
             name: true,
             slug: true,
             description: true,
+            active: true,
             pricingType: true,
             basePrice: true,
             baseFloristCompensation: true,
-            active: true,
+            taxCodeId: true,
+            categoryId: true,
             sortOrder: true,
             createdAt: true,
             updatedAt: true,
+            deletedAt: true,
 
             taxCode: {
                 select: {
+                    id: true,
+                    code: true,
+                    name: true,
                     rate: true,
+                    active: true,
                 },
             },
 
@@ -145,13 +179,15 @@ async findOneAdmin(
                 select: {
                     id: true,
                     name: true,
+                    slug: true,
+                    description: true,
+                    active: true,
                 },
             },
 
             images: {
                 where: {
                     deletedAt: null,
-                    variantId: null,
                 },
                 orderBy: [
                     {
@@ -163,7 +199,15 @@ async findOneAdmin(
                 ],
                 select: {
                     id: true,
+                    fileId: true,
                     altText: true,
+                    sortOrder: true,
+                    isPrimary: true,
+                    variantId: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    deletedAt: true,
+
                     file: {
                         select: {
                             path: true,
@@ -189,6 +233,9 @@ async findOneAdmin(
                     floristCompensationPerAdditionalUnit: true,
                     sortOrder: true,
                     active: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    deletedAt: true,
                 },
             },
 
@@ -208,11 +255,25 @@ async findOneAdmin(
                     floristCompensation: true,
                     sortOrder: true,
                     active: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    deletedAt: true,
 
                     image: {
+                        where: {
+                            deletedAt: null,
+                        },
                         select: {
                             id: true,
+                            fileId: true,
                             altText: true,
+                            sortOrder: true,
+                            isPrimary: true,
+                            variantId: true,
+                            createdAt: true,
+                            updatedAt: true,
+                            deletedAt: true,
+
                             file: {
                                 select: {
                                     path: true,
@@ -231,70 +292,70 @@ async findOneAdmin(
         );
     }
 
-    return this.productMapper.toAdminDetailResponse(product);
+    return this.productMapper.toAdminDetailResponse(
+        product,
+    );
 }
 
-
     // =========================================================
-    // LIST
+    // PUBLIC LIST
     // =========================================================
 
     async findAll(
         query: ProductQueryDto,
     ) {
+        const where =
+            this.buildListWhere(query);
+
+        const orderBy =
+            query.sort
+                ? {
+                    [query.sort]:
+                        query.order,
+                }
+                : {
+                    sortOrder: 'asc' as const,
+                };
 
         const products =
             await this.prisma.product.findMany({
+                where,
 
-                where:
-                    this.buildListWhere(query),
+                ...getPagination(
+                    query.page,
+                    query.pageSize,
+                ),
 
-                include: {
+                select: {
+                    id: true,
+                    name: true,
+                    basePrice: true,
 
-                    /*
-                     * Only the tax rate is required
-                     * to calculate the final catalog price.
-                     */
                     taxCode: {
                         select: {
                             rate: true,
                         },
                     },
 
-                    /*
-                     * Only category information required
-                     * by the catalog.
-                     */
-                    category: {
-                        select: {
-                            id: true,
-                            name: true,
-                        },
-                    },
-
-                    /*
-                     * Only prices are required here
-                     * to determine the lowest variant price.
-                     */
                     variants: {
                         where: {
                             active: true,
                             deletedAt: null,
                         },
+                        orderBy: {
+                            price: 'asc',
+                        },
+                        take: 1,
                         select: {
                             price: true,
                         },
                     },
 
-                    /*
-                     * Only the first product image.
-                     */
                     images: {
                         where: {
                             variantId: null,
                             deletedAt: null,
                         },
-                        take: 1,
                         orderBy: [
                             {
                                 isPrimary: 'desc',
@@ -303,7 +364,8 @@ async findOneAdmin(
                                 sortOrder: 'asc',
                             },
                         ],
-                        include: {
+                        take: 1,
+                        select: {
                             file: {
                                 select: {
                                     path: true,
@@ -313,17 +375,24 @@ async findOneAdmin(
                     },
                 },
 
-                orderBy: {
-                    sortOrder: 'asc',
-                },
+                orderBy,
             });
 
-        return ApiResponse.success(
-            products.map(
-                product =>
-                    this.productMapper.toListResponse(
-                        product,
-                    ),
+        const total =
+            await this.prisma.product.count({
+                where,
+            });
+
+        return ApiResponse.paginated(
+            products.map((product) =>
+                this.productMapper.toListResponse(
+                    product,
+                ),
+            ),
+            getPaginationResponse(
+                query.page,
+                query.pageSize,
+                total,
             ),
         );
     }
@@ -364,20 +433,33 @@ async findOneAdmin(
     async findOne(
         id: number,
     ) {
-
         const product =
             await this.prisma.product.findFirst({
-
                 where: {
                     id,
                     deletedAt: null,
                 },
 
-                include: {
+                select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                    description: true,
+                    pricingType: true,
+                    basePrice: true,
 
-                    taxCode: true,
+                    taxCode: {
+                        select: {
+                            rate: true,
+                        },
+                    },
 
-                    category: true,
+                    category: {
+                        select: {
+                            id: true,
+                            name: true,
+                        },
+                    },
 
                     components: {
                         where: {
@@ -386,38 +468,48 @@ async findOneAdmin(
                         orderBy: {
                             sortOrder: 'asc',
                         },
+                        select: {
+                            id: true,
+                            name: true,
+                            minQuantity: true,
+                            recommendedQuantity: true,
+                            maxQuantity: true,
+                            customerPricePerAdditionalUnit: true,
+                        },
                     },
 
                     variants: {
-
                         where: {
                             deletedAt: null,
                         },
-
                         orderBy: {
                             sortOrder: 'asc',
                         },
+                        select: {
+                            id: true,
+                            type: true,
+                            name: true,
+                            code: true,
+                            price: true,
+                            active: true,
 
-                        include: {
-
-                            /*
-                             * A variant has ONE image.
-                             */
                             image: {
-                                include: {
-                                    file: true,
+                                select: {
+                                    file: {
+                                        select: {
+                                            path: true,
+                                        },
+                                    },
                                 },
                             },
                         },
                     },
 
                     images: {
-
                         where: {
                             variantId: null,
                             deletedAt: null,
                         },
-
                         orderBy: [
                             {
                                 isPrimary: 'desc',
@@ -426,9 +518,12 @@ async findOneAdmin(
                                 sortOrder: 'asc',
                             },
                         ],
-
-                        include: {
-                            file: true,
+                        select: {
+                            file: {
+                                select: {
+                                    path: true,
+                                },
+                            },
                         },
                     },
                 },

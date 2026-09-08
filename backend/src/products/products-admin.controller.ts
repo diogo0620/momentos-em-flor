@@ -12,7 +12,6 @@ import { ProductAdminListResponseDto } from './dto/admin/product-admin-list-resp
 import { ProductAdminDetailResponseDto } from './dto/admin/product-admin-detail-response.dto';
 import { ProductQueryDto } from './query/product-query.dto';
 
-
 @Controller('admin/products')
 export class ProductsAdminController {
 
@@ -20,14 +19,12 @@ export class ProductsAdminController {
         private readonly productsService: ProductsService,
     ) {}
 
-
     @Get()
-    async findAll(@Query()
-            query: ProductQueryDto): Promise<ProductAdminListResponseDto[]> {
-
+    async findAll(
+        @Query() query: ProductQueryDto,
+    ) {
         return this.productsService.findAllAdmin(query);
     }
-
 
     @Get(':id')
     async findOne(
