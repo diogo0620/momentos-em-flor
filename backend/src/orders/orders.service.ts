@@ -4,6 +4,7 @@ import {
 
 import {
     OrderStatus,
+    UserRole,
 } from '@prisma/client';
 
 import { PrismaService } from '@/prisma/prisma.service';
@@ -19,27 +20,30 @@ import { OrderQueryDto } from './query/order-query.dto';
 import { getPagination } from '@/common/database/pagination';
 import { getPaginationResponse } from '@/common/database/pagination-response';
 
-import { UserRole } from '@prisma/client';
-
 import type { AuthenticatedUser } from '@/auth/interfaces/authenticated-user.interface';
+
 import { UpdateOrderDto } from './dto/update-order.dto';
+
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrderCreatedEvent } from '@/events/order/order-created.event';
-import { OrderCreateResponseDto } from './dto/order-create-response.dto';
-import { GeocodingService } from '@/geocoding/geocoding.service';
-import { log } from 'console';
 
+import { GeocodingService } from '@/geocoding/geocoding.service';
 
 
 @Injectable()
 export class OrdersService {
     constructor(
         private readonly prisma: PrismaService,
+
         private readonly mapper: OrderMapper,
-        private readonly eventEmitter: EventEmitter2,
+
+        private readonly eventEmitter:
+            EventEmitter2,
+
         private readonly geocodingService:
             GeocodingService,
     ) { }
+
 
     async findAll(
         user: AuthenticatedUser,
@@ -74,7 +78,8 @@ export class OrdersService {
             ...(user.role === UserRole.FLORIST && {
                 offers: {
                     some: {
-                        floristId: user.floristId!,
+                        floristId:
+                            user.floristId!,
                     },
                 },
             }),
@@ -84,34 +89,47 @@ export class OrdersService {
             }),
 
             ...(query.customerId &&
-                user.role === UserRole.SYSTEM_ADMIN && {
-                customerId: query.customerId,
+                user.role ===
+                    UserRole.SYSTEM_ADMIN && {
+                customerId:
+                    query.customerId,
             }),
 
             ...(query.search && {
                 OR: [
                     {
                         orderNumber: {
-                            contains: query.search,
-                            mode: 'insensitive' as const,
+                            contains:
+                                query.search,
+                            mode:
+                                'insensitive' as const,
                         },
                     },
+
                     {
                         customerEmail: {
-                            contains: query.search,
-                            mode: 'insensitive' as const,
+                            contains:
+                                query.search,
+                            mode:
+                                'insensitive' as const,
                         },
                     },
+
                     {
                         customerFirstName: {
-                            contains: query.search,
-                            mode: 'insensitive' as const,
+                            contains:
+                                query.search,
+                            mode:
+                                'insensitive' as const,
                         },
                     },
+
                     {
                         customerLastName: {
-                            contains: query.search,
-                            mode: 'insensitive' as const,
+                            contains:
+                                query.search,
+                            mode:
+                                'insensitive' as const,
                         },
                     },
                 ],
@@ -120,16 +138,24 @@ export class OrdersService {
 
         const orderBy = query.sort
             ? {
-                [query.sort]: query.order,
+                [query.sort]:
+                    query.order,
             }
             : {
-                createdAt: 'desc' as const,
+                createdAt:
+                    'desc' as const,
             };
 
         const orders =
             await this.prisma.order.findMany({
                 where,
+
                 orderBy,
+
+                include: {
+                    items: true,
+                },
+
                 ...getPagination(
                     query.page,
                     query.pageSize,
@@ -142,7 +168,10 @@ export class OrdersService {
             });
 
         return ApiResponse.paginated(
-            this.mapper.toListResponses(orders),
+            this.mapper.toResponses(
+                orders,
+            ),
+
             getPaginationResponse(
                 query.page,
                 query.pageSize,
@@ -151,124 +180,101 @@ export class OrdersService {
         );
     }
 
+
     async findOne(
-    user: AuthenticatedUser,
-    id: number,
-) {
-    /*
-     * Florist must be associated with a
-     * florist account.
-     */
-    if (
-        user.role === UserRole.FLORIST &&
-        !user.floristId
+        user: AuthenticatedUser,
+        id: number,
     ) {
-        Exceptions.forbidden(
-            ORDER_MESSAGES.FLORIST_REQUIRED,
-        );
-    }
+        if (
+            user.role !== UserRole.SYSTEM_ADMIN &&
+            user.role !== UserRole.CUSTOMER &&
+            user.role !== UserRole.FLORIST
+        ) {
+            Exceptions.forbidden(
+                ORDER_MESSAGES.FORBIDDEN,
+            );
+        }
 
-    const where = {
-        id,
-        deletedAt: null,
+        if (
+            user.role === UserRole.FLORIST &&
+            !user.floristId
+        ) {
+            Exceptions.forbidden(
+                ORDER_MESSAGES.FORBIDDEN,
+            );
+        }
 
-        /*
-         * CUSTOMER can only access their own orders.
-         */
-        ...(user.role === UserRole.CUSTOMER && {
-            customerId: user.id,
-        }),
+        const where = {
+            id,
 
-        /*
-         * FLORIST can only access orders
-         * assigned to their florist.
-         */
-        ...(user.role === UserRole.FLORIST && {
-            assignedFloristId:
-                user.floristId!,
-        }),
-    };
+            deletedAt: null,
 
-    /*
-     * Only SYSTEM_ADMIN, CUSTOMER and FLORIST
-     * are allowed to access orders.
-     */
-    if (
-        user.role !== UserRole.SYSTEM_ADMIN &&
-        user.role !== UserRole.CUSTOMER &&
-        user.role !== UserRole.FLORIST
-    ) {
-        Exceptions.forbidden(
-            ORDER_MESSAGES.FORBIDDEN,
-        );
-    }
+            ...(user.role === UserRole.CUSTOMER && {
+                customerId: user.id,
+            }),
 
-    const order =
-        await this.prisma.order.findFirst({
-            where,
-
-            include: {
-                items: true,
-
+            ...(user.role === UserRole.FLORIST && {
                 offers: {
-                    include: {
-                        orderOfferItems: true,
-
-                        florist: true,
+                    some: {
+                        floristId:
+                            user.floristId!,
                     },
                 },
+            }),
+        };
 
-                statusHistory: {
-                    orderBy: {
-                        createdAt: 'asc',
-                    },
+        const order =
+            await this.prisma.order.findFirst({
+                where,
 
-                    include: {
-                        changedByUser: {
-                            select: {
-                                id: true,
-                                firstName: true,
-                                lastName: true,
-                                email: true,
-                                role: true,
-                            },
+                include: {
+                    items: true,
+
+                    offers: {
+                        include: {
+                            orderOfferItems:
+                                true,
+
+                            florist:
+                                true,
                         },
                     },
                 },
-            },
-        });
+            });
 
-    if (!order) {
-        Exceptions.notFound(
-            ORDER_MESSAGES.NOT_FOUND,
+        if (!order) {
+            Exceptions.notFound(
+                ORDER_MESSAGES.NOT_FOUND,
+            );
+        }
+
+        return ApiResponse.success(
+            this.mapper.toResponse(
+                order,
+            ),
         );
     }
-
-    return ApiResponse.success(
-        this.mapper.toResponse(
-            order,
-        ),
-    );
-}
 
 
     async create(
         user: AuthenticatedUser | null,
         dto: CreateOrderDto,
     ) {
-        let customerId: number | null = null;
+        let customerId:
+            number | null = null;
 
-        let customerFirstName: string;
-        let customerLastName: string | null;
-        let customerEmail: string | null;
-        let customerPhone: string | null;
+        let customerFirstName:
+            string;
 
-        console.log("Teste")
+        let customerLastName:
+            string | null;
 
-        console.log(
-    'CREATE ORDER USER:',
-    user,
-);
+        let customerEmail:
+            string | null;
+
+        let customerPhone:
+            string | null;
+
 
         /*
          * Authenticated CUSTOMER
@@ -281,19 +287,25 @@ export class OrdersService {
                 await this.prisma.user.findFirst({
                     where: {
                         id: user.id,
-                        role: UserRole.CUSTOMER,
+
+                        role:
+                            UserRole.CUSTOMER,
+
                         deletedAt: null,
+
                         active: true,
                     },
                 });
 
             if (!customer) {
                 Exceptions.notFound(
-                    ORDER_MESSAGES.CUSTOMER_NOT_FOUND,
+                    ORDER_MESSAGES
+                        .CUSTOMER_NOT_FOUND,
                 );
             }
 
-            customerId = customer.id;
+            customerId =
+                customer.id;
 
             customerFirstName =
                 customer.firstName;
@@ -307,6 +319,7 @@ export class OrdersService {
             customerPhone =
                 customer.phone;
         }
+
 
         /*
          * Guest / Admin
@@ -347,30 +360,42 @@ export class OrdersService {
                 null;
         }
 
+
         /*
          * Validate items
          */
-        if (dto.items.length === 0) {
+        if (
+            dto.items.length === 0
+        ) {
             Exceptions.badRequest(
                 ORDER_MESSAGES.EMPTY_ORDER,
             );
         }
 
-        const productIds = dto.items.map(
-            (item) => item.productId,
-        );
+        const productIds =
+            dto.items.map(
+                (item) =>
+                    item.productId,
+            );
 
         if (
             new Set(productIds).size !==
             productIds.length
         ) {
             Exceptions.badRequest(
-                ORDER_MESSAGES.DUPLICATE_PRODUCTS,
+                ORDER_MESSAGES
+                    .DUPLICATE_PRODUCTS,
             );
         }
 
+
         /*
          * Validate products
+         *
+         * We load the TaxCode because
+         * the product price is BEFORE VAT
+         * and the tax rate must be
+         * snapshotted into the OrderItem.
          */
         const products =
             await this.prisma.product.findMany({
@@ -378,8 +403,14 @@ export class OrdersService {
                     id: {
                         in: productIds,
                     },
+
                     active: true,
+
                     deletedAt: null,
+                },
+
+                include: {
+                    taxCode: true,
                 },
             });
 
@@ -388,75 +419,160 @@ export class OrdersService {
             productIds.length
         ) {
             Exceptions.badRequest(
-                ORDER_MESSAGES.PRODUCT_NOT_AVAILABLE,
+                ORDER_MESSAGES
+                    .PRODUCT_NOT_AVAILABLE,
             );
         }
 
-        const productsById = new Map(
-            products.map((product) => [
-                product.id,
-                product,
-            ]),
-        );
+        const productsById =
+            new Map(
+                products.map(
+                    (product) => [
+                        product.id,
+                        product,
+                    ],
+                ),
+            );
+
 
         /*
          * Build order items
+         *
+         * unitPrice:
+         *   Price BEFORE VAT
+         *
+         * taxRate:
+         *   VAT percentage at purchase time
+         *
+         * taxAmount:
+         *   VAT amount for this line
+         *
+         * lineTotal:
+         *   Total INCLUDING VAT
          */
-        const items = dto.items.map((item) => {
-            const product =
-                productsById.get(
-                    item.productId,
-                )!;
+        const items =
+            dto.items.map((item) => {
+                const product =
+                    productsById.get(
+                        item.productId,
+                    )!;
 
-            const unitPrice =
-                Number(product.basePrice);
+                const unitPrice =
+                    Number(
+                        product.basePrice,
+                    );
 
-            const lineTotal =
-                unitPrice *
-                item.quantity;
+                const taxRate =
+                    Number(
+                        product.taxCode.rate,
+                    );
 
-            return {
-                productId:
-                    product.id,
+                const netLineTotal =
+                    unitPrice *
+                    item.quantity;
 
-                productName:
-                    product.name,
+                const taxAmount =
+                    Number(
+                        (
+                            netLineTotal *
+                            (taxRate / 100)
+                        ).toFixed(2),
+                    );
 
-                productDescription:
-                    product.description,
+                const lineTotal =
+                    Number(
+                        (
+                            netLineTotal +
+                            taxAmount
+                        ).toFixed(2),
+                    );
 
-                quantity:
-                    item.quantity,
+                return {
+                    productId:
+                        product.id,
 
-                unitPrice,
+                    productName:
+                        product.name,
 
-                lineTotal,
-            };
-        });
+                    productDescription:
+                        product.description,
+
+                    quantity:
+                        item.quantity,
+
+                    unitPrice,
+
+                    taxRate,
+
+                    taxAmount,
+
+                    lineTotal,
+                };
+            });
+
 
         /*
          * Calculate totals
+         *
+         * subtotal = BEFORE VAT
+         * taxAmount = VAT
+         * total = INCLUDING VAT
          */
-        const subtotal = items.reduce(
-            (total, item) =>
-                total + item.lineTotal,
-            0,
-        );
+        const subtotal =
+            Number(
+                items
+                    .reduce(
+                        (
+                            total,
+                            item,
+                        ) =>
+                            total +
+                            (
+                                item.unitPrice *
+                                item.quantity
+                            ),
+                        0,
+                    )
+                    .toFixed(2),
+            );
 
-        const deliveryFee = 0;
-        const discount = 0;
+        const taxAmount =
+            Number(
+                items
+                    .reduce(
+                        (
+                            total,
+                            item,
+                        ) =>
+                            total +
+                            item.taxAmount,
+                        0,
+                    )
+                    .toFixed(2),
+            );
+
+        const deliveryFee =
+            0;
+
+        const discount =
+            0;
 
         const total =
-            subtotal +
-            deliveryFee -
-            discount;
+            Number(
+                (
+                    subtotal +
+                    taxAmount +
+                    deliveryFee -
+                    discount
+                ).toFixed(2),
+            );
+
 
         /*
          * Geocode delivery address.
          *
-         * Latitude and longitude are generated
-         * by the backend and are not provided
-         * by the client.
+         * Latitude and longitude are
+         * generated by the backend.
          */
         const coordinates =
             await this.geocodingService
@@ -480,11 +596,13 @@ export class OrdersService {
                         dto.deliveryCountryCode,
                 });
 
+
         /*
          * Generate order number
          */
         const orderNumber =
             await this.generateOrderNumber();
+
 
         /*
          * Create order
@@ -555,39 +673,47 @@ export class OrdersService {
                                 dto.cardMessage,
 
                             subtotal,
+
+                            taxAmount,
+
                             deliveryFee,
+
                             discount,
+
                             total,
 
                             status:
                                 OrderStatus.CREATED,
 
                             items: {
-                                create: items,
+                                create:
+                                    items,
                             },
                         },
                     });
                 },
             );
 
+
         /*
          * Notify listeners.
          *
-         * Distribution will be handled
-         * asynchronously by OrderCreatedListener.
+         * Distribution is handled
+         * asynchronously by
+         * OrderCreatedListener.
          */
         this.eventEmitter.emit(
             'order.created',
+
             new OrderCreatedEvent(
                 order.id,
             ),
         );
 
+
         /*
-         * Return only creation information.
-         *
-         * No items.
-         * No offers.
+         * Return only creation
+         * information.
          */
         return ApiResponse.success(
             this.mapper.toCreateResponse(
@@ -595,6 +721,7 @@ export class OrdersService {
             ),
         );
     }
+
 
     async update(
         id: number,
@@ -604,6 +731,7 @@ export class OrdersService {
             await this.prisma.order.findFirst({
                 where: {
                     id,
+
                     deletedAt: null,
                 },
             });
@@ -614,9 +742,10 @@ export class OrdersService {
             );
         }
 
+
         /*
-         * Check whether the delivery address
-         * is being changed.
+         * Check whether the delivery
+         * address is being changed.
          */
         const addressChanged =
             dto.deliveryStreet !== undefined ||
@@ -626,9 +755,11 @@ export class OrdersService {
             dto.deliveryDistrict !== undefined ||
             dto.deliveryCountryCode !== undefined;
 
+
         /*
-         * Geocode the final address only when
-         * one of the address fields changes.
+         * Geocode the final address only
+         * when one of the address fields
+         * changes.
          */
         let coordinates:
             | {
@@ -637,37 +768,45 @@ export class OrdersService {
             }
             | undefined;
 
+
         if (addressChanged) {
             coordinates =
                 await this.geocodingService
                     .geocodeAddress({
                         street:
                             dto.deliveryStreet ??
-                            existingOrder.deliveryStreet,
+                            existingOrder
+                                .deliveryStreet,
 
                         street2:
                             dto.deliveryStreet2 ??
-                            existingOrder.deliveryStreet2,
+                            existingOrder
+                                .deliveryStreet2,
 
                         postalCode:
                             dto.deliveryPostalCode ??
-                            existingOrder.deliveryPostalCode,
+                            existingOrder
+                                .deliveryPostalCode,
 
                         city:
                             dto.deliveryCity ??
-                            existingOrder.deliveryCity,
+                            existingOrder
+                                .deliveryCity,
 
                         district:
                             dto.deliveryDistrict ??
-                            existingOrder.deliveryDistrict,
+                            existingOrder
+                                .deliveryDistrict,
 
                         countryCode:
                             (
                                 dto.deliveryCountryCode ??
-                                existingOrder.deliveryCountryCode
+                                existingOrder
+                                    .deliveryCountryCode
                             ).toUpperCase(),
                     });
         }
+
 
         const order =
             await this.prisma.order.update({
@@ -676,76 +815,91 @@ export class OrdersService {
                 },
 
                 data: {
-                    ...(dto.recipientFirstName !== undefined && {
+                    ...(dto.recipientFirstName !==
+                        undefined && {
                         recipientFirstName:
                             dto.recipientFirstName,
                     }),
 
-                    ...(dto.recipientLastName !== undefined && {
+                    ...(dto.recipientLastName !==
+                        undefined && {
                         recipientLastName:
                             dto.recipientLastName,
                     }),
 
-                    ...(dto.recipientPhone !== undefined && {
+                    ...(dto.recipientPhone !==
+                        undefined && {
                         recipientPhone:
                             dto.recipientPhone,
                     }),
 
-                    ...(dto.occasion !== undefined && {
+                    ...(dto.occasion !==
+                        undefined && {
                         occasion:
                             dto.occasion,
                     }),
 
-                    ...(dto.deliveryDate !== undefined && {
+                    ...(dto.deliveryDate !==
+                        undefined && {
                         deliveryDate:
                             new Date(
                                 dto.deliveryDate,
                             ),
                     }),
 
-                    ...(dto.deliveryTimeSlot !== undefined && {
+                    ...(dto.deliveryTimeSlot !==
+                        undefined && {
                         deliveryTimeSlot:
                             dto.deliveryTimeSlot,
                     }),
 
-                    ...(dto.deliveryInstructions !== undefined && {
+                    ...(dto.deliveryInstructions !==
+                        undefined && {
                         deliveryInstructions:
                             dto.deliveryInstructions,
                     }),
 
-                    ...(dto.deliveryStreet !== undefined && {
+                    ...(dto.deliveryStreet !==
+                        undefined && {
                         deliveryStreet:
                             dto.deliveryStreet,
                     }),
 
-                    ...(dto.deliveryStreet2 !== undefined && {
+                    ...(dto.deliveryStreet2 !==
+                        undefined && {
                         deliveryStreet2:
                             dto.deliveryStreet2,
                     }),
 
-                    ...(dto.deliveryPostalCode !== undefined && {
+                    ...(dto.deliveryPostalCode !==
+                        undefined && {
                         deliveryPostalCode:
                             dto.deliveryPostalCode,
                     }),
 
-                    ...(dto.deliveryCity !== undefined && {
+                    ...(dto.deliveryCity !==
+                        undefined && {
                         deliveryCity:
                             dto.deliveryCity,
                     }),
 
-                    ...(dto.deliveryDistrict !== undefined && {
+                    ...(dto.deliveryDistrict !==
+                        undefined && {
                         deliveryDistrict:
                             dto.deliveryDistrict,
                     }),
 
-                    ...(dto.deliveryCountryCode !== undefined && {
+                    ...(dto.deliveryCountryCode !==
+                        undefined && {
                         deliveryCountryCode:
-                            dto.deliveryCountryCode.toUpperCase(),
+                            dto.deliveryCountryCode
+                                .toUpperCase(),
                     }),
 
                     /*
-                     * Update coordinates only when
-                     * the delivery address changed.
+                     * Update coordinates only
+                     * when the delivery address
+                     * changed.
                      */
                     ...(coordinates && {
                         deliveryLatitude:
@@ -755,7 +909,8 @@ export class OrdersService {
                             coordinates.longitude,
                     }),
 
-                    ...(dto.cardMessage !== undefined && {
+                    ...(dto.cardMessage !==
+                        undefined && {
                         cardMessage:
                             dto.cardMessage,
                     }),
@@ -767,16 +922,21 @@ export class OrdersService {
             });
 
         return ApiResponse.success(
-            this.mapper.toResponse(order),
+            this.mapper.toResponse(
+                order,
+            ),
         );
     }
 
 
-    async remove(id: number) {
+    async remove(
+        id: number,
+    ) {
         const order =
             await this.prisma.order.findFirst({
                 where: {
                     id,
+
                     deletedAt: null,
                 },
             });
@@ -791,8 +951,10 @@ export class OrdersService {
             where: {
                 id,
             },
+
             data: {
-                deletedAt: new Date(),
+                deletedAt:
+                    new Date(),
             },
         });
 
@@ -802,17 +964,36 @@ export class OrdersService {
         });
     }
 
-    private async generateOrderNumber(): Promise<string> {
-        const year = new Date()
-            .getFullYear();
 
-        let orderNumber: string;
+    async findEligibleFloristsForOrder(
+        orderId: number,
+    ) {
+        /*
+         * Kept as a thin wrapper so
+         * the controller does not need
+         * to know about the distribution
+         * service.
+         *
+         * Distribution is triggered
+         * through the order.created event.
+         */
+        return [];
+    }
+
+
+    private async generateOrderNumber(): Promise<string> {
+        const year =
+            new Date().getFullYear();
+
+        let orderNumber:
+            string;
 
         do {
             const random =
                 Math.floor(
                     100000 +
-                    Math.random() * 900000,
+                    Math.random() *
+                    900000,
                 );
 
             orderNumber =
@@ -830,5 +1011,4 @@ export class OrdersService {
             }
         } while (true);
     }
-
 }

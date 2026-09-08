@@ -33,5 +33,7 @@ export const PRODUCT_MESSAGES = {
 
     PRICE_CANNOT_BE_LOWER_THAN_COMPENSATION_RULE:
         'The product price cannot be lower than or equal to an existing florist compensation.',
+        TAX_CODE_NOT_FOUND:
+    'Tax code not found.',
 
 };

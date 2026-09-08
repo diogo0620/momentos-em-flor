@@ -17,6 +17,7 @@ import { OrderOffersModule } from './order-offers/order-offers.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ReviewsModule } from './reviews/reviews.module';
+import { TaxCodesModule } from './tax-codes/tax-codes.module';
 
 @Module({
   imports: [
@@ -38,7 +39,8 @@ import { ReviewsModule } from './reviews/reviews.module';
     FloristCompensationRulesModule,
     OrdersModule,
     OrderOffersModule,
-    ReviewsModule
+    ReviewsModule,
+    TaxCodesModule,
   ],
 })
 export class AppModule { }
