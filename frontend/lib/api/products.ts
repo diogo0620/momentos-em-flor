@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/api/client";
+import { apiFetch, apiUpload } from "@/lib/api/client";
 
 import type {
     Pagination,
@@ -168,33 +168,71 @@ export type ProductAdminDetail = {
     name: string;
     slug: string;
     description: string | null;
-
     basePrice: number;
     baseFloristCompensation: number;
-
-    /**
-     * Final customer price:
-     * basePrice + VAT
-     */
     price: number;
-
     taxCode: ProductAdminTaxCode;
-
     category: {
         id: number;
         name: string;
     };
-
     images: ProductAdminImage[];
-
     components: ProductAdminComponent[];
-
     variants: ProductAdminVariant[];
-
     sortOrder: number;
     active: boolean;
     createdAt: string;
     updatedAt: string;
+};
+
+export type ProductConfigurationComponent = {
+    id?: number;
+    name: string;
+    minQuantity: number;
+    recommendedQuantity: number;
+    maxQuantity: number;
+    customerPricePerAdditionalUnit: number;
+    floristCompensationPerAdditionalUnit: number;
+    active?: boolean;
+    sortOrder: number;
+};
+
+export type ProductConfigurationVariant = {
+    id?: number;
+    type: string;
+    name: string;
+    code?: string | null;
+    price: number;
+    floristCompensation: number;
+    active?: boolean;
+    sortOrder: number;
+    imageId?: number | null;
+};
+
+export type ProductConfigurationImage = {
+    id?: number;
+    fileId: number;
+    altText?: string | null;
+    sortOrder: number;
+    isPrimary: boolean;
+    variantId?: number | null;
+};
+
+export type UpdateProductConfigurationData = {
+    components?: ProductConfigurationComponent[];
+    variants?: ProductConfigurationVariant[];
+    images?: ProductConfigurationImage[];
+};
+
+export type UploadedFile = {
+    id: number;
+    filename: string;
+    originalName: string;
+    size: number;
+    mimeType: string;
+    extension: string;
+    path: string;
+    url: string;
 };
 
 export async function getAdminProduct(
@@ -252,4 +290,32 @@ export async function deleteProduct(
     }>(`/products/${id}`, {
         method: "DELETE",
     });
+}
+
+
+
+
+
+
+
+export async function updateProductConfiguration(
+    id: number,
+    data: UpdateProductConfigurationData,
+) {
+    return apiFetch(
+        `/admin/products/${id}/configuration`,
+        {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        },
+    );
+}
+
+export async function uploadProductImage(
+    file: File,
+): Promise<UploadedFile> {
+    return apiUpload<UploadedFile>(
+        '/uploads',
+        file,
+    );
 }

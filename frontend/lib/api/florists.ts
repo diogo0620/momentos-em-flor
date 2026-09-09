@@ -13,14 +13,16 @@ export type FloristListResponse = {
     };
 };
 
+export type GetFloristsParams = {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    sort?: string;
+    order?: "asc" | "desc";
+};
+
 export async function getFlorists(
-    params?: {
-        page?: number;
-        pageSize?: number;
-        search?: string;
-        sort?: string;
-        order?: "asc" | "desc";
-    },
+    params?: GetFloristsParams,
 ) {
     const searchParams =
         new URLSearchParams();

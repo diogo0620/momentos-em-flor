@@ -58,3 +58,10 @@ export type Florist = {
     createdAt: string;
     updatedAt: string;
 };
+
+export type FloristPagination = {
+    page: number;
+    pageSize: number;
+    total: number;
+    pages: number;
+};

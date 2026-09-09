@@ -1,82 +1,90 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+"use client";
 
-import PageHeader from "@/components/admin/common/PageHeader";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+
 import ProductForm from "@/components/admin/products/ProductForm";
+import {
+    getAdminProduct,
+    type ProductAdminDetail,
+} from "@/lib/api/products";
 
-import { getProduct } from "@/lib/api/products";
+export default function EditProductPage() {
+    const params = useParams();
+    const router = useRouter();
 
-export default async function EditProductPage({
-    params,
-}: {
-    params: Promise<{ id: string }>;
-}) {
-    const { id } = await params;
+    const productId = Number(params.id);
 
-    const productId = Number(id);
+    const [product, setProduct] =
+        useState<ProductAdminDetail | null>(null);
 
-    if (Number.isNaN(productId)) {
+    const [loading, setLoading] =
+        useState(true);
+
+    const [error, setError] =
+        useState<string | null>(null);
+
+    useEffect(() => {
+        if (!Number.isInteger(productId)) {
+            setError("Produto inválido.");
+            setLoading(false);
+            return;
+        }
+
+        async function loadProduct() {
+            try {
+                setLoading(true);
+                setError(null);
+
+                const response =
+                    await getAdminProduct(productId);
+
+                setProduct(response);
+            } catch (err) {
+                setError(
+                    err instanceof Error
+                        ? err.message
+                        : "Não foi possível carregar o produto.",
+                );
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        loadProduct();
+    }, [productId]);
+
+    if (loading) {
         return (
-            <div className="rounded-3xl bg-white p-10 text-center shadow-sm">
-                <h2 className="text-2xl font-bold">
-                    Produto inválido
-                </h2>
+            <div className="flex min-h-[400px] items-center justify-center">
+                <p className="text-sm text-muted-foreground">
+                    A carregar produto...
+                </p>
             </div>
         );
     }
 
-    try {
-        const response =
-            await getProduct(productId);
-
-        const product = response.data;
-
+    if (error || !product) {
         return (
-            <div>
-                <Link
-                    href={`/admin/products/${product.id}`}
-                    className="inline-flex items-center gap-2 text-sm text-gray-500 transition hover:text-[#55624A]"
+            <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
+                <p className="text-sm text-destructive">
+                    {error ?? "Produto não encontrado."}
+                </p>
+
+                <button
+                    type="button"
+                    onClick={() => router.back()}
+                    className="text-sm font-medium underline"
                 >
-                    <ArrowLeft size={16} />
-                    Voltar ao produto
-                </Link>
-
-                <div className="mt-6">
-                    <PageHeader
-                        title="Editar produto"
-                        subtitle={`Editar ${product.name}`}
-                    />
-                </div>
-
-                <div className="mt-8">
-                    <ProductForm
-                        product={product}
-                    />
-                </div>
-            </div>
-        );
-    } catch {
-        return (
-            <div>
-                <Link
-                    href="/admin/products"
-                    className="inline-flex items-center gap-2 text-sm text-gray-500 transition hover:text-[#55624A]"
-                >
-                    <ArrowLeft size={16} />
-                    Voltar aos produtos
-                </Link>
-
-                <div className="mt-8 rounded-3xl bg-white p-10 text-center shadow-sm">
-                    <h2 className="text-2xl font-bold">
-                        Produto não encontrado
-                    </h2>
-
-                    <p className="mt-2 text-gray-500">
-                        Não foi possível carregar o
-                        produto #{id}.
-                    </p>
-                </div>
+                    Voltar
+                </button>
             </div>
         );
     }
+
+    return (
+        <ProductForm
+            product={product}
+        />
+    );
 }

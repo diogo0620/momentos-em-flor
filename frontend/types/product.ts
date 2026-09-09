@@ -51,6 +51,7 @@ export type ProductDetail = {
     images: ProductImage[];
     components: ProductComponent[];
     variants: ProductVariant[];
+    active: boolean;
 };
 
 export type Pagination = {

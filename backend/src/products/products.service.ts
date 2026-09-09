@@ -821,6 +821,42 @@ private validateVariantsAgainstBasePrice(
                     ),
             },
         }),
+
+        ...(this.hasItems(dto.images) && {
+    images: {
+        create: dto.images!.map(
+            (image) => ({
+                file: {
+                    connect: {
+                        id: image.fileId,
+                    },
+                },
+
+                altText:
+                    image.altText ??
+                    null,
+
+                sortOrder:
+                    image.sortOrder ??
+                    0,
+
+                isPrimary:
+                    image.isPrimary ??
+                    false,
+
+                ...(image.variantId !== undefined &&
+                    image.variantId !== null && {
+                        variant: {
+                            connect: {
+                                id:
+                                    image.variantId,
+                            },
+                        },
+                    }),
+            }),
+        ),
+    },
+}),
     };
 }
 
@@ -865,39 +901,36 @@ private validateVariantsAgainstBasePrice(
 
 
     private buildVariantCreateData(
-        variants: NonNullable<
-            CreateProductDto['variants']
-        >,
-    ) {
+    variants: NonNullable<
+        CreateProductDto['variants']
+    >,
+) {
+    return variants.map(
+        (variant) => ({
+            type: variant.type,
 
-        return variants.map(
-            variant => ({
+            name: variant.name,
 
-                type:
-                    variant.type,
+            code:
+                variant.code ??
+                null,
 
-                name:
-                    variant.name,
+            price:
+                variant.price,
 
-                code:
-                    variant.code,
+            floristCompensation:
+                variant.floristCompensation,
 
-                price:
-                    variant.price,
+            sortOrder:
+                variant.sortOrder ??
+                0,
 
-                floristCompensation:
-                    variant.floristCompensation,
-
-                sortOrder:
-                    variant.sortOrder ??
-                    0,
-
-                active:
-                    variant.active ??
-                    true,
-            }),
-        );
-    }
+            active:
+                variant.active ??
+                true,
+        }),
+    );
+}
 
 
     // =========================================================

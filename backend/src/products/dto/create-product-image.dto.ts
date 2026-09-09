@@ -4,14 +4,12 @@ import {
 } from '@nestjs/swagger';
 
 export class CreateProductImageDto {
-
     @ApiProperty({
-        example:
-            'https://cdn.momentosemflor.pt/products/ramo-primavera.jpg',
+        example: 123,
         description:
-            'URL of the product image.',
+            'ID of the uploaded file.',
     })
-    url: string;
+    fileId: number;
 
     @ApiPropertyOptional({
         example: 'Ramo Primavera',
@@ -26,6 +24,21 @@ export class CreateProductImageDto {
             'Display order of the image.',
     })
     sortOrder?: number;
+
+    @ApiPropertyOptional({
+        example: true,
+        description:
+            'Whether this is the primary product image.',
+    })
+    isPrimary?: boolean;
+
+    @ApiPropertyOptional({
+        example: 456,
+        nullable: true,
+        description:
+            'Variant ID when the image belongs to a specific variant.',
+    })
+    variantId?: number | null;
 
     @ApiPropertyOptional({
         example: true,

@@ -3,48 +3,37 @@ import {
     ApiPropertyOptional,
 } from '@nestjs/swagger';
 
-import { ProductVariantType } from '@prisma/client';
+import {
+    ProductVariantType,
+} from '@prisma/client';
 
 export class CreateProductVariantDto {
-
     @ApiProperty({
-        example: ProductVariantType.SIZE,
         enum: ProductVariantType,
-        description:
-            'Type of the product variant.',
+        example: ProductVariantType.SIZE,
     })
     type: ProductVariantType;
 
     @ApiProperty({
-        example: 'Média',
-        description:
-            'Display name of the variant.',
+        example: 'Médio',
     })
     name: string;
 
     @ApiPropertyOptional({
-        example: 'COROA-M',
-        description:
-            'Optional value used internally to identify the variant.',
+        example: 'MEDIUM',
+        nullable: true,
     })
-    code: string;
-
-    @ApiPropertyOptional({
-        example: 'medium',
-        description:
-            'Optional value used internally to identify the variant.',
-    })
-    value?: string;
+    code?: string | null;
 
     @ApiProperty({
         example: 39.90,
         description:
-            'Price of this variant before VAT.',
+            'Variant net price, before VAT.',
     })
     price: number;
 
     @ApiProperty({
-        example: 30.00,
+        example: 25.00,
         description:
             'Florist compensation for this variant.',
     })

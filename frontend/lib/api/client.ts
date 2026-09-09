@@ -43,6 +43,79 @@ async function refreshAccessToken(): Promise<string | null> {
     }
 }
 
+export async function apiUpload<T>(
+    endpoint: string,
+    file: File,
+): Promise<T> {
+    const formData = new FormData();
+
+    formData.append("file", file);
+
+    const headers = new Headers();
+
+    if (accessToken) {
+        headers.set(
+            "Authorization",
+            `Bearer ${accessToken}`,
+        );
+    }
+
+    let response = await fetch(
+        `${API_URL}${endpoint}`,
+        {
+            method: "POST",
+            headers,
+            body: formData,
+            credentials: "include",
+        },
+    );
+
+    if (response.status === 401) {
+        const newAccessToken =
+            await refreshAccessToken();
+
+        if (newAccessToken) {
+            headers.set(
+                "Authorization",
+                `Bearer ${newAccessToken}`,
+            );
+
+            response = await fetch(
+                `${API_URL}${endpoint}`,
+                {
+                    method: "POST",
+                    headers,
+                    body: formData,
+                    credentials: "include",
+                },
+            );
+        }
+    }
+
+    if (!response.ok) {
+        let message =
+            "Ocorreu um erro no upload do ficheiro.";
+
+        try {
+            const error = await response.json();
+
+            if (typeof error.message === "string") {
+                message = error.message;
+            } else if (
+                Array.isArray(error.message)
+            ) {
+                message = error.message.join(", ");
+            }
+        } catch {
+            // Mantém a mensagem genérica.
+        }
+
+        throw new Error(message);
+    }
+
+    return response.json();
+}
+
 export async function apiFetch<T>(
     endpoint: string,
     options: ApiOptions = {},
