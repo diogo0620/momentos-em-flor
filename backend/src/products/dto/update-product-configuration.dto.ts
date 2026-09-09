@@ -91,6 +91,10 @@ export class UpdateProductVariantItemDto {
     @IsInt()
     @Min(1)
     imageId?: number | null;
+
+    @IsOptional()
+    @IsString()
+    clientId?: string;
 }
 
 export class UpdateProductImageItemDto {
@@ -122,6 +126,10 @@ export class UpdateProductImageItemDto {
     @IsInt()
     @Min(1)
     variantId?: number | null;
+
+    @IsOptional()
+    @IsString()
+    variantClientId?: string | null;
 }
 
 export class UpdateProductConfigurationDto {
@@ -148,4 +156,6 @@ export class UpdateProductConfigurationDto {
     @Type(() => UpdateProductImageItemDto)
     @IsOptional()
     images?: UpdateProductImageItemDto[];
+
+
 }

@@ -22,7 +22,11 @@ type Props = {
 };
 
 type ComponentForm = ProductConfigurationComponent;
-type VariantForm = ProductConfigurationVariant;
+
+type VariantForm = ProductConfigurationVariant & {
+    clientId?: string;
+};
+
 type ImageForm = ProductConfigurationImage & {
     previewUrl?: string;
     fileName?: string;
@@ -50,6 +54,7 @@ function createComponent(sortOrder: number): ComponentForm {
 
 function createVariant(sortOrder: number): VariantForm {
     return {
+        clientId: crypto.randomUUID(),
         type: "SIZE",
         name: "",
         code: "",
@@ -57,6 +62,7 @@ function createVariant(sortOrder: number): VariantForm {
         floristCompensation: 0,
         active: true,
         sortOrder,
+        imageId: null,
     };
 }
 
@@ -112,6 +118,7 @@ function normaliseImages(
             sortOrder: index,
             isPrimary: image.isPrimary,
             variantId: image.variantId,
+            variantClientId: null,
             previewUrl: image.url,
         }));
 }
@@ -330,6 +337,38 @@ export default function ProductForm({
     }
 
     function removeVariant(index: number) {
+        const variant = variants[index];
+
+        if (!variant) {
+            return;
+        }
+
+        setImages((current) =>
+            current.map((image) => {
+                const matchesExistingVariant =
+                    variant.id != null &&
+                    image.variantId === variant.id;
+
+                const matchesNewVariant =
+                    variant.clientId != null &&
+                    image.variantClientId ===
+                        variant.clientId;
+
+                if (
+                    matchesExistingVariant ||
+                    matchesNewVariant
+                ) {
+                    return {
+                        ...image,
+                        variantId: null,
+                        variantClientId: null,
+                    };
+                }
+
+                return image;
+            }),
+        );
+
         setVariants((current) =>
             current
                 .filter(
@@ -384,6 +423,7 @@ export default function ProductForm({
                     isPrimary:
                         current.length === 0,
                     variantId: null,
+                    variantClientId: null,
                     previewUrl: uploaded.url,
                     fileName:
                         uploaded.originalName,
@@ -410,6 +450,126 @@ export default function ProductForm({
         );
     }
 
+    function isVariantImageAlreadyUsed(
+        imageIndex: number,
+        variant: VariantForm,
+    ) {
+        return images.some(
+            (image, currentImageIndex) => {
+                if (
+                    currentImageIndex ===
+                    imageIndex
+                ) {
+                    return false;
+                }
+
+                if (
+                    variant.id != null &&
+                    image.variantId === variant.id
+                ) {
+                    return true;
+                }
+
+                if (
+                    variant.clientId != null &&
+                    image.variantClientId ===
+                        variant.clientId
+                ) {
+                    return true;
+                }
+
+                return false;
+            },
+        );
+    }
+
+    function setImageVariant(
+        imageIndex: number,
+        value: string,
+    ) {
+        if (value === "") {
+            setImages((current) =>
+                current.map(
+                    (image, currentIndex) =>
+                        currentIndex === imageIndex
+                            ? {
+                                  ...image,
+                                  variantId:
+                                      null,
+                                  variantClientId:
+                                      null,
+                              }
+                            : image,
+                ),
+            );
+
+            return;
+        }
+
+        const variant = variants.find(
+            (item) => {
+                if (item.id != null) {
+                    return (
+                        `id:${item.id}` ===
+                        value
+                    );
+                }
+
+                if (item.clientId) {
+                    return (
+                        `client:${item.clientId}` ===
+                        value
+                    );
+                }
+
+                return false;
+            },
+        );
+
+        if (!variant) {
+            return;
+        }
+
+        if (
+            isVariantImageAlreadyUsed(
+                imageIndex,
+                variant,
+            )
+        ) {
+            setError(
+                `A variante "${variant.name || "sem nome"}" já tem uma imagem associada.`,
+            );
+            return;
+        }
+
+        setError(null);
+
+        setImages((current) =>
+            current.map(
+                (image, currentIndex) => {
+                    if (
+                        currentIndex !==
+                        imageIndex
+                    ) {
+                        return image;
+                    }
+
+                    return {
+                        ...image,
+                        variantId:
+                            variant.id ??
+                            null,
+                        variantClientId:
+                            variant.id
+                                ? null
+                                : variant.clientId ??
+                                  null,
+                    };
+                },
+            ),
+        );
+    }
+
     function validateForm(): string | null {
         if (!name.trim()) {
             return "O nome do produto é obrigatório.";
@@ -423,7 +583,9 @@ export default function ProductForm({
             return "O preço base é obrigatório.";
         }
 
-        if (baseFloristCompensation === "") {
+        if (
+            baseFloristCompensation === ""
+        ) {
             return "A compensação da florista é obrigatória.";
         }
 
@@ -461,7 +623,8 @@ export default function ProductForm({
                 }
 
                 if (
-                    component.minQuantity < 0 ||
+                    component.minQuantity <
+                        0 ||
                     component.recommendedQuantity <
                         component.minQuantity ||
                     component.maxQuantity <
@@ -472,9 +635,9 @@ export default function ProductForm({
 
                 if (
                     component.customerPricePerAdditionalUnit <
-                    0 ||
+                        0 ||
                     component.floristCompensationPerAdditionalUnit <
-                    0
+                        0
                 ) {
                     return `Os valores do componente "${component.name}" são inválidos.`;
                 }
@@ -521,7 +684,95 @@ export default function ProductForm({
             }
         }
 
+        for (
+            let index = 0;
+            index < images.length;
+            index++
+        ) {
+            const image = images[index];
+
+            if (
+                image.variantId != null ||
+                image.variantClientId != null
+            ) {
+                const assignedVariants =
+                    images.filter(
+                        (otherImage, otherIndex) => {
+                            if (
+                                otherIndex ===
+                                index
+                            ) {
+                                return false;
+                            }
+
+                            if (
+                                image.variantId !=
+                                    null &&
+                                otherImage.variantId ===
+                                    image.variantId
+                            ) {
+                                return true;
+                            }
+
+                            if (
+                                image.variantClientId !=
+                                    null &&
+                                otherImage.variantClientId ===
+                                    image.variantClientId
+                            ) {
+                                return true;
+                            }
+
+                            return false;
+                        },
+                    );
+
+                if (
+                    assignedVariants.length >
+                    0
+                ) {
+                    return `Uma variante não pode ter mais do que uma imagem associada.`;
+                }
+            }
+        }
+
         return null;
+    }
+
+    function buildConfiguration() {
+        return {
+            components: components.map(
+                (component, index) => ({
+                    ...component,
+                    sortOrder: index,
+                }),
+            ),
+
+            variants: variants.map(
+                (variant, index) => ({
+                    ...variant,
+                    sortOrder: index,
+                }),
+            ),
+
+            images: images.map(
+                (image, index) => ({
+                    id: image.id,
+                    fileId: image.fileId,
+                    altText:
+                        image.altText || null,
+                    sortOrder: index,
+                    isPrimary:
+                        image.isPrimary,
+                    variantId:
+                        image.variantId ??
+                        null,
+                    variantClientId:
+                        image.variantClientId ??
+                        null,
+                }),
+            ),
+        };
     }
 
     async function handleSubmit(
@@ -570,66 +821,29 @@ export default function ProductForm({
                     },
                 );
 
-                const configuration = {
-                    components:
-                        components.map(
-                            (component, index) => ({
-                                ...component,
-                                sortOrder: index,
-                            }),
-                        ),
-                    variants:
-                        variants.map(
-                            (variant, index) => ({
-                                ...variant,
-                                sortOrder: index,
-                            }),
-                        ),
-                    images:
-                        images.map(
-                            (image, index) => ({
-                                id: image.id,
-                                fileId:
-                                    image.fileId,
-                                altText:
-                                    image.altText ||
-                                    null,
-                                sortOrder: index,
-                                isPrimary:
-                                    image.isPrimary,
-                                variantId:
-                                    image.variantId ??
-                                    null,
-                            }),
-                        ),
-                };
-
                 await updateProductConfiguration(
                     product.id,
-                    configuration,
+                    buildConfiguration(),
                 );
 
                 router.push(
                     `/admin/products/${product.id}`,
                 );
+
                 router.refresh();
+
                 return;
             }
 
-            const response =
-                await createProduct({
-                    name: name.trim(),
-                    description:
-                        description.trim() ||
-                        undefined,
-                    basePrice:
-                        parsedBasePrice,
-                    baseFloristCompensation:
-                        parsedCompensation,
-                    categoryId:
-                        parsedCategoryId,
-                    active,
-                });
+            const response = await createProduct({
+    name: name.trim(),
+    description: description.trim() || undefined,
+    basePrice: parsedBasePrice,
+    baseFloristCompensation: parsedCompensation,
+    categoryId: parsedCategoryId,
+    taxCodeId: 1,
+    active,
+});
 
             const createdProduct =
                 response.data;
@@ -642,63 +856,20 @@ export default function ProductForm({
             ) {
                 await updateProductConfiguration(
                     createdProduct.id,
-                    {
-                        components:
-                            components.map(
-                                (
-                                    component,
-                                    index,
-                                ) => ({
-                                    ...component,
-                                    sortOrder:
-                                        index,
-                                }),
-                            ),
-                        variants:
-                            variants.map(
-                                (
-                                    variant,
-                                    index,
-                                ) => ({
-                                    ...variant,
-                                    sortOrder:
-                                        index,
-                                }),
-                            ),
-                        images:
-                            images.map(
-                                (
-                                    image,
-                                    index,
-                                ) => ({
-                                    fileId:
-                                        image.fileId,
-                                    altText:
-                                        image.altText ||
-                                        null,
-                                    sortOrder:
-                                        index,
-                                    isPrimary:
-                                        image.isPrimary,
-                                    variantId:
-                                        null,
-                                }),
-                            ),
-                    },
+                    buildConfiguration(),
                 );
             }
 
             router.push(
-                "/admin/products",
+                `/admin/products/${createdProduct.id}`,
             );
+
             router.refresh();
         } catch (err) {
             setError(
                 err instanceof Error
                     ? err.message
-                    : isEditing
-                      ? "Não foi possível atualizar o produto."
-                      : "Não foi possível criar o produto.",
+                    : "Não foi possível guardar o produto.",
             );
         } finally {
             setIsSubmitting(false);
@@ -711,77 +882,49 @@ export default function ProductForm({
             className="space-y-8"
         >
             {error && (
-                <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-sm text-red-600">
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                     {error}
                 </div>
             )}
 
             {success && (
-                <div className="rounded-2xl border border-green-100 bg-green-50 p-5 text-sm text-green-700">
+                <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
                     {success}
                 </div>
             )}
 
-            {/* HEADER */}
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                    <p className="text-sm font-medium text-[#55624A]">
-                        Produtos
-                    </p>
-
-                    <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#2F3B2A]">
-                        {isEditing
-                            ? "Editar produto"
-                            : "Novo produto"}
-                    </h1>
-
-                    <p className="mt-2 text-sm text-gray-500">
-                        {isEditing
-                            ? "Atualiza a informação, configuração e imagens do produto."
-                            : "Cria um novo produto para o catálogo."}
-                    </p>
-                </div>
-            </div>
-
-            {/* BASIC INFORMATION */}
-
-            <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-                <div>
-                    <h2 className="text-xl font-bold text-[#2F3B2A]">
-                        Informação do produto
+            <section className="rounded-xl border bg-white p-6 shadow-sm">
+                <div className="mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                        Informação básica
                     </h2>
 
                     <p className="mt-1 text-sm text-gray-500">
-                        Informação principal apresentada no
-                        catálogo.
+                        Informação principal do
+                        produto.
                     </p>
                 </div>
 
-                <div className="mt-8 grid gap-6">
-                    <div>
+                <div className="grid gap-6 md:grid-cols-2">
+                    <div className="md:col-span-2">
                         <label className="mb-2 block text-sm font-medium text-gray-700">
                             Nome
                         </label>
 
                         <input
+                            type="text"
                             value={name}
                             onChange={(event) =>
                                 setName(
                                     event.target.value,
                                 )
                             }
-                            maxLength={150}
-                            placeholder="Ex.: Ramo de Rosas Vermelhas"
-                            className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-[#55624A] focus:ring-2 focus:ring-[#55624A]/10"
+                            className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
+                            placeholder="Nome do produto"
                         />
-
-                        <p className="mt-2 text-xs text-gray-400">
-                            {name.length}/150 caracteres.
-                        </p>
                     </div>
 
-                    <div>
+                    <div className="md:col-span-2">
                         <label className="mb-2 block text-sm font-medium text-gray-700">
                             Descrição
                         </label>
@@ -793,188 +936,154 @@ export default function ProductForm({
                                     event.target.value,
                                 )
                             }
-                            maxLength={500}
                             rows={5}
-                            placeholder="Descreve o produto..."
-                            className="w-full resize-none rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-[#55624A] focus:ring-2 focus:ring-[#55624A]/10"
+                            className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
+                            placeholder="Descrição do produto"
                         />
+                    </div>
 
-                        <p className="mt-2 text-xs text-gray-400">
-                            {description.length}/500
-                            caracteres.
-                        </p>
+                    <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-700">
+                            Categoria
+                        </label>
+
+                        <select
+                            value={categoryId}
+                            onChange={(event) =>
+                                setCategoryId(
+                                    event.target.value,
+                                )
+                            }
+                            disabled={
+                                isLoadingCategories
+                            }
+                            className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
+                        >
+                            <option value="">
+                                {isLoadingCategories
+                                    ? "A carregar..."
+                                    : "Selecionar categoria"}
+                            </option>
+
+                            {categories.map(
+                                (category) => (
+                                    <option
+                                        key={
+                                            category.id
+                                        }
+                                        value={
+                                            category.id
+                                        }
+                                    >
+                                        {
+                                            category.name
+                                        }
+                                    </option>
+                                ),
+                            )}
+                        </select>
                     </div>
                 </div>
             </section>
 
-            {/* PRICING */}
-
-            <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-                <div>
-                    <h2 className="text-xl font-bold text-[#2F3B2A]">
+            <section className="rounded-xl border bg-white p-6 shadow-sm">
+                <div className="mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900">
                         Preços
                     </h2>
 
                     <p className="mt-1 text-sm text-gray-500">
-                        O preço apresentado ao cliente é o preço
-                        base acrescido de IVA.
+                        O preço base é sempre
+                        obrigatório. O preço apresentado
+                        ao cliente inclui IVA.
                     </p>
                 </div>
 
-                <div className="mt-8 grid gap-6 md:grid-cols-2">
+                <div className="grid gap-6 md:grid-cols-2">
                     <div>
                         <label className="mb-2 block text-sm font-medium text-gray-700">
-                            Preço base (€)
+                            Preço base
                         </label>
 
-                        <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={basePrice}
-                            onChange={(event) =>
-                                setBasePrice(
-                                    event.target.value,
-                                )
-                            }
-                            placeholder="29.90"
-                            className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-[#55624A] focus:ring-2 focus:ring-[#55624A]/10"
-                        />
+                        <div className="relative">
+                            <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={basePrice}
+                                onChange={(event) =>
+                                    setBasePrice(
+                                        event.target
+                                            .value,
+                                    )
+                                }
+                                className="w-full rounded-lg border px-3 py-2 pr-12 text-sm outline-none focus:ring-2 focus:ring-black"
+                                placeholder="0.00"
+                            />
 
-                        {product && (
-                            <p className="mt-2 text-xs text-gray-400">
-                                Preço atual com IVA:{" "}
-                                {product.price.toFixed(
-                                    2,
-                                )}
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
                                 €
-                            </p>
-                        )}
+                            </span>
+                        </div>
                     </div>
 
                     <div>
                         <label className="mb-2 block text-sm font-medium text-gray-700">
-                            Compensação da florista (€)
+                            Compensação da florista
                         </label>
 
-                        <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={
-                                baseFloristCompensation
-                            }
-                            onChange={(event) =>
-                                setBaseFloristCompensation(
-                                    event.target.value,
-                                )
-                            }
-                            placeholder="25.00"
-                            className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-[#55624A] focus:ring-2 focus:ring-[#55624A]/10"
-                        />
+                        <div className="relative">
+                            <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={
+                                    baseFloristCompensation
+                                }
+                                onChange={(event) =>
+                                    setBaseFloristCompensation(
+                                        event.target
+                                            .value,
+                                    )
+                                }
+                                className="w-full rounded-lg border px-3 py-2 pr-12 text-sm outline-none focus:ring-2 focus:ring-black"
+                                placeholder="0.00"
+                            />
+
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                                €
+                            </span>
+                        </div>
                     </div>
                 </div>
 
-                {product && (
-                    <div className="mt-6 rounded-2xl bg-[#F7F8F5] p-4">
-                        <div className="flex items-center justify-between gap-4">
-                            <span className="text-sm text-gray-500">
-                                Taxa de IVA
-                            </span>
-
-                            <span className="font-semibold text-[#2F3B2A]">
-                                {product.taxCode.name}{" "}
-                                (
-                                {product.taxCode.rate.toFixed(
-                                    2,
-                                )}
-                                %)
-                            </span>
+                {product?.taxCode && (
+                    <div className="mt-6 rounded-lg bg-gray-50 p-4">
+                        <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                            Tax Code
                         </div>
 
-                        <div className="mt-3 flex items-center justify-between gap-4 border-t border-gray-200 pt-3">
-                            <span className="text-sm text-gray-500">
-                                Preço final atual
-                            </span>
-
-                            <span className="font-bold text-[#2F3B2A]">
-                                {product.price.toFixed(
-                                    2,
-                                )}
-                                €
-                            </span>
+                        <div className="mt-1 text-sm font-medium text-gray-900">
+                            {product.taxCode.code}
+                            {" · "}
+                            {product.taxCode.name}
+                            {" · "}
+                            {product.taxCode.rate}%
                         </div>
                     </div>
                 )}
             </section>
 
-            {/* CATEGORY */}
-
-            <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-                <div>
-                    <h2 className="text-xl font-bold text-[#2F3B2A]">
-                        Categoria
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-500">
-                        Define onde o produto aparece no catálogo.
-                    </p>
-                </div>
-
-                <div className="mt-6 max-w-xl">
-                    <label className="mb-2 block text-sm font-medium text-gray-700">
-                        Categoria
-                    </label>
-
-                    <select
-                        value={categoryId}
-                        onChange={(event) =>
-                            setCategoryId(
-                                event.target.value,
-                            )
-                        }
-                        disabled={
-                            isLoadingCategories
-                        }
-                        className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 outline-none transition focus:border-[#55624A] focus:ring-2 focus:ring-[#55624A]/10 disabled:bg-gray-100"
-                    >
-                        <option value="">
-                            {isLoadingCategories
-                                ? "A carregar categorias..."
-                                : "Selecionar categoria"}
-                        </option>
-
-                        {categories.map(
-                            (category) => (
-                                <option
-                                    key={
-                                        category.id
-                                    }
-                                    value={
-                                        category.id
-                                    }
-                                >
-                                    {category.name}
-                                </option>
-                            ),
-                        )}
-                    </select>
-                </div>
-            </section>
-
-            {/* CONFIGURATION */}
-
-            <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+            <section className="rounded-xl border bg-white p-6 shadow-sm">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <h2 className="text-xl font-bold text-[#2F3B2A]">
+                        <h2 className="text-lg font-semibold text-gray-900">
                             Configuração
                         </h2>
 
-                        <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                            Um produto pode ter componentes ou
-                            variantes. Não é possível utilizar os
-                            dois tipos simultaneamente.
+                        <p className="mt-1 text-sm text-gray-500">
+                            Escolhe entre componentes
+                            personalizáveis ou variantes.
                         </p>
                     </div>
 
@@ -982,7 +1091,12 @@ export default function ProductForm({
                         <button
                             type="button"
                             onClick={addComponent}
-                            className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                            className={`rounded-lg border px-4 py-2 text-sm font-medium ${
+                                configurationMode ===
+                                "components"
+                                    ? "bg-black text-white"
+                                    : "bg-white text-gray-700"
+                            }`}
                         >
                             + Componente
                         </button>
@@ -990,51 +1104,20 @@ export default function ProductForm({
                         <button
                             type="button"
                             onClick={addVariant}
-                            className="rounded-xl bg-[#55624A] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+                            className={`rounded-lg border px-4 py-2 text-sm font-medium ${
+                                configurationMode ===
+                                "variants"
+                                    ? "bg-black text-white"
+                                    : "bg-white text-gray-700"
+                            }`}
                         >
                             + Variante
                         </button>
                     </div>
                 </div>
 
-                {configurationMode === null && (
-                    <div className="mt-8 rounded-2xl border border-dashed border-gray-200 p-8 text-center">
-                        <p className="font-medium text-gray-600">
-                            Este produto não tem configuração
-                            adicional.
-                        </p>
-
-                        <p className="mt-1 text-sm text-gray-400">
-                            Adiciona componentes ou variantes se
-                            o produto permitir personalização.
-                        </p>
-                    </div>
-                )}
-
-                {/* COMPONENTS */}
-
                 {components.length > 0 && (
-                    <div className="mt-8 space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h3 className="font-semibold text-[#2F3B2A]">
-                                    Componentes
-                                </h3>
-
-                                <p className="text-xs text-gray-400">
-                                    Personalizações e unidades
-                                    adicionais.
-                                </p>
-                            </div>
-
-                            <span className="rounded-full bg-[#F1F3ED] px-3 py-1 text-xs font-medium text-[#55624A]">
-                                {components.length}{" "}
-                                {components.length === 1
-                                    ? "componente"
-                                    : "componentes"}
-                            </span>
-                        </div>
-
+                    <div className="mt-6 space-y-4">
                         {components.map(
                             (
                                 component,
@@ -1043,13 +1126,70 @@ export default function ProductForm({
                                 <div
                                     key={
                                         component.id ??
-                                        `new-component-${index}`
+                                        `component-${index}`
                                     }
-                                    className="rounded-2xl border border-gray-200 p-5"
+                                    className="rounded-xl border bg-gray-50 p-5"
                                 >
-                                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-                                        <div className="flex-1">
-                                            <label className="mb-2 block text-xs font-medium text-gray-500">
+                                    <div className="mb-4 flex items-center justify-between">
+                                        <h3 className="font-medium text-gray-900">
+                                            Componente{" "}
+                                            {index +
+                                                1}
+                                        </h3>
+
+                                        <div className="flex gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    moveComponent(
+                                                        index,
+                                                        -1,
+                                                    )
+                                                }
+                                                disabled={
+                                                    index ===
+                                                    0
+                                                }
+                                                className="rounded border px-2 py-1 text-xs disabled:opacity-40"
+                                            >
+                                                ↑
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    moveComponent(
+                                                        index,
+                                                        1,
+                                                    )
+                                                }
+                                                disabled={
+                                                    index ===
+                                                    components.length -
+                                                        1
+                                                }
+                                                className="rounded border px-2 py-1 text-xs disabled:opacity-40"
+                                            >
+                                                ↓
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    removeComponent(
+                                                        index,
+                                                    )
+                                                }
+                                                className="rounded border border-red-200 px-2 py-1 text-xs text-red-600"
+                                            >
+                                                Remover
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        <div className="lg:col-span-3">
+                                            <label className="mb-1 block text-xs font-medium text-gray-600">
                                                 Nome
                                             </label>
 
@@ -1073,74 +1213,19 @@ export default function ProductForm({
                                                                     index
                                                                         ? {
                                                                               ...item,
-                                                                              name: event
-                                                                                  .target
-                                                                                  .value,
+                                                                              name: event.target.value,
                                                                           }
                                                                         : item,
                                                             ),
                                                     )
                                                 }
-                                                placeholder="Ex.: Rosas adicionais"
-                                                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#55624A]"
+                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
+                                                placeholder="Ex.: Chocolates"
                                             />
                                         </div>
 
-                                        <div className="flex items-end gap-2">
-                                            <button
-                                                type="button"
-                                                disabled={
-                                                    index ===
-                                                    0
-                                                }
-                                                onClick={() =>
-                                                    moveComponent(
-                                                        index,
-                                                        -1,
-                                                    )
-                                                }
-                                                className="rounded-xl border border-gray-200 px-3 py-2 text-sm disabled:opacity-30"
-                                                title="Mover para cima"
-                                            >
-                                                ↑
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                disabled={
-                                                    index ===
-                                                    components.length -
-                                                        1
-                                                }
-                                                onClick={() =>
-                                                    moveComponent(
-                                                        index,
-                                                        1,
-                                                    )
-                                                }
-                                                className="rounded-xl border border-gray-200 px-3 py-2 text-sm disabled:opacity-30"
-                                                title="Mover para baixo"
-                                            >
-                                                ↓
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    removeComponent(
-                                                        index,
-                                                    )
-                                                }
-                                                className="rounded-xl border border-red-100 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                                            >
-                                                Eliminar
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-5 grid gap-4 sm:grid-cols-3">
                                         <div>
-                                            <label className="mb-2 block text-xs font-medium text-gray-500">
+                                            <label className="mb-1 block text-xs font-medium text-gray-600">
                                                 Mínimo
                                             </label>
 
@@ -1177,12 +1262,12 @@ export default function ProductForm({
                                                             ),
                                                     )
                                                 }
-                                                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#55624A]"
+                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="mb-2 block text-xs font-medium text-gray-500">
+                                            <label className="mb-1 block text-xs font-medium text-gray-600">
                                                 Recomendado
                                             </label>
 
@@ -1219,12 +1304,12 @@ export default function ProductForm({
                                                             ),
                                                     )
                                                 }
-                                                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#55624A]"
+                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="mb-2 block text-xs font-medium text-gray-500">
+                                            <label className="mb-1 block text-xs font-medium text-gray-600">
                                                 Máximo
                                             </label>
 
@@ -1261,16 +1346,13 @@ export default function ProductForm({
                                                             ),
                                                     )
                                                 }
-                                                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#55624A]"
+                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
                                             />
                                         </div>
-                                    </div>
 
-                                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
                                         <div>
-                                            <label className="mb-2 block text-xs font-medium text-gray-500">
-                                                Preço por unidade
-                                                adicional (€)
+                                            <label className="mb-1 block text-xs font-medium text-gray-600">
+                                                Preço adicional
                                             </label>
 
                                             <input
@@ -1307,14 +1389,13 @@ export default function ProductForm({
                                                             ),
                                                     )
                                                 }
-                                                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#55624A]"
+                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="mb-2 block text-xs font-medium text-gray-500">
-                                                Compensação por
-                                                unidade (€)
+                                            <label className="mb-1 block text-xs font-medium text-gray-600">
+                                                Compensação adicional
                                             </label>
 
                                             <input
@@ -1351,77 +1432,50 @@ export default function ProductForm({
                                                             ),
                                                     )
                                                 }
-                                                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#55624A]"
+                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
                                             />
                                         </div>
+
+                                        <label className="flex items-center gap-2 text-sm text-gray-700">
+                                            <input
+                                                type="checkbox"
+                                                checked={
+                                                    component.active
+                                                }
+                                                onChange={(
+                                                    event,
+                                                ) =>
+                                                    setComponents(
+                                                        (
+                                                            current,
+                                                        ) =>
+                                                            current.map(
+                                                                (
+                                                                    item,
+                                                                    itemIndex,
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...item,
+                                                                              active: event.target.checked,
+                                                                          }
+                                                                        : item,
+                                                            ),
+                                                    )
+                                                }
+                                            />
+                                            Ativo
+                                        </label>
                                     </div>
-
-                                    <label className="mt-5 flex items-center gap-3 text-sm text-gray-600">
-                                        <input
-                                            type="checkbox"
-                                            checked={
-                                                component.active ??
-                                                true
-                                            }
-                                            onChange={(
-                                                event,
-                                            ) =>
-                                                setComponents(
-                                                    (
-                                                        current,
-                                                    ) =>
-                                                        current.map(
-                                                            (
-                                                                item,
-                                                                itemIndex,
-                                                            ) =>
-                                                                itemIndex ===
-                                                                index
-                                                                    ? {
-                                                                          ...item,
-                                                                          active: event
-                                                                              .target
-                                                                              .checked,
-                                                                      }
-                                                                    : item,
-                                                        ),
-                                                )
-                                            }
-                                            className="h-4 w-4 rounded border-gray-300"
-                                        />
-
-                                        Componente ativo
-                                    </label>
                                 </div>
                             ),
                         )}
                     </div>
                 )}
 
-                {/* VARIANTS */}
-
                 {variants.length > 0 && (
-                    <div className="mt-8 space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h3 className="font-semibold text-[#2F3B2A]">
-                                    Variantes
-                                </h3>
-
-                                <p className="text-xs text-gray-400">
-                                    Cada variante pode ter um preço
-                                    próprio.
-                                </p>
-                            </div>
-
-                            <span className="rounded-full bg-[#F1F3ED] px-3 py-1 text-xs font-medium text-[#55624A]">
-                                {variants.length}{" "}
-                                {variants.length === 1
-                                    ? "variante"
-                                    : "variantes"}
-                            </span>
-                        </div>
-
+                    <div className="mt-6 space-y-4">
                         {variants.map(
                             (
                                 variant,
@@ -1430,13 +1484,71 @@ export default function ProductForm({
                                 <div
                                     key={
                                         variant.id ??
-                                        `new-variant-${index}`
+                                        variant.clientId ??
+                                        `variant-${index}`
                                     }
-                                    className="rounded-2xl border border-gray-200 p-5"
+                                    className="rounded-xl border bg-gray-50 p-5"
                                 >
-                                    <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
-                                        <div className="w-full xl:w-40">
-                                            <label className="mb-2 block text-xs font-medium text-gray-500">
+                                    <div className="mb-4 flex items-center justify-between">
+                                        <h3 className="font-medium text-gray-900">
+                                            Variante{" "}
+                                            {index +
+                                                1}
+                                        </h3>
+
+                                        <div className="flex gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    moveVariant(
+                                                        index,
+                                                        -1,
+                                                    )
+                                                }
+                                                disabled={
+                                                    index ===
+                                                    0
+                                                }
+                                                className="rounded border px-2 py-1 text-xs disabled:opacity-40"
+                                            >
+                                                ↑
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    moveVariant(
+                                                        index,
+                                                        1,
+                                                    )
+                                                }
+                                                disabled={
+                                                    index ===
+                                                    variants.length -
+                                                        1
+                                                }
+                                                className="rounded border px-2 py-1 text-xs disabled:opacity-40"
+                                            >
+                                                ↓
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    removeVariant(
+                                                        index,
+                                                    )
+                                                }
+                                                className="rounded border border-red-200 px-2 py-1 text-xs text-red-600"
+                                            >
+                                                Remover
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                        <div>
+                                            <label className="mb-1 block text-xs font-medium text-gray-600">
                                                 Tipo
                                             </label>
 
@@ -1460,15 +1572,13 @@ export default function ProductForm({
                                                                     index
                                                                         ? {
                                                                               ...item,
-                                                                              type: event
-                                                                                  .target
-                                                                                  .value,
+                                                                              type: event.target.value,
                                                                           }
                                                                         : item,
                                                             ),
                                                     )
                                                 }
-                                                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#55624A]"
+                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
                                             >
                                                 {VARIANT_TYPES.map(
                                                     (
@@ -1482,29 +1592,17 @@ export default function ProductForm({
                                                                 type
                                                             }
                                                         >
-                                                            {type}
+                                                            {
+                                                                type
+                                                            }
                                                         </option>
                                                     ),
-                                                )}
-
-                                                {!VARIANT_TYPES.includes(
-                                                    variant.type as any,
-                                                ) && (
-                                                    <option
-                                                        value={
-                                                            variant.type
-                                                        }
-                                                    >
-                                                        {
-                                                            variant.type
-                                                        }
-                                                    </option>
                                                 )}
                                             </select>
                                         </div>
 
-                                        <div className="flex-1">
-                                            <label className="mb-2 block text-xs font-medium text-gray-500">
+                                        <div>
+                                            <label className="mb-1 block text-xs font-medium text-gray-600">
                                                 Nome
                                             </label>
 
@@ -1528,21 +1626,19 @@ export default function ProductForm({
                                                                     index
                                                                         ? {
                                                                               ...item,
-                                                                              name: event
-                                                                                  .target
-                                                                                  .value,
+                                                                              name: event.target.value,
                                                                           }
                                                                         : item,
                                                             ),
                                                     )
                                                 }
-                                                placeholder="Ex.: Grande"
-                                                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#55624A]"
+                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
+                                                placeholder="Ex.: Vermelho"
                                             />
                                         </div>
 
-                                        <div className="w-full xl:w-32">
-                                            <label className="mb-2 block text-xs font-medium text-gray-500">
+                                        <div>
+                                            <label className="mb-1 block text-xs font-medium text-gray-600">
                                                 Código
                                             </label>
 
@@ -1567,24 +1663,20 @@ export default function ProductForm({
                                                                     index
                                                                         ? {
                                                                               ...item,
-                                                                              code: event
-                                                                                  .target
-                                                                                  .value,
+                                                                              code: event.target.value,
                                                                           }
                                                                         : item,
                                                             ),
                                                     )
                                                 }
-                                                placeholder="GRD"
-                                                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#55624A]"
+                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
+                                                placeholder="Opcional"
                                             />
                                         </div>
-                                    </div>
 
-                                    <div className="mt-5 grid gap-4 sm:grid-cols-2">
                                         <div>
-                                            <label className="mb-2 block text-xs font-medium text-gray-500">
-                                                Preço (€)
+                                            <label className="mb-1 block text-xs font-medium text-gray-600">
+                                                Preço
                                             </label>
 
                                             <input
@@ -1621,13 +1713,13 @@ export default function ProductForm({
                                                             ),
                                                     )
                                                 }
-                                                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#55624A]"
+                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="mb-2 block text-xs font-medium text-gray-500">
-                                                Compensação (€)
+                                            <label className="mb-1 block text-xs font-medium text-gray-600">
+                                                Compensação
                                             </label>
 
                                             <input
@@ -1664,13 +1756,11 @@ export default function ProductForm({
                                                             ),
                                                     )
                                                 }
-                                                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#55624A]"
+                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
                                             />
                                         </div>
-                                    </div>
 
-                                    <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                                        <label className="flex items-center gap-3 text-sm text-gray-600">
+                                        <label className="flex items-center gap-2 text-sm text-gray-700">
                                             <input
                                                 type="checkbox"
                                                 checked={
@@ -1693,137 +1783,89 @@ export default function ProductForm({
                                                                     index
                                                                         ? {
                                                                               ...item,
-                                                                              active: event
-                                                                                  .target
-                                                                                  .checked,
+                                                                              active: event.target.checked,
                                                                           }
                                                                         : item,
                                                             ),
                                                     )
                                                 }
-                                                className="h-4 w-4 rounded border-gray-300"
                                             />
-
-                                            Variante ativa
+                                            Ativo
                                         </label>
-
-                                        <div className="flex gap-2">
-                                            <button
-                                                type="button"
-                                                disabled={
-                                                    index ===
-                                                    0
-                                                }
-                                                onClick={() =>
-                                                    moveVariant(
-                                                        index,
-                                                        -1,
-                                                    )
-                                                }
-                                                className="rounded-xl border border-gray-200 px-3 py-2 text-sm disabled:opacity-30"
-                                                title="Mover para cima"
-                                            >
-                                                ↑
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                disabled={
-                                                    index ===
-                                                    variants.length -
-                                                        1
-                                                }
-                                                onClick={() =>
-                                                    moveVariant(
-                                                        index,
-                                                        1,
-                                                    )
-                                                }
-                                                className="rounded-xl border border-gray-200 px-3 py-2 text-sm disabled:opacity-30"
-                                                title="Mover para baixo"
-                                            >
-                                                ↓
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    removeVariant(
-                                                        index,
-                                                    )
-                                                }
-                                                className="rounded-xl border border-red-100 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                                            >
-                                                Eliminar
-                                            </button>
-                                        </div>
                                     </div>
                                 </div>
                             ),
                         )}
                     </div>
                 )}
+
+                {configurationMode ===
+                    null && (
+                    <div className="mt-6 rounded-lg border border-dashed p-8 text-center">
+                        <p className="text-sm text-gray-500">
+                            Este produto não tem
+                            configuração.
+                        </p>
+                    </div>
+                )}
             </section>
 
-            {/* IMAGES */}
-
-            <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+            <section className="rounded-xl border bg-white p-6 shadow-sm">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <h2 className="text-xl font-bold text-[#2F3B2A]">
+                        <h2 className="text-lg font-semibold text-gray-900">
                             Imagens
                         </h2>
 
                         <p className="mt-1 text-sm text-gray-500">
-                            Adiciona, organiza e define a imagem
-                            principal do produto.
+                            Adiciona as imagens do
+                            produto e, quando aplicável,
+                            associa uma imagem a uma
+                            variante.
                         </p>
                     </div>
 
-                    <label className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-[#55624A] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90">
+                    <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-black px-4 py-2 text-sm font-medium text-white">
                         {uploadingImage
                             ? "A carregar..."
-                            : "+ Adicionar imagem"}
+                            : "Adicionar imagem"}
 
                         <input
                             type="file"
                             accept="image/jpeg,image/png,image/webp"
+                            className="hidden"
                             disabled={
-                                uploadingImage ||
-                                isSubmitting
+                                uploadingImage
                             }
                             onChange={
                                 handleImageUpload
                             }
-                            className="hidden"
                         />
                     </label>
                 </div>
 
                 {images.length === 0 ? (
-                    <div className="mt-8 rounded-2xl border border-dashed border-gray-200 p-10 text-center">
-                        <p className="font-medium text-gray-600">
+                    <div className="mt-6 rounded-lg border border-dashed p-8 text-center">
+                        <p className="text-sm text-gray-500">
                             Ainda não existem imagens.
-                        </p>
-
-                        <p className="mt-1 text-sm text-gray-400">
-                            Adiciona pelo menos uma imagem para
-                            apresentar melhor o produto.
                         </p>
                     </div>
                 ) : (
-                    <div className="mt-8 space-y-4">
+                    <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                         {images.map(
-                            (image, index) => (
+                            (
+                                image,
+                                index,
+                            ) => (
                                 <div
                                     key={
                                         image.id ??
-                                        `${image.fileId}-${index}`
+                                        `image-${image.fileId}-${index}`
                                     }
-                                    className="flex flex-col gap-5 rounded-2xl border border-gray-200 p-4 sm:flex-row"
+                                    className="overflow-hidden rounded-xl border bg-white"
                                 >
-                                    <div className="h-32 w-full shrink-0 overflow-hidden rounded-2xl bg-gray-100 sm:h-32 sm:w-32">
-                                        {image.previewUrl ? (
+                                    <div className="aspect-square bg-gray-100">
+                                        {image.previewUrl && (
                                             <img
                                                 src={
                                                     image.previewUrl
@@ -1834,84 +1876,143 @@ export default function ProductForm({
                                                 }
                                                 className="h-full w-full object-cover"
                                             />
-                                        ) : (
-                                            <div className="flex h-full items-center justify-center text-xs text-gray-400">
-                                                Sem
-                                                preview
-                                            </div>
                                         )}
                                     </div>
 
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                            <div>
-                                                <p className="text-sm font-semibold text-[#2F3B2A]">
+                                    <div className="space-y-4 p-4">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-medium text-gray-900">
                                                     {image.fileName ??
                                                         `Imagem ${index + 1}`}
                                                 </p>
 
                                                 {image.isPrimary && (
-                                                    <span className="mt-2 inline-flex rounded-full bg-[#EEF2E9] px-2.5 py-1 text-xs font-medium text-[#55624A]">
+                                                    <span className="mt-1 inline-block rounded-full bg-black px-2 py-0.5 text-xs text-white">
                                                         Principal
                                                     </span>
                                                 )}
                                             </div>
 
-                                            <div className="flex gap-2">
+                                            <div className="flex shrink-0 gap-1">
                                                 <button
                                                     type="button"
-                                                    disabled={
-                                                        index ===
-                                                        0
-                                                    }
                                                     onClick={() =>
                                                         moveImage(
                                                             index,
                                                             -1,
                                                         )
                                                     }
-                                                    className="rounded-xl border border-gray-200 px-3 py-2 text-sm disabled:opacity-30"
-                                                    title="Mover para cima"
+                                                    disabled={
+                                                        index ===
+                                                        0
+                                                    }
+                                                    className="rounded border px-2 py-1 text-xs disabled:opacity-40"
                                                 >
                                                     ↑
                                                 </button>
 
                                                 <button
                                                     type="button"
-                                                    disabled={
-                                                        index ===
-                                                        images.length -
-                                                            1
-                                                    }
                                                     onClick={() =>
                                                         moveImage(
                                                             index,
                                                             1,
                                                         )
                                                     }
-                                                    className="rounded-xl border border-gray-200 px-3 py-2 text-sm disabled:opacity-30"
-                                                    title="Mover para baixo"
+                                                    disabled={
+                                                        index ===
+                                                        images.length -
+                                                            1
+                                                    }
+                                                    className="rounded border px-2 py-1 text-xs disabled:opacity-40"
                                                 >
                                                     ↓
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        removeImage(
-                                                            index,
-                                                        )
-                                                    }
-                                                    className="rounded-xl border border-red-100 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                                                >
-                                                    Eliminar
                                                 </button>
                                             </div>
                                         </div>
 
-                                        <div className="mt-4">
-                                            <label className="mb-2 block text-xs font-medium text-gray-500">
-                                                Texto alternativo
+                                        <div>
+                                            <label className="mb-1 block text-xs font-medium text-gray-600">
+                                                Variante
+                                            </label>
+
+                                            <select
+                                                value={
+                                                    image.variantId !=
+                                                        null
+                                                        ? `id:${image.variantId}`
+                                                        : image.variantClientId
+                                                          ? `client:${image.variantClientId}`
+                                                          : ""
+                                                }
+                                                onChange={(
+                                                    event,
+                                                ) =>
+                                                    setImageVariant(
+                                                        index,
+                                                        event
+                                                            .target
+                                                            .value,
+                                                    )
+                                                }
+                                                disabled={
+                                                    variants.length ===
+                                                    0
+                                                }
+                                                className="w-full rounded-lg border px-3 py-2 text-sm"
+                                            >
+                                                <option value="">
+                                                    Imagem geral
+                                                    do produto
+                                                </option>
+
+                                                {variants.map(
+                                                    (
+                                                        variant,
+                                                        variantIndex,
+                                                    ) => {
+                                                        const value =
+                                                            variant.id !=
+                                                            null
+                                                                ? `id:${variant.id}`
+                                                                : `client:${variant.clientId}`;
+
+                                                        return (
+                                                            <option
+                                                                key={
+                                                                    variant.id ??
+                                                                    variant.clientId ??
+                                                                    variantIndex
+                                                                }
+                                                                value={
+                                                                    value
+                                                                }
+                                                            >
+                                                                {variant.type}{" "}
+                                                                ·{" "}
+                                                                {variant.name ||
+                                                                    `Variante ${variantIndex + 1}`}
+                                                            </option>
+                                                        );
+                                                    },
+                                                )}
+                                            </select>
+
+                                            {variants.length ===
+                                                0 && (
+                                                <p className="mt-1 text-xs text-gray-400">
+                                                    Adiciona primeiro
+                                                    uma variante para
+                                                    poder associar a
+                                                    imagem.
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <label className="mb-1 block text-xs font-medium text-gray-600">
+                                                Alt text
                                             </label>
 
                                             <input
@@ -1935,21 +2036,18 @@ export default function ProductForm({
                                                                     index
                                                                         ? {
                                                                               ...item,
-                                                                              altText:
-                                                                                  event
-                                                                                      .target
-                                                                                      .value,
+                                                                              altText: event.target.value,
                                                                           }
                                                                         : item,
                                                             ),
                                                     )
                                                 }
-                                                placeholder="Ex.: Ramo de rosas vermelhas"
-                                                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#55624A]"
+                                                className="w-full rounded-lg border px-3 py-2 text-sm"
+                                                placeholder="Descrição da imagem"
                                             />
                                         </div>
 
-                                        {!image.isPrimary && (
+                                        <div className="flex items-center justify-between gap-2">
                                             <button
                                                 type="button"
                                                 onClick={() =>
@@ -1957,81 +2055,72 @@ export default function ProductForm({
                                                         index,
                                                     )
                                                 }
-                                                className="mt-3 text-xs font-medium text-[#55624A] hover:underline"
+                                                disabled={
+                                                    image.isPrimary
+                                                }
+                                                className="rounded-lg border px-3 py-2 text-xs font-medium disabled:opacity-40"
                                             >
-                                                Definir como
-                                                principal
+                                                Tornar principal
                                             </button>
-                                        )}
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    removeImage(
+                                                        index,
+                                                    )
+                                                }
+                                                className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600"
+                                            >
+                                                Remover
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ),
                         )}
                     </div>
                 )}
-
-                <p className="mt-5 text-xs text-gray-400">
-                    Formatos permitidos: JPG, PNG e WEBP. Tamanho
-                    máximo: 5 MB.
-                </p>
             </section>
 
-            {/* STATUS */}
+            <section className="rounded-xl border bg-white p-6 shadow-sm">
+                <div>
+                    <h2 className="text-lg font-semibold text-gray-900">
+                        Estado
+                    </h2>
 
-            <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-                <div className="flex items-center justify-between gap-6">
-                    <div>
-                        <h2 className="text-xl font-bold text-[#2F3B2A]">
-                            Estado
-                        </h2>
-
-                        <p className="mt-1 text-sm text-gray-500">
-                            Define se o produto está disponível no
-                            catálogo.
-                        </p>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={() =>
-                            setActive(
-                                (current) =>
-                                    !current,
-                            )
-                        }
-                        className={`relative h-7 w-12 rounded-full transition ${
-                            active
-                                ? "bg-[#55624A]"
-                                : "bg-gray-300"
-                        }`}
-                    >
-                        <span
-                            className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${
-                                active
-                                    ? "left-6"
-                                    : "left-1"
-                            }`}
-                        />
-                    </button>
+                    <p className="mt-1 text-sm text-gray-500">
+                        Define se o produto está disponível
+                        no sistema.
+                    </p>
                 </div>
 
-                <p className="mt-4 text-sm font-medium text-gray-700">
-                    {active
-                        ? "Produto ativo"
-                        : "Produto inativo"}
-                </p>
+                <label className="mt-5 flex cursor-pointer items-center gap-3">
+                    <input
+                        type="checkbox"
+                        checked={active}
+                        onChange={(event) =>
+                            setActive(
+                                event.target.checked,
+                            )
+                        }
+                        className="h-4 w-4"
+                    />
+
+                    <span className="text-sm font-medium text-gray-700">
+                        Produto ativo
+                    </span>
+                </label>
             </section>
 
-            {/* ACTIONS */}
-
-            <div className="sticky bottom-4 z-10 flex flex-col-reverse gap-3 rounded-2xl border border-gray-200 bg-white/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:justify-end">
                 <button
                     type="button"
                     onClick={() =>
                         router.back()
                     }
                     disabled={isSubmitting}
-                    className="rounded-2xl border border-gray-200 px-6 py-3 font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
+                    className="rounded-lg border px-5 py-2.5 text-sm font-medium text-gray-700 disabled:opacity-50"
                 >
                     Cancelar
                 </button>
@@ -2040,15 +2129,12 @@ export default function ProductForm({
                     type="submit"
                     disabled={
                         isSubmitting ||
-                        isLoadingCategories ||
                         uploadingImage
                     }
-                    className="rounded-2xl bg-[#55624A] px-6 py-3 font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg bg-black px-5 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     {isSubmitting
-                        ? isEditing
-                            ? "A guardar..."
-                            : "A criar..."
+                        ? "A guardar..."
                         : isEditing
                           ? "Guardar alterações"
                           : "Criar produto"}

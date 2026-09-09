@@ -64,8 +64,9 @@ export class ProductConfigurationService {
                 );
             }
 
+            let variantClientIdMap = new Map<string, number>();
             if (dto.variants !== undefined) {
-                await this.syncVariants(
+                variantClientIdMap = await this.syncVariants(
                     tx,
                     productId,
                     dto.variants,
@@ -77,6 +78,7 @@ export class ProductConfigurationService {
                     tx,
                     productId,
                     dto.images,
+                    variantClientIdMap
                 );
             }
 
@@ -274,121 +276,136 @@ export class ProductConfigurationService {
         }
     }
 
-    private async syncVariants(
-        tx: any,
-        productId: number,
-        variants: UpdateProductVariantItemDto[],
-    ): Promise<void> {
+private async syncVariants(
+    tx: any,
+    productId: number,
+    variants: UpdateProductVariantItemDto[],
+): Promise<Map<string, number>> {
 
-        const existing = await tx.productVariant.findMany({
+    const existing = await tx.productVariant.findMany({
+        where: {
+            productId,
+            deletedAt: null,
+        },
+    });
+
+    const incomingIds = variants
+        .filter((variant) => variant.id !== undefined)
+        .map((variant) => variant.id);
+
+    const idsToDelete = existing
+        .filter(
+            (variant: any) =>
+                !incomingIds.includes(variant.id),
+        )
+        .map((variant: any) => variant.id);
+
+    if (idsToDelete.length > 0) {
+        await tx.productImage.updateMany({
             where: {
                 productId,
-                deletedAt: null,
+                variantId: {
+                    in: idsToDelete,
+                },
+            },
+            data: {
+                variantId: null,
             },
         });
 
-        const incomingIds = variants
-            .filter((variant) => variant.id !== undefined)
-            .map((variant) => variant.id);
-
-        const idsToDelete = existing
-            .filter((variant: any) => !incomingIds.includes(variant.id))
-            .map((variant: any) => variant.id);
-
-        if (idsToDelete.length > 0) {
-
-            await tx.productImage.updateMany({
-                where: {
-                    productId,
-                    variantId: {
-                        in: idsToDelete,
-                    },
+        await tx.productVariant.updateMany({
+            where: {
+                id: {
+                    in: idsToDelete,
                 },
-                data: {
-                    variantId: null,
-                },
-            });
+                productId,
+            },
+            data: {
+                deletedAt: new Date(),
+            },
+        });
+    }
 
-            await tx.productVariant.updateMany({
-                where: {
-                    id: {
-                        in: idsToDelete,
-                    },
-                    productId,
-                },
-                data: {
-                    deletedAt: new Date(),
-                },
-            });
-        }
+    const clientIdMap = new Map<string, number>();
 
-        for (const variant of variants) {
+    for (const variant of variants) {
+        const data = {
+            type: variant.type,
+            name: variant.name,
+            code: variant.code ?? null,
+            price: variant.price,
+            floristCompensation:
+                variant.floristCompensation,
+            active: variant.active ?? true,
+            sortOrder: variant.sortOrder,
+        };
 
-            const data = {
-                type: variant.type,
-                name: variant.name,
-                code: variant.code ?? null,
-                price: variant.price,
-                floristCompensation:
-                    variant.floristCompensation,
-                active: variant.active ?? true,
-                sortOrder: variant.sortOrder,
-            };
+        let variantId: number;
 
-            let variantId: number;
+        if (variant.id !== undefined) {
+            const current = existing.find(
+                (item: any) =>
+                    item.id === variant.id,
+            );
 
-            if (variant.id !== undefined) {
-
-                const current = existing.find(
-                    (item: any) =>
-                        item.id === variant.id,
+            if (!current) {
+                throw new BadRequestException(
+                    `Variant ${variant.id} does not belong to this product.`,
                 );
+            }
 
-                if (!current) {
-                    throw new BadRequestException(
-                        `Variant ${variant.id} does not belong to this product.`,
-                    );
-                }
+            await tx.productVariant.update({
+                where: {
+                    id: variant.id,
+                },
+                data,
+            });
 
-                await tx.productVariant.update({
-                    where: {
-                        id: variant.id,
+            variantId = variant.id;
+        } else {
+            const created =
+                await tx.productVariant.create({
+                    data: {
+                        productId,
+                        ...data,
                     },
-                    data,
                 });
 
-                variantId = variant.id;
+            variantId = created.id;
+        }
 
-            } else {
-
-                const created =
-                    await tx.productVariant.create({
-                        data: {
-                            productId,
-                            ...data,
-                        },
-                    });
-
-                variantId = created.id;
-            }
-
-            if (variant.imageId !== undefined) {
-
-                await this.assignVariantImage(
-                    tx,
-                    productId,
-                    variantId,
-                    variant.imageId,
+        if (variant.clientId) {
+            if (clientIdMap.has(variant.clientId)) {
+                throw new BadRequestException(
+                    `Duplicate variant clientId "${variant.clientId}".`,
                 );
             }
+
+            clientIdMap.set(
+                variant.clientId,
+                variantId,
+            );
+        }
+
+        if (variant.imageId !== undefined) {
+            await this.assignVariantImage(
+                tx,
+                productId,
+                variantId,
+                variant.imageId,
+            );
         }
     }
 
+    return clientIdMap;
+}
+
     private async syncImages(
-        tx: any,
-        productId: number,
-        images: UpdateProductImageItemDto[],
-    ): Promise<void> {
+    tx: any,
+    productId: number,
+    images: UpdateProductImageItemDto[],
+    variantClientIdMap: Map<string, number>,
+): Promise<void> {
 
         const existing = await tx.productImage.findMany({
             where: {
@@ -421,19 +438,45 @@ export class ProductConfigurationService {
 
         for (const image of images) {
 
-            await this.validateImageVariant(
-                tx,
-                productId,
-                image.variantId ?? null,
-            );
+            if (
+        image.variantId !== undefined &&
+        image.variantClientId !== undefined &&
+        image.variantClientId !== null
+    ) {
+        throw new BadRequestException(
+            'An image cannot have both variantId and variantClientId.',
+        );
+    }
 
-            const data = {
-                fileId: image.fileId,
-                altText: image.altText ?? null,
-                sortOrder: image.sortOrder,
-                isPrimary: image.isPrimary,
-                variantId: image.variantId ?? null,
-            };
+    let variantId =
+        image.variantId ?? null;
+
+    if (image.variantClientId) {
+        variantId =
+            variantClientIdMap.get(
+                image.variantClientId,
+            ) ?? null;
+
+        if (variantId === null) {
+            throw new BadRequestException(
+                `Variant clientId "${image.variantClientId}" does not match any variant.`,
+            );
+        }
+    }
+
+    await this.validateImageVariant(
+        tx,
+        productId,
+        variantId,
+    );
+
+    const data = {
+        fileId: image.fileId,
+        altText: image.altText ?? null,
+        sortOrder: image.sortOrder,
+        isPrimary: image.isPrimary,
+        variantId,
+    };
 
             if (image.id !== undefined) {
 

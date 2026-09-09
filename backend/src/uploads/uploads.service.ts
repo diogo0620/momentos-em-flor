@@ -44,15 +44,15 @@ export class UploadsService {
                 },
             });
 
-        return {
-            id: dbFile.id,
-            filename: dbFile.storedName,
-            originalName: dbFile.originalName,
-            size: dbFile.size,
-            mimeType: dbFile.mimeType,
-            extension: dbFile.extension,
-            path: dbFile.path,
-            url: `/uploads/temp/${file.filename}`,
-        };
+       return {
+    id: dbFile.id,
+    filename: dbFile.storedName,
+    originalName: dbFile.originalName,
+    size: dbFile.size,
+    mimeType: dbFile.mimeType,
+    extension: dbFile.extension,
+    path: dbFile.path,
+    url: `/uploads/temp/${encodeURIComponent(file.filename)}`,
+};
     }
 }

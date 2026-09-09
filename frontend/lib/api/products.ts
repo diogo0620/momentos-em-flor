@@ -117,9 +117,25 @@ export async function getAdminProducts(
 ) {
     const query = buildProductQuery(params);
 
-    return apiFetch<ProductAdminListResponse>(
-        `/admin/products${query ? `?${query}` : ""}`,
-    );
+    const response =
+        await apiFetch<ProductAdminListResponse>(
+            `/admin/products${query ? `?${query}` : ""}`,
+        );
+
+    return {
+        ...response,
+        data: response.data.map((product) => ({
+            ...product,
+            image: product.image
+                ? {
+                    ...product.image,
+                    url: resolveFileUrl(
+                        product.image.url,
+                    ),
+                }
+                : null,
+        })),
+    };
 }
 
 export type ProductAdminImage = {
@@ -199,6 +215,7 @@ export type ProductConfigurationComponent = {
 
 export type ProductConfigurationVariant = {
     id?: number;
+    clientId?: string;
     type: string;
     name: string;
     code?: string | null;
@@ -216,6 +233,7 @@ export type ProductConfigurationImage = {
     sortOrder: number;
     isPrimary: boolean;
     variantId?: number | null;
+    variantClientId?: string | null;
 };
 
 export type UpdateProductConfigurationData = {
@@ -237,10 +255,29 @@ export type UploadedFile = {
 
 export async function getAdminProduct(
     id: number,
-) {
-    return apiFetch<ProductAdminDetail>(
+): Promise<ProductAdminDetail> {
+    const product = await apiFetch<ProductAdminDetail>(
         `/admin/products/${id}`,
     );
+
+    return {
+        ...product,
+
+        images: product.images.map((image) => ({
+            ...image,
+            url: resolveFileUrl(image.url),
+        })),
+
+        variants: product.variants.map((variant) => ({
+            ...variant,
+            image: variant.image
+                ? {
+                    ...variant.image,
+                    url: resolveFileUrl(variant.image.url),
+                }
+                : null,
+        })),
+    };
 }
 
 // =========================================================
@@ -253,6 +290,7 @@ export type CreateProductData = {
     basePrice: number;
     baseFloristCompensation: number;
     categoryId: number;
+    taxCodeId: number;
     active?: boolean;
 };
 
@@ -314,8 +352,31 @@ export async function updateProductConfiguration(
 export async function uploadProductImage(
     file: File,
 ): Promise<UploadedFile> {
-    return apiUpload<UploadedFile>(
-        '/uploads',
+    const uploaded = await apiUpload<UploadedFile>(
+        "/uploads",
         file,
     );
+
+    return {
+        ...uploaded,
+        url: resolveFileUrl(uploaded.url),
+    };
+}
+
+
+
+const FILES_URL =
+    process.env.NEXT_PUBLIC_FILES_URL ??
+    "http://localhost:3001";
+
+function resolveFileUrl(url: string): string {
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+        return url;
+    }
+
+    const normalisedUrl = url
+        .replace(/\\/g, "/")
+        .replace(/^\/+/, "");
+
+    return `${FILES_URL}/${normalisedUrl}`;
 }
