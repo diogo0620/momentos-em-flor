@@ -1,8 +1,8 @@
+
 "use client";
 
 import Image from "next/image";
 import Link from "next/link";
-
 import {
     ArrowRight,
     Heart,
@@ -10,459 +10,280 @@ import {
     Trash2,
 } from "lucide-react";
 
-import {
-    useState,
-} from "react";
-
-type FavoriteProduct = {
-    id: number;
-    name: string;
-    category: string;
-    price: number;
-    image: string;
-};
-
-const initialFavorites: FavoriteProduct[] = [
-    {
-        id: 1,
-        name: "Bouquet Primavera",
-        category: "Bouquets",
-        price: 34.90,
-        image: "/products/bouquet-primavera.jpg",
-    },
-    {
-        id: 2,
-        name: "Rosas Vermelhas",
-        category: "Rosas",
-        price: 29.90,
-        image: "/products/rosas-vermelhas.jpg",
-    },
-    {
-        id: 3,
-        name: "Bouquet Romântico",
-        category: "Bouquets",
-        price: 39.90,
-        image: "/products/bouquet-romantico.jpg",
-    },
-];
+import { useWishlist } from "@/contexts/WishlistContext";
 
 export default function FavoritesPage() {
-    const [favorites, setFavorites] =
-        useState<FavoriteProduct[]>(
-            initialFavorites,
-        );
-
-    function removeFavorite(
-        productId: number,
-    ) {
-        setFavorites((current) =>
-            current.filter(
-                (product) =>
-                    product.id !== productId,
-            ),
-        );
-    }
+    const {
+        items,
+        removeFromWishlist,
+    } = useWishlist();
 
     return (
-        <main className="min-h-screen bg-[#FAFBF8]">
+        <main className="min-h-screen bg-white">
+            {/* HERO / HEADER */}
 
-            {/* ================================================================ */}
-            {/* PAGE                                                             */}
-            {/* ================================================================ */}
+            <section className="bg-[#F1F4EB]">
+                <div className="mx-auto max-w-7xl px-6 py-16 sm:py-20">
+                    <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#55624A]">
+                                Os meus favoritos
+                            </p>
 
-            <div className="mx-auto w-full max-w-7xl px-5 py-10 sm:px-8 sm:py-12 lg:px-10 lg:py-16">
+                            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-[#263020] sm:text-5xl">
+                                Flores que adora
+                            </h1>
 
-                {/* ============================================================ */}
-                {/* HEADER                                                         */}
-                {/* ============================================================ */}
-
-                <div className="rounded-[2rem] bg-[#F1F4EB] px-6 py-8 sm:px-10 sm:py-10">
-
-                    <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-
-                        <div className="flex items-start gap-4">
-
-                            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-[#55624A] shadow-sm">
-
-                                <Heart
-                                    size={25}
-                                    fill="currentColor"
-                                />
-
-                            </div>
-
-                            <div>
-
-                                <p className="text-sm font-medium text-[#7B876F]">
-                                    Os meus favoritos
-                                </p>
-
-                                <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#2F3B2A] sm:text-4xl">
-                                    Flores que adora
-                                </h1>
-
-                                <p className="mt-2 max-w-xl text-sm leading-6 text-gray-600 sm:text-base">
-                                    Guarde os seus produtos favoritos
-                                    para os encontrar facilmente quando
-                                    quiser voltar a encomendar.
-                                </p>
-
-                            </div>
-
+                            <p className="mt-4 max-w-xl text-base leading-7 text-gray-500">
+                                Guarde aqui os bouquets e flores que mais
+                                gostou para os encontrar facilmente mais tarde.
+                            </p>
                         </div>
 
-                        {favorites.length > 0 && (
-                            <div className="shrink-0 self-start rounded-full bg-white px-4 py-2 text-sm font-medium text-[#55624A] shadow-sm sm:self-center">
-
-                                {favorites.length === 1
-                                    ? "1 favorito"
-                                    : `${favorites.length} favoritos`}
-
-                            </div>
-                        )}
-
-                    </div>
-
-                </div>
-
-                {/* ============================================================ */}
-                {/* CONTENT                                                        */}
-                {/* ============================================================ */}
-
-                {favorites.length > 0 ? (
-
-                    <div className="mt-10">
-
-                        <div className="mb-5 flex items-center justify-between">
-
-                            <div>
-
-                                <h2 className="text-xl font-bold text-[#2F3B2A]">
-                                    Os seus favoritos
-                                </h2>
-
-                                <p className="mt-1 text-sm text-gray-500">
-                                    Produtos que guardou para mais tarde.
-                                </p>
-
-                            </div>
-
-                            <Link
-                                href="/products"
+                        {items.length > 0 && (
+                            <div
                                 className="
-                                    hidden
+                                    inline-flex
+                                    w-fit
                                     items-center
                                     gap-2
+                                    rounded-full
+                                    bg-white
+                                    px-4
+                                    py-2
                                     text-sm
                                     font-medium
                                     text-[#55624A]
-                                    transition
-                                    hover:gap-3
-                                    sm:inline-flex
+                                    shadow-sm
                                 "
                             >
-                                Explorar produtos
-
-                                <ArrowRight
-                                    size={17}
+                                <Heart
+                                    size={16}
+                                    fill="currentColor"
                                 />
 
-                            </Link>
-
-                        </div>
-
-                        {/* ====================================================== */}
-                        {/* PRODUCTS                                                 */}
-                        {/* ====================================================== */}
-
-                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-
-                            {favorites.map(
-                                (product) => (
-                                    <FavoriteCard
-                                        key={
-                                            product.id
-                                        }
-                                        product={
-                                            product
-                                        }
-                                        onRemove={() =>
-                                            removeFavorite(
-                                                product.id,
-                                            )
-                                        }
-                                    />
-                                ),
-                            )}
-
-                        </div>
-
-                        <div className="mt-8 sm:hidden">
-
-                            <Link
-                                href="/products"
-                                className="
-                                    flex
-                                    w-full
-                                    items-center
-                                    justify-center
-                                    gap-2
-                                    rounded-2xl
-                                    border
-                                    border-gray-200
-                                    bg-white
-                                    px-5
-                                    py-3
-                                    text-sm
-                                    font-semibold
-                                    text-[#55624A]
-                                    transition
-                                    hover:bg-[#F5F7F2]
-                                "
-                            >
-                                Explorar produtos
-
-                                <ArrowRight
-                                    size={17}
-                                />
-
-                            </Link>
-
-                        </div>
-
+                                <span>
+                                    {items.length}{" "}
+                                    {items.length === 1
+                                        ? "favorito"
+                                        : "favoritos"}
+                                </span>
+                            </div>
+                        )}
                     </div>
+                </div>
+            </section>
 
-                ) : (
+            {/* CONTENT */}
 
+            <section className="mx-auto max-w-7xl px-6 py-12 sm:py-16">
+                {items.length === 0 ? (
                     <EmptyFavorites />
+                ) : (
+                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        {items.map((item) => (
+                            <article
+                                key={item.id}
+                                className="
+                                    group
+                                    overflow-hidden
+                                    rounded-3xl
+                                    border
+                                    border-[#E5E7E0]
+                                    bg-white
+                                    transition-all
+                                    duration-300
+                                    hover:-translate-y-1
+                                    hover:shadow-xl
+                                "
+                            >
+                                {/* IMAGE */}
 
+                                <div className="relative aspect-[4/3] overflow-hidden bg-[#FAFAF7]">
+                                    <Link
+                                        href={`/products/${item.id}`}
+                                        className="block h-full"
+                                    >
+                                        {item.image ? (
+                                            <Image
+                                                src={item.image}
+                                                alt={item.name}
+                                                fill
+                                                unoptimized
+                                                className="
+                                                    object-cover
+                                                    transition-transform
+                                                    duration-500
+                                                    group-hover:scale-105
+                                                "
+                                                sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                                            />
+                                        ) : (
+                                            <div className="flex h-full items-center justify-center">
+                                                <Heart
+                                                    size={48}
+                                                    strokeWidth={1.2}
+                                                    className="text-[#D6DEC8]"
+                                                />
+                                            </div>
+                                        )}
+                                    </Link>
+
+                                    {/* REMOVE */}
+
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            removeFromWishlist(item.id)
+                                        }
+                                        aria-label={`Remover ${item.name} dos favoritos`}
+                                        className="
+                                            absolute
+                                            right-4
+                                            top-4
+                                            z-10
+                                            flex
+                                            h-10
+                                            w-10
+                                            items-center
+                                            justify-center
+                                            rounded-full
+                                            bg-white
+                                            text-[#55624A]
+                                            shadow-md
+                                            transition-all
+                                            duration-300
+                                            hover:scale-105
+                                            hover:bg-red-50
+                                            hover:text-red-500
+                                        "
+                                    >
+                                        <Heart
+                                            size={19}
+                                            strokeWidth={1.8}
+                                            fill="currentColor"
+                                        />
+                                    </button>
+                                </div>
+
+                                {/* INFO */}
+
+                                <div className="p-6">
+                                    <h2
+                                        className="
+                                            text-xl
+                                            font-semibold
+                                            text-[#2F3B2A]
+                                        "
+                                    >
+                                        {item.name}
+                                    </h2>
+
+                                    <div className="mt-6 flex items-center justify-between gap-4">
+                                        <Link
+                                            href={`/products/${item.id}`}
+                                            className="
+                                                inline-flex
+                                                items-center
+                                                gap-2
+                                                text-sm
+                                                font-medium
+                                                text-[#55624A]
+                                                transition
+                                                hover:gap-3
+                                            "
+                                        >
+                                            Ver produto
+                                            <ArrowRight size={16} />
+                                        </Link>
+
+                                        <Link
+                                            href={`/products/${item.id}`}
+                                            className="
+                                                inline-flex
+                                                h-10
+                                                items-center
+                                                gap-2
+                                                rounded-full
+                                                bg-[#55624A]
+                                                px-4
+                                                text-sm
+                                                font-medium
+                                                text-white
+                                                transition-all
+                                                duration-300
+                                                hover:bg-[#46523D]
+                                                hover:shadow-md
+                                            "
+                                        >
+                                            <ShoppingBag size={16} />
+                                            Comprar
+                                        </Link>
+                                    </div>
+                                </div>
+                            </article>
+                        ))}
+                    </div>
                 )}
-
-            </div>
-
+            </section>
         </main>
     );
 }
 
-/* ========================================================================== */
-/* FAVORITE CARD                                                              */
-/* ========================================================================== */
-
-function FavoriteCard({
-    product,
-    onRemove,
-}: {
-    product: FavoriteProduct;
-    onRemove: () => void;
-}) {
-    return (
-        <article className="group overflow-hidden rounded-[1.75rem] border border-gray-100 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
-
-            {/* ================================================================== */}
-            {/* IMAGE                                                              */}
-            {/* ================================================================== */}
-
-            <div className="relative aspect-[4/3] overflow-hidden bg-[#F5F7F2]">
-
-                <Image
-                    src={product.image}
-                    alt={product.name}
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="
-                        object-cover
-                        transition
-                        duration-500
-                        group-hover:scale-105
-                    "
-                />
-
-                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/20 to-transparent" />
-
-                {/* ============================================================== */}
-                {/* REMOVE                                                           */}
-                {/* ============================================================== */}
-
-                <button
-                    type="button"
-                    onClick={onRemove}
-                    aria-label={`Remover ${product.name} dos favoritos`}
-                    title="Remover dos favoritos"
-                    className="
-                        absolute
-                        right-4
-                        top-4
-                        flex
-                        h-10
-                        w-10
-                        items-center
-                        justify-center
-                        rounded-full
-                        bg-white
-                        text-[#55624A]
-                        shadow-md
-                        transition
-                        hover:bg-red-50
-                        hover:text-red-500
-                    "
-                >
-                    <Heart
-                        size={18}
-                        fill="currentColor"
-                    />
-                </button>
-
-            </div>
-
-            {/* ================================================================== */}
-            {/* INFO                                                               */}
-            {/* ================================================================== */}
-
-            <div className="p-5 sm:p-6">
-
-                <div className="flex items-start justify-between gap-4">
-
-                    <div className="min-w-0">
-
-                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#8A957F]">
-                            {product.category}
-                        </p>
-
-                        <h3 className="mt-2 truncate text-lg font-bold text-[#2F3B2A]">
-                            {product.name}
-                        </h3>
-
-                    </div>
-
-                    <span className="shrink-0 text-lg font-bold text-[#55624A]">
-                        {product.price.toFixed(2)} €
-                    </span>
-
-                </div>
-
-                {/* ============================================================== */}
-                {/* ACTIONS                                                         */}
-                {/* ============================================================== */}
-
-                <div className="mt-5 flex gap-2">
-
-                    <Link
-                        href={`/products/${product.id}`}
-                        className="
-                            flex
-                            flex-1
-                            items-center
-                            justify-center
-                            rounded-2xl
-                            border
-                            border-gray-200
-                            bg-white
-                            px-3
-                            py-3
-                            text-sm
-                            font-semibold
-                            text-[#55624A]
-                            transition
-                            hover:bg-[#F5F7F2]
-                        "
-                    >
-                        Ver produto
-                    </Link>
-
-                    <button
-                        type="button"
-                        className="
-                            flex
-                            flex-1
-                            items-center
-                            justify-center
-                            gap-2
-                            rounded-2xl
-                            bg-[#55624A]
-                            px-3
-                            py-3
-                            text-sm
-                            font-semibold
-                            text-white
-                            transition
-                            hover:bg-[#46523C]
-                        "
-                    >
-                        <ShoppingBag
-                            size={16}
-                        />
-
-                        Comprar
-                    </button>
-
-                </div>
-
-            </div>
-
-        </article>
-    );
-}
-
-/* ========================================================================== */
-/* EMPTY STATE                                                                */
-/* ========================================================================== */
-
 function EmptyFavorites() {
     return (
-        <div className="mt-10 rounded-[2rem] border border-gray-100 bg-white px-6 py-16 shadow-sm sm:py-20">
-
-            <div className="mx-auto flex max-w-lg flex-col items-center text-center">
-
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#F1F4EB] text-[#55624A]">
-
-                    <Heart
-                        size={32}
-                    />
-
-                </div>
-
-                <h2 className="mt-6 text-2xl font-bold text-[#2F3B2A]">
-                    Ainda não tem favoritos
-                </h2>
-
-                <p className="mt-3 text-sm leading-6 text-gray-500 sm:text-base">
-                    Explore os nossos produtos e guarde os seus
-                    favoritos para os encontrar facilmente mais tarde.
-                </p>
-
-                <Link
-                    href="/products"
-                    className="
-                        mt-7
-                        inline-flex
-                        items-center
-                        gap-2
-                        rounded-2xl
-                        bg-[#55624A]
-                        px-6
-                        py-3
-                        text-sm
-                        font-semibold
-                        text-white
-                        transition
-                        hover:bg-[#46523C]
-                    "
-                >
-
-                    <ShoppingBag
-                        size={17}
-                    />
-
-                    Explorar produtos
-
-                    <ArrowRight
-                        size={17}
-                    />
-
-                </Link>
-
+        <div className="flex min-h-[420px] flex-col items-center justify-center text-center">
+            <div
+                className="
+                    flex
+                    h-20
+                    w-20
+                    items-center
+                    justify-center
+                    rounded-full
+                    bg-[#F3F5EE]
+                    text-[#55624A]
+                "
+            >
+                <Heart
+                    size={34}
+                    strokeWidth={1.4}
+                />
             </div>
 
+            <h2 className="mt-6 text-2xl font-semibold text-[#2F3B2A]">
+                Ainda não tem favoritos
+            </h2>
+
+            <p className="mt-3 max-w-md text-sm leading-6 text-gray-400">
+                Explore os nossos bouquets e guarde os seus favoritos
+                para os encontrar facilmente mais tarde.
+            </p>
+
+            <Link
+                href="/products"
+                className="
+                    mt-7
+                    inline-flex
+                    items-center
+                    gap-2
+                    rounded-full
+                    bg-[#55624A]
+                    px-6
+                    py-3
+                    text-sm
+                    font-medium
+                    text-white
+                    transition-all
+                    duration-300
+                    hover:bg-[#46523D]
+                    hover:shadow-md
+                "
+            >
+                Explorar flores
+                <ArrowRight size={17} />
+            </Link>
         </div>
     );
 }
+

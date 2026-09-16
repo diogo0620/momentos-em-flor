@@ -7,7 +7,6 @@ import { createSwaggerConfig } from '@/config/swagger.config';
 import { corsConfig } from '@/config/cors.config';
 
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { join } from 'path';
 
 import { AppModule } from './app.module';
 
@@ -16,13 +15,6 @@ import cookieParser from 'cookie-parser';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(
     AppModule,
-  );
-
-  app.useStaticAssets(
-    join(process.cwd(), 'uploads'),
-    {
-      prefix: '/uploads/',
-    },
   );
 
   app.setGlobalPrefix('api');
@@ -34,7 +26,6 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
-
 
   /*
   app.useGlobalFilters(
@@ -50,17 +41,22 @@ async function bootstrap() {
       createSwaggerConfig(),
     );
 
-
   SwaggerModule.setup('api/docs', app, document);
 
   app.use(cookieParser());
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('app.port')!;
+
   await app.listen(port);
 
-  console.log(`🚀 Backend running on http://localhost:${port}/api`);
-  console.log(`📚 Swagger available at http://localhost:${port}/api/docs`);
+  console.log(
+    `🚀 Backend running on http://localhost:${port}/api`,
+  );
+
+  console.log(
+    `📚 Swagger available at http://localhost:${port}/api/docs`,
+  );
 }
 
 bootstrap();

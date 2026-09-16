@@ -51,7 +51,7 @@ type ProductWithListRelations =
                 select: {
                     file: {
                         select: {
-                            path: true;
+                            id: true;
                         };
                     };
                 };
@@ -74,6 +74,7 @@ type ProductWithDetailRelations =
             slug: true;
             description: true;
             basePrice: true;
+            active: true;
 
             taxCode: {
                 select: {
@@ -92,7 +93,7 @@ type ProductWithDetailRelations =
                 select: {
                     file: {
                         select: {
-                            path: true;
+                            id: true;
                         };
                     };
                 };
@@ -122,7 +123,7 @@ type ProductWithDetailRelations =
                         select: {
                             file: {
                                 select: {
-                                    path: true;
+                                    id: true;
                                 };
                             };
                         };
@@ -182,7 +183,7 @@ type ProductWithAdminDetailRelations =
 
                     file: {
                         select: {
-                            path: true;
+                            id: true;
                         };
                     };
                 };
@@ -233,7 +234,7 @@ type ProductWithAdminDetailRelations =
 
                             file: {
                                 select: {
-                                    path: true;
+                                    id: true;
                                 };
                             };
                         };
@@ -327,7 +328,7 @@ toAdminListResponse(
             id: number;
             altText: string | null;
             file: {
-                path: string;
+                id: number;
             };
         }[];
     },
@@ -338,7 +339,7 @@ toAdminListResponse(
 
     const image = product.images[0]
         ? {
-              url: product.images[0].file.path,
+              url: `/api/files/${product.images[0].file.id}`,
           }
         : null;
 
@@ -404,7 +405,7 @@ toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDe
         images: product.images.map((image) => ({
             id: image.id,
             fileId: image.fileId,
-            url: image.file.path,
+            url:   `/api/files/${image.file.id}`,
             altText: image.altText,
             sortOrder: image.sortOrder,
             isPrimary: image.isPrimary,
@@ -470,7 +471,7 @@ toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDe
                           fileId:
                               variant.image.fileId,
                           url:
-                              variant.image.file.path,
+                              `/api/files/${variant.image.file.id}`,
                           altText:
                               variant.image.altText,
                           sortOrder:
@@ -501,7 +502,7 @@ toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDe
     image: ProductWithListRelations['images'][number],
 ) {
     return {
-        url: image.file.path,
+        url: `/api/files/${image.file.id}`,
     };
 }
 
@@ -514,7 +515,7 @@ toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDe
     ) {
 
         return {
-            url: image.file.path,
+            url: `/api/files/${image.file.id}`,
         };
     }
 
@@ -601,16 +602,11 @@ toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDe
                         price:
                             variantGrossPrice,
 
-                        image:
-                            variant.image
-                                ? {
-                                    url:
-                                        variant
-                                            .image
-                                            .file
-                                            .path,
-                                }
-                                : null,
+                        image: variant.image
+    ? {
+        url: `/api/files/${variant.image.file.id}`,
+    }
+    : null,
                     };
                 },
             );
@@ -776,6 +772,8 @@ toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDe
 
             variants:
                 variants,
+
+                active: product.active,
         };
     }
 }

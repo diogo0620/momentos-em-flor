@@ -8,18 +8,30 @@ import { useCart } from "@/contexts/CartContext";
 import type { Product } from "@/types/product";
 import type { CartItem } from "@/types/cart";
 
+type SelectedComponent = {
+    componentId: number;
+    name: string;
+    quantity: number;
+};
+
 type Props = {
     product: Product;
     quantity: number;
-    recipient?: string;
-    message?: string;
+    price: number;
+    image?: string;
+    variantId?: number;
+    variantName?: string;
+    components?: SelectedComponent[];
 };
 
 export default function AddToCartButton({
     product,
     quantity,
-    recipient,
-    message,
+    price,
+    image = "",
+    variantId,
+    variantName,
+    components = [],
 }: Props) {
     const { addItem } = useCart();
 
@@ -28,13 +40,19 @@ export default function AddToCartButton({
 
     function handleAddToCart() {
         const item: CartItem = {
+            cartItemId:
+                crypto.randomUUID(),
+
             id: product.id,
             name: product.name,
-            image: "",
-            price: product.basePrice,
+            image,
+            price,
             quantity,
-            recipient,
-            message,
+
+            variantId,
+            variantName,
+
+            components,
         };
 
         addItem(item);

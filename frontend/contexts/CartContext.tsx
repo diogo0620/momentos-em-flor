@@ -17,8 +17,13 @@ type CartContextType = {
         item: CartItem,
     ) => void;
 
+    updateQuantity: (
+        cartItemId: string,
+        quantity: number,
+    ) => void;
+
     removeItem: (
-        id: string,
+        cartItemId: string,
     ) => void;
 
     clearCart: () => void;
@@ -70,22 +75,24 @@ export function CartProvider({
         item: CartItem,
     ) {
         setItems((current) => {
-
             const existing =
                 current.find(
                     (product) =>
                         product.id ===
                             item.id &&
-                        product.recipient ===
-                            item.recipient &&
-                        product.message ===
-                            item.message,
+                        product.variantId ===
+                            item.variantId &&
+                        areComponentsEqual(
+                            product.components,
+                            item.components,
+                        ),
                 );
 
             if (existing) {
                 return current.map(
                     (product) =>
-                        product === existing
+                        product.cartItemId ===
+                        existing.cartItemId
                             ? {
                                   ...product,
                                   quantity:
@@ -103,13 +110,43 @@ export function CartProvider({
         });
     }
 
+    function updateQuantity(
+        cartItemId: string,
+        quantity: number,
+    ) {
+        if (quantity <= 0) {
+            setItems((current) =>
+                current.filter(
+                    (item) =>
+                        item.cartItemId !==
+                        cartItemId,
+                ),
+            );
+
+            return;
+        }
+
+        setItems((current) =>
+            current.map((item) =>
+                item.cartItemId ===
+                cartItemId
+                    ? {
+                          ...item,
+                          quantity,
+                      }
+                    : item,
+            ),
+        );
+    }
+
     function removeItem(
-        id: string,
+        cartItemId: string,
     ) {
         setItems((current) =>
             current.filter(
                 (item) =>
-                    item.id !== id,
+                    item.cartItemId !==
+                    cartItemId,
             ),
         );
     }
@@ -123,12 +160,49 @@ export function CartProvider({
             value={{
                 items,
                 addItem,
+                updateQuantity,
                 removeItem,
                 clearCart,
             }}
         >
             {children}
         </CartContext.Provider>
+    );
+}
+
+function areComponentsEqual(
+    first?: CartItem["components"],
+    second?: CartItem["components"],
+) {
+    const firstComponents =
+        first ?? [];
+
+    const secondComponents =
+        second ?? [];
+
+    if (
+        firstComponents.length !==
+        secondComponents.length
+    ) {
+        return false;
+    }
+
+    return firstComponents.every(
+        (firstComponent) => {
+            const secondComponent =
+                secondComponents.find(
+                    (component) =>
+                        component.componentId ===
+                        firstComponent.componentId,
+                );
+
+            return (
+                secondComponent !==
+                    undefined &&
+                secondComponent.quantity ===
+                    firstComponent.quantity
+            );
+        },
     );
 }
 

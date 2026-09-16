@@ -99,7 +99,7 @@ export class ProductsService {
                     altText: true,
                     file: {
                         select: {
-                            path: true,
+                            id: true,
                         },
                     },
                 },
@@ -189,7 +189,7 @@ export class ProductsService {
 
                     file: {
                         select: {
-                            path: true,
+                            id: true,
                         },
                     },
                 },
@@ -243,7 +243,7 @@ export class ProductsService {
 
                             file: {
                                 select: {
-                                    path: true,
+                                    id: true,
                                 },
                             },
                         },
@@ -320,7 +320,7 @@ export class ProductsService {
                         select: {
                             file: {
                                 select: {
-                                    path: true,
+                                    id: true,
                                 },
                             },
                         },
@@ -396,6 +396,7 @@ export class ProductsService {
                     slug: true,
                     description: true,
                     basePrice: true,
+                    active: true,
 
                     taxCode: {
                         select: {
@@ -440,7 +441,7 @@ export class ProductsService {
                                 select: {
                                     file: {
                                         select: {
-                                            path: true,
+                                            id: true,
                                         },
                                     },
                                 },
@@ -463,7 +464,7 @@ export class ProductsService {
                         select: {
                             file: {
                                 select: {
-                                    path: true,
+                                    id: true,
                                 },
                             },
                         },

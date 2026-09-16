@@ -4,6 +4,8 @@ import { UploadsService } from './uploads.service';
 import { UploadsController } from './uploads.controller';
 
 import { PrismaModule } from '../prisma/prisma.module';
+import { LocalFileStorageService } from './storage/local-file-storage.service';
+import { FilesController } from './files.controller';
 
 @Module({
     imports: [
@@ -11,9 +13,11 @@ import { PrismaModule } from '../prisma/prisma.module';
     ],
     controllers: [
         UploadsController,
+        FilesController,
     ],
     providers: [
         UploadsService,
+        LocalFileStorageService,
     ],
     exports: [
         UploadsService,

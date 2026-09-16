@@ -1,6 +1,8 @@
 
 import { PrismaClient, ProductVariantType, FileProvider } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { stat } from 'fs/promises';
+import { join } from 'path/win32';
 
 const prisma = new PrismaClient();
 
@@ -101,18 +103,22 @@ async function createFile(
   path: string,
   altText: string,
 ) {
+  const absolutePath = join(process.cwd(), 'uploads', path);
+
+  const stats = await stat(absolutePath);
+
   return prisma.file.create({
     data: {
       originalName,
       storedName,
       extension: 'jpg',
       mimeType: 'image/jpeg',
-      size: 150000,
+      size: stats.size,
       path,
       altText,
       provider: FileProvider.LOCAL,
-      width: 1200,
-      height: 1200,
+      width: 768,
+      height: 768,
     },
   });
 }
@@ -287,35 +293,35 @@ async function createProducts(taxCodes: Awaited<ReturnType<typeof createTaxCodes
 async function createProductImages(products: Awaited<ReturnType<typeof createProducts>>) {
   console.log('🖼️ Creating product images...');
 
-  const primaveraFile = await createFile('ramo-primavera.jpg', 'ramo-primavera.jpg', '/products/ramo-primavera.jpg', 'Ramo Primavera');
+  const primaveraFile = await createFile('ramo-flores-variadas-768x768.jpg', 'ramo-flores-variadas-768x768.jpg', 'products/ramo-flores-variadas-768x768.jpg', 'Ramo Primavera');
 
   await createProductImage(products.primavera.id, primaveraFile.id, {
     altText: 'Ramo Primavera',
     sortOrder: 0,
   });
 
-  const orchidFile = await createFile('orquidea-branca.jpg', 'orquidea-branca.jpg', '/products/orquidea-branca.jpg', 'Orquídea Branca');
+  const orchidFile = await createFile('orquidea-branca-768x768.jpg', 'orquidea-branca-768x768.jpg', 'products/orquidea-branca-768x768.jpg', 'Orquídea Branca');
 
   await createProductImage(products.orchid.id, orchidFile.id, {
     altText: 'Orquídea Branca',
     sortOrder: 0,
   });
 
-  const rosesFile = await createFile('rosas-vermelhas.jpg', 'rosas-vermelhas.jpg', '/products/rosas-vermelhas.jpg', 'Rosas Vermelhas');
+  const rosesFile = await createFile('atado-rosas-vermelhas-768x768.jpg', 'atado-rosas-vermelhas-768x768.jpg', 'products/atado-rosas-vermelhas-768x768.jpg', 'Rosas Vermelhas');
 
   await createProductImage(products.redRoses.id, rosesFile.id, {
     altText: 'Rosas Vermelhas',
     sortOrder: 0,
   });
 
-  const crownGeneralFile = await createFile('coroa-floral.jpg', 'coroa-floral.jpg', '/products/coroa-floral.jpg', 'Coroa Floral');
+  const crownGeneralFile = await createFile('coroa-multicor-funeral-768x768.jpg', 'coroa-multicor-funeral-768x768.jpg', 'products/coroa-multicor-funeral-768x768.jpg', 'Coroa Floral');
 
   await createProductImage(products.crown.id, crownGeneralFile.id, {
     altText: 'Coroa Floral',
     sortOrder: 0,
   });
 
-  const crownSmallFile = await createFile('coroa-pequena.jpg', 'coroa-pequena.jpg', '/products/coroa-pequena.jpg', 'Coroa Floral Pequena');
+  const crownSmallFile = await createFile('coroa-multicor-funeral-768x768.jpg', 'coroa-multicor-funeral-768x768.jpg', 'products/coroa-multicor-funeral-768x768.jpg', 'Coroa Floral Pequena');
 
   await createProductImage(products.crown.id, crownSmallFile.id, {
     variantId: products.crownSmall.id,
@@ -323,7 +329,7 @@ async function createProductImages(products: Awaited<ReturnType<typeof createPro
     sortOrder: 0,
   });
 
-  const crownMediumFile = await createFile('coroa-media.jpg', 'coroa-media.jpg', '/products/coroa-media.jpg', 'Coroa Floral Média');
+  const crownMediumFile = await createFile('coroa-multicor-funeral-768x768.jpg', 'coroa-multicor-funeral-768x768.jpg', 'products/coroa-multicor-funeral-768x768.jpg', 'Coroa Floral Média');
 
   await createProductImage(products.crown.id, crownMediumFile.id, {
     variantId: products.crownMedium.id,
@@ -331,7 +337,7 @@ async function createProductImages(products: Awaited<ReturnType<typeof createPro
     sortOrder: 0,
   });
 
-  const crownLargeFile = await createFile('coroa-grande.jpg', 'coroa-grande.jpg', '/products/coroa-grande.jpg', 'Coroa Floral Grande');
+  const crownLargeFile = await createFile('coroa-multicor-funeral-768x768.jpg', 'coroa-multicor-funeral-768x768.jpg', 'products/coroa-multicor-funeral-768x768.jpg', 'Coroa Floral Grande');
 
   await createProductImage(products.crown.id, crownLargeFile.id, {
     variantId: products.crownLarge.id,

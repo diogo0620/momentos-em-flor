@@ -1,8 +1,20 @@
-export type CartItem = {
-    id: string;
+export type CartItemComponent = {
+    componentId: number;
     name: string;
+    quantity: number;
+};
+
+export type CartItem = {
+    cartItemId: string;
+
+    id: number;
+    name: string;
+    image: string;
     price: number;
     quantity: number;
-    recipient?: string;
-    message?: string;
+
+    variantId?: number;
+    variantName?: string;
+
+    components?: CartItemComponent[];
 };

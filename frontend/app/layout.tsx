@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 
 import { AuthProvider } from "@/lib/auth/AuthProvider";
 import { CartProvider } from "@/contexts/CartContext";
+import { WishlistProvider } from "@/contexts/WishlistContext";
 
 const inter = Inter({
     subsets: ["latin"],
@@ -24,10 +25,12 @@ export default function RootLayout({
         <html lang="pt">
             <body className={inter.className}>
                 <AuthProvider>
-                    <CartProvider>
-                        {children}
-                    </CartProvider>
-                </AuthProvider>
+    <CartProvider>
+        <WishlistProvider>
+            {children}
+        </WishlistProvider>
+    </CartProvider>
+</AuthProvider>
             </body>
         </html>
     );

@@ -16,9 +16,11 @@ import { useState } from "react";
 
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useWishlist } from "@/contexts/WishlistContext";
 
 export default function Navbar() {
-    const { items } = useCart();
+    const { items: cartItems } = useCart();
+    const { items: wishlistItems } = useWishlist();
 
     const {
         user,
@@ -155,28 +157,52 @@ export default function Navbar() {
                         </button>
 
                         {/* FAVORITES */}
+{/* FAVORITES */}
 
-                        <Link
-                            href="/favorites"
-                            className="
-                                flex
-                                h-11
-                                w-11
-                                items-center
-                                justify-center
-                                rounded-full
-                                transition-all
-                                duration-300
-                                hover:scale-110
-                                hover:bg-[#F3F5EE]
-                            "
-                            aria-label="Favoritos"
-                        >
-                            <Heart
-                                size={22}
-                                strokeWidth={1.8}
-                            />
-                        </Link>
+<Link
+    href="/favorites"
+    className="
+        relative
+        flex
+        h-11
+        w-11
+        items-center
+        justify-center
+        rounded-full
+        transition-all
+        duration-300
+        hover:scale-110
+        hover:bg-[#F3F5EE]
+    "
+    aria-label="Favoritos"
+>
+    <Heart
+        size={22}
+        strokeWidth={1.8}
+    />
+
+    {wishlistItems.length > 0 && (
+        <span
+            className="
+                absolute
+                -right-1
+                -top-1
+                flex
+                h-5
+                w-5
+                items-center
+                justify-center
+                rounded-full
+                bg-[#55624A]
+                text-xs
+                font-medium
+                text-white
+            "
+        >
+            {wishlistItems.length}
+        </span>
+    )}
+</Link>
 
                         {/* CART */}
 
@@ -202,7 +228,7 @@ export default function Navbar() {
                                 strokeWidth={1.8}
                             />
 
-                            {items.length > 0 && (
+                            {cartItems.length > 0 && (
                                 <span
                                     className="
                                         absolute
@@ -220,7 +246,7 @@ export default function Navbar() {
                                         text-white
                                     "
                                 >
-                                    {items.length}
+                                    {cartItems.length}
                                 </span>
                             )}
 

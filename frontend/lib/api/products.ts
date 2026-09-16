@@ -89,24 +89,78 @@ function buildProductQuery(
 // PUBLIC
 // =========================================================
 
+
 export async function getProducts(
     params: GetProductsParams = {},
 ) {
     const query = buildProductQuery(params);
 
-    return apiFetch<ProductListResponse>(
-        `/products${query ? `?${query}` : ""}`,
-    );
+    const response =
+        await apiFetch<ProductListResponse>(
+            `/products${query ? `?${query}` : ""}`,
+        );
+
+    return {
+        ...response,
+        data: response.data.map(
+            (product) => ({
+                ...product,
+                image: product.image
+                    ? {
+                        ...product.image,
+                        url: resolveFileUrl(
+                            product.image.url,
+                        ),
+                    }
+                    : null,
+            }),
+        ),
+    };
 }
+
+
 
 export async function getProduct(
     id: number,
 ) {
-    return apiFetch<{
+    const response = await apiFetch<{
         success: boolean;
         data: ProductDetail;
     }>(`/products/${id}`);
+
+    return {
+        ...response,
+        data: {
+            ...response.data,
+
+            images: response.data.images.map(
+                (image) => ({
+                    ...image,
+                    url: resolveFileUrl(
+                        image.url,
+                    ),
+                }),
+            ),
+
+            variants:
+                response.data.variants.map(
+                    (variant) => ({
+                        ...variant,
+                        image: variant.image
+                            ? {
+                                ...variant.image,
+                                url: resolveFileUrl(
+                                    variant.image.url,
+                                ),
+                            }
+                            : null,
+                    }),
+                ),
+        },
+    };
 }
+
+
 
 // =========================================================
 // ADMIN

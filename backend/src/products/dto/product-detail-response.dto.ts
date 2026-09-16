@@ -182,4 +182,10 @@ export class ProductDetailResponseDto {
         isArray: true,
     })
     variants: ProductDetailVariantDto[];
+
+
+    @ApiProperty({
+        example: true,
+    })
+    active: boolean;
 }

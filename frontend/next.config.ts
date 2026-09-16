@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
                 protocol: "https",
                 hostname: "homeflora.pt",
             },
+            {
+                protocol: "http",
+                hostname: "localhost",
+                port: "3001",
+                pathname: "/api/files/**",
+            },
         ],
     },
 };

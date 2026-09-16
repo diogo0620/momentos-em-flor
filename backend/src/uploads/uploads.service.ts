@@ -8,12 +8,13 @@ import {
 } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { LocalFileStorageService } from './storage/local-file-storage.service';
 
 @Injectable()
 export class UploadsService {
-
     constructor(
         private readonly prisma: PrismaService,
+        private readonly storage: LocalFileStorageService,
     ) {}
 
     async upload(
@@ -31,29 +32,54 @@ export class UploadsService {
                 .pop()
                 ?.toLowerCase() ?? '';
 
+        const stored =
+            await this.storage.moveFromTemp(
+                file,
+                'products',
+            );
+
         const dbFile =
             await this.prisma.file.create({
                 data: {
-                    originalName: file.originalname,
-                    storedName: file.filename,
+                    originalName:
+                        file.originalname,
+
+                    storedName:
+                        stored.filename,
+
                     extension,
-                    mimeType: file.mimetype,
-                    size: file.size,
-                    path: file.path,
-                    provider: FileProvider.LOCAL,
+
+                    mimeType:
+                        file.mimetype,
+
+                    size:
+                        file.size,
+
+                    path:
+                        stored.path,
+
+                    provider:
+                        FileProvider.LOCAL,
                 },
             });
 
-       return {
-    id: dbFile.id,
-    filename: dbFile.storedName,
-    originalName: dbFile.originalName,
-    size: dbFile.size,
-    mimeType: dbFile.mimeType,
-    extension: dbFile.extension,
-    path: dbFile.path,
-    url: `/uploads/temp/${encodeURIComponent(file.filename)}`,
-};
+        return {
+            id: dbFile.id,
+            filename:
+                dbFile.storedName,
+            originalName:
+                dbFile.originalName,
+            size:
+                dbFile.size,
+            mimeType:
+                dbFile.mimeType,
+            extension:
+                dbFile.extension,
+            path:
+                dbFile.path,
+
+            url:
+                `/api/files/${dbFile.id}`,
+        };
     }
 }
-
