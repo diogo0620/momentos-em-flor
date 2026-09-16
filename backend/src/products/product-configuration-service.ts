@@ -27,23 +27,13 @@ export class ProductConfigurationService {
         const product = await this.prisma.product.findFirst({
             where: {
                 id: productId,
-                deletedAt: null,
             },
             include: {
                 components: {
-                    where: {
-                        deletedAt: null,
-                    },
                 },
                 variants: {
-                    where: {
-                        deletedAt: null,
-                    },
                 },
                 images: {
-                    where: {
-                        deletedAt: null,
-                    },
                 },
             },
         });
@@ -88,17 +78,11 @@ export class ProductConfigurationService {
                 },
                 include: {
                     components: {
-                        where: {
-                            deletedAt: null,
-                        },
                         orderBy: {
                             sortOrder: 'asc',
                         },
                     },
                     variants: {
-                        where: {
-                            deletedAt: null,
-                        },
                         orderBy: {
                             sortOrder: 'asc',
                         },
@@ -111,9 +95,6 @@ export class ProductConfigurationService {
                         },
                     },
                     images: {
-                        where: {
-                            deletedAt: null,
-                        },
                         orderBy: [
                             {
                                 isPrimary: 'desc',
@@ -202,8 +183,7 @@ export class ProductConfigurationService {
 
         const existing = await tx.productComponent.findMany({
             where: {
-                productId,
-                deletedAt: null,
+                productId
             },
         });
 
@@ -216,16 +196,13 @@ export class ProductConfigurationService {
             .map((component: any) => component.id);
 
         if (idsToDelete.length > 0) {
-            await tx.productComponent.updateMany({
+            await tx.productComponent.deleteMany({
                 where: {
                     id: {
                         in: idsToDelete,
                     },
                     productId,
-                },
-                data: {
-                    deletedAt: new Date(),
-                },
+                }
             });
         }
 
@@ -284,8 +261,7 @@ private async syncVariants(
 
     const existing = await tx.productVariant.findMany({
         where: {
-            productId,
-            deletedAt: null,
+            productId
         },
     });
 
@@ -313,16 +289,13 @@ private async syncVariants(
             },
         });
 
-        await tx.productVariant.updateMany({
+        await tx.productVariant.deleteMany({
             where: {
                 id: {
                     in: idsToDelete,
                 },
                 productId,
-            },
-            data: {
-                deletedAt: new Date(),
-            },
+            }
         });
     }
 
@@ -409,8 +382,7 @@ private async syncVariants(
 
         const existing = await tx.productImage.findMany({
             where: {
-                productId,
-                deletedAt: null,
+                productId
             },
         });
 
@@ -423,16 +395,13 @@ private async syncVariants(
             .map((image: any) => image.id);
 
         if (idsToDelete.length > 0) {
-            await tx.productImage.updateMany({
+            await tx.productImage.deleteMany({
                 where: {
                     id: {
                         in: idsToDelete,
                     },
                     productId,
-                },
-                data: {
-                    deletedAt: new Date(),
-                },
+                }
             });
         }
 
@@ -540,8 +509,7 @@ private async syncVariants(
         const image = await tx.productImage.findFirst({
             where: {
                 id: imageId,
-                productId,
-                deletedAt: null,
+                productId
             },
         });
 
@@ -585,8 +553,7 @@ private async syncVariants(
             await tx.productVariant.findFirst({
                 where: {
                     id: variantId,
-                    productId,
-                    deletedAt: null,
+                    productId
                 },
             });
 
@@ -604,8 +571,7 @@ private async syncVariants(
 
         const images = await tx.productImage.findMany({
             where: {
-                productId,
-                deletedAt: null,
+                productId
             },
             orderBy: {
                 sortOrder: 'asc',
@@ -625,7 +591,6 @@ private async syncVariants(
         await tx.productImage.updateMany({
             where: {
                 productId,
-                deletedAt: null,
                 id: {
                     not: firstPrimary.id,
                 },

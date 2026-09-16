@@ -41,7 +41,6 @@ export class OrderCreatedListener {
             where: {
                 id: event.orderId,
                 status: OrderStatus.CREATED,
-                deletedAt: null,
             },
 
             data: {

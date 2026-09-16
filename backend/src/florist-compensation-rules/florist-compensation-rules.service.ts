@@ -30,7 +30,6 @@ export class FloristCompensationRulesService {
     ) {
         const where = {
             ...(query.search && {
-                deletedAt: null,
                 product: {
                     name: {
                         contains: query.search,
@@ -82,8 +81,7 @@ export class FloristCompensationRulesService {
         const rule =
             await this.prisma.floristCompensationRule.findUnique({
                 where: {
-                    id,
-                    deletedAt: null
+                    id
                 },
                 include: {
                     product: true,
@@ -110,8 +108,7 @@ export class FloristCompensationRulesService {
         await this.prisma.product.findFirst({
             where: {
                 id: dto.productId,
-                active: true,
-                deletedAt: null,
+                active: true
             },
             select: {
                 id: true,
@@ -134,8 +131,7 @@ export class FloristCompensationRulesService {
                 where: {
                     id: dto.variantId,
                     productId: dto.productId,
-                    active: true,
-                    deletedAt: null,
+                    active: true
                 },
                 select: {
                     id: true,
@@ -167,8 +163,7 @@ export class FloristCompensationRulesService {
         await this.prisma.florist.findFirst({
             where: {
                 id: dto.floristId,
-                active: true,
-                deletedAt: null,
+                active: true
             },
         });
 
@@ -189,8 +184,6 @@ export class FloristCompensationRulesService {
 
                 variantId:
                     dto.variantId ?? null,
-
-                deletedAt: null,
             },
         });
 
@@ -244,7 +237,6 @@ async update(
         await this.prisma.floristCompensationRule.findFirst({
             where: {
                 id,
-                deletedAt: null,
             },
 
             include: {
@@ -332,8 +324,7 @@ async update(
         const rule =
             await this.prisma.floristCompensationRule.findFirst({
                 where: {
-                    id,
-                    deletedAt: null,
+                    id
                 },
             });
 
@@ -343,13 +334,10 @@ async update(
             );
         }
 
-        await this.prisma.floristCompensationRule.update({
+        await this.prisma.floristCompensationRule.delete({
             where: {
                 id,
-            },
-            data: {
-                deletedAt: new Date(),
-            },
+            }
         });
 
         return ApiResponse.success({

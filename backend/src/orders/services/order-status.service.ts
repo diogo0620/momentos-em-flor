@@ -84,8 +84,7 @@ export class OrderStatusService {
         const order =
             await tx.order.findFirst({
                 where: {
-                    id: orderId,
-                    deletedAt: null,
+                    id: orderId
                 },
 
                 select: {
@@ -137,8 +136,7 @@ export class OrderStatusService {
             await tx.florist.findFirst({
                 where: {
                     id: floristId,
-                    active: true,
-                    deletedAt: null,
+                    active: true
                 },
 
                 select: {
@@ -217,8 +215,7 @@ export class OrderStatusService {
         const order =
             await this.prisma.order.findFirst({
                 where: {
-                    id: orderId,
-                    deletedAt: null,
+                    id: orderId
                 },
 
                 select: {
@@ -322,8 +319,7 @@ export class OrderStatusService {
         const order =
             await this.prisma.order.findFirst({
                 where: {
-                    id: orderId,
-                    deletedAt: null,
+                    id: orderId
                 },
 
                 select: {
@@ -390,8 +386,7 @@ export class OrderStatusService {
         const order =
             await this.prisma.order.findFirst({
                 where: {
-                    id: orderId,
-                    deletedAt: null,
+                    id: orderId
                 },
 
                 select: {

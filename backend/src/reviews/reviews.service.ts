@@ -117,7 +117,6 @@ export class ReviewsService {
                 where: {
                     id: orderId,
 
-                    deletedAt: null,
                 },
 
                 select: {

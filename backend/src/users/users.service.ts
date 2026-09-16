@@ -56,7 +56,6 @@ export class UsersService {
   ) {
 
     const where = {
-      deletedAt: null,
       ...(query.search && {
         OR: [
           {
@@ -134,7 +133,6 @@ export class UsersService {
     const exists =
       await this.prisma.user.findFirst({
         where: {
-          deletedAt: null,
           email: dto.email,
         },
       });
@@ -233,7 +231,6 @@ export class UsersService {
       const exists =
         await this.prisma.user.findFirst({
           where: {
-            deletedAt: null,
             id: {
               not: id,
             },
@@ -268,14 +265,11 @@ export class UsersService {
   ) {
     await this.getUserOrThrow(id);
 
-    await this.prisma.user.update({
+    await this.prisma.user.delete({
       where: {
         id,
       },
-      data: {
-        active: false,
-        deletedAt: new Date(),
-      },
+
     });
 
     return ApiResponse.success(
@@ -291,7 +285,6 @@ export class UsersService {
       await this.prisma.user.findFirst({
         where: {
           id,
-          deletedAt: null,
         },
       });
 
@@ -311,7 +304,6 @@ export class UsersService {
         await this.prisma.user.findFirst({
             where: {
                 id,
-                deletedAt: null,
             },
 
             include: {

@@ -62,8 +62,6 @@ export class ProductAdminImageDto {
     @ApiProperty()
     updatedAt: Date;
 
-    @ApiPropertyOptional()
-    deletedAt: Date | null;
 }
 
 export class ProductAdminComponentDto {
@@ -100,8 +98,6 @@ export class ProductAdminComponentDto {
     @ApiProperty()
     updatedAt: Date;
 
-    @ApiPropertyOptional()
-    deletedAt: Date | null;
 }
 
 export class ProductAdminVariantDto {
@@ -141,8 +137,7 @@ export class ProductAdminVariantDto {
     @ApiProperty()
     updatedAt: Date;
 
-    @ApiPropertyOptional()
-    deletedAt: Date | null;
+
 }
 
 export class ProductAdminDetailResponseDto {
@@ -184,8 +179,6 @@ export class ProductAdminDetailResponseDto {
     @ApiProperty()
     updatedAt: Date;
 
-    @ApiPropertyOptional()
-    deletedAt: Date | null;
 
     // -------------------------------------------------------------------------
     // Relations

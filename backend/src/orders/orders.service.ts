@@ -69,7 +69,7 @@ export class OrdersService {
         }
 
         const where = {
-            deletedAt: null,
+
 
             ...(user.role === UserRole.CUSTOMER && {
                 customerId: user.id,
@@ -206,8 +206,6 @@ export class OrdersService {
         const where = {
             id,
 
-            deletedAt: null,
-
             ...(user.role === UserRole.CUSTOMER && {
                 customerId: user.id,
             }),
@@ -289,8 +287,6 @@ export class OrdersService {
 
                         role:
                             UserRole.CUSTOMER,
-
-                        deletedAt: null,
 
                         active: true,
                     },
@@ -404,8 +400,6 @@ export class OrdersService {
                     },
 
                     active: true,
-
-                    deletedAt: null,
                 },
 
                 include: {
@@ -730,8 +724,6 @@ export class OrdersService {
             await this.prisma.order.findFirst({
                 where: {
                     id,
-
-                    deletedAt: null,
                 },
             });
 
@@ -935,8 +927,6 @@ export class OrdersService {
             await this.prisma.order.findFirst({
                 where: {
                     id,
-
-                    deletedAt: null,
                 },
             });
 
@@ -946,15 +936,10 @@ export class OrdersService {
             );
         }
 
-        await this.prisma.order.update({
+        await this.prisma.order.delete({
             where: {
                 id,
-            },
-
-            data: {
-                deletedAt:
-                    new Date(),
-            },
+            }
         });
 
         return ApiResponse.success({

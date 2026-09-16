@@ -48,9 +48,6 @@ export class TaxCodesService {
         const taxCodes =
             await this.prisma.taxCode.findMany({
 
-                where: {
-                    deletedAt: null,
-                },
 
                 orderBy: [
                     {
@@ -113,8 +110,6 @@ export class TaxCodesService {
             await this.prisma.taxCode.findFirst({
                 where: {
                     code,
-
-                    deletedAt: null,
                 },
             });
 
@@ -218,7 +213,7 @@ export class TaxCodesService {
                             not: id,
                         },
 
-                        deletedAt: null,
+
                     },
                 });
 
@@ -308,20 +303,12 @@ export class TaxCodesService {
         await this.ensureNotInUse(id);
 
 
-        await this.prisma.taxCode.update({
+        await this.prisma.taxCode.delete({
 
             where: {
                 id,
             },
 
-            data: {
-
-                active:
-                    false,
-
-                deletedAt:
-                    new Date(),
-            },
         });
 
 
@@ -346,8 +333,6 @@ export class TaxCodesService {
                 where: {
 
                     id,
-
-                    deletedAt: null,
                 },
             });
 
@@ -379,8 +364,6 @@ export class TaxCodesService {
                     taxCodeId,
 
                     active: true,
-
-                    deletedAt: null,
                 },
 
                 select: {

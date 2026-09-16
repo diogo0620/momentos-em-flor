@@ -33,7 +33,6 @@ export class FloristsService {
         query: FloristQueryDto,
     ) {
         const where = {
-            deletedAt: null,
 
             ...(query.search && {
                 OR: [
@@ -119,7 +118,6 @@ export class FloristsService {
         const exists =
             await this.prisma.florist.findFirst({
                 where: {
-                    deletedAt: null,
 
                     OR: [
                         {
@@ -272,7 +270,6 @@ export class FloristsService {
         const exists =
             await this.prisma.florist.findFirst({
                 where: {
-                    deletedAt: null,
 
                     id: {
                         not: id,
@@ -425,18 +422,11 @@ export class FloristsService {
             id,
         );
 
-        await this.prisma.florist.update({
+        await this.prisma.florist.delete({
             where: {
                 id,
             },
 
-            data: {
-                active:
-                    false,
-
-                deletedAt:
-                    new Date(),
-            },
         });
 
         return ApiResponse.success(
@@ -458,9 +448,7 @@ export class FloristsService {
         const florist =
             await this.prisma.florist.findFirst({
                 where: {
-                    id,
-
-                    deletedAt: null,
+                    id
                 },
 
                 include: {
@@ -488,9 +476,7 @@ export class FloristsService {
         const florist =
             await this.prisma.florist.findFirst({
                 where: {
-                    id,
-
-                    deletedAt: null,
+                    id
                 },
 
                 include: {
@@ -498,8 +484,6 @@ export class FloristsService {
 
                     users: {
                         where: {
-                            deletedAt:
-                                null,
 
                             role:
                                 UserRole.FLORIST,

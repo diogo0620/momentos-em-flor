@@ -19,11 +19,7 @@ export class OrderDistributionService {
             await this.prisma.florist.findMany({
                 where: {
                     active: true,
-                    acceptingOrders: true,
-                    deletedAt: null,
-                    address: {
-                        deletedAt: null,
-                    },
+                    acceptingOrders: true
                 },
                 include: {
                     address: true,
@@ -63,8 +59,7 @@ export class OrderDistributionService {
         const order =
             await this.prisma.order.findFirst({
                 where: {
-                    id: orderId,
-                    deletedAt: null,
+                    id: orderId
                 },
                 select: {
                     id: true,
@@ -94,8 +89,7 @@ export class OrderDistributionService {
                 where: {
                     productId,
                     floristId,
-                    active: true,
-                    deletedAt: null,
+                    active: true
                 },
             });
 
@@ -109,8 +103,7 @@ export class OrderDistributionService {
             await this.prisma.product.findFirst({
                 where: {
                     id: productId,
-                    active: true,
-                    deletedAt: null,
+                    active: true
                 },
                 select: {
                     baseFloristCompensation: true,
@@ -136,8 +129,7 @@ export class OrderDistributionService {
         const order =
             await this.prisma.order.findFirst({
                 where: {
-                    id: orderId,
-                    deletedAt: null,
+                    id: orderId
                 },
                 include: {
                     items: true,
@@ -155,8 +147,7 @@ export class OrderDistributionService {
                 where: {
                     id: floristId,
                     active: true,
-                    acceptingOrders: true,
-                    deletedAt: null,
+                    acceptingOrders: true
                 },
                 include: {
                     address: true,

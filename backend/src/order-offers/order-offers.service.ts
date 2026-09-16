@@ -67,11 +67,7 @@ export class OrderOffersService {
         const offer =
             await this.prisma.orderOffer.findFirst({
                 where: {
-                    id,
-
-                    order: {
-                        deletedAt: null,
-                    },
+                    id
                 },
 
                 include: {
@@ -123,10 +119,7 @@ export class OrderOffersService {
                             true,
 
                         acceptingOrders:
-                            true,
-
-                        deletedAt:
-                            null,
+                            true
                     },
                 });
 
@@ -423,10 +416,6 @@ const compensationAmount =
                     OrderOfferStatus.VIEWED,
                 ],
             },
-
-            order: {
-                deletedAt: null,
-            },
         };
 
         const offers =
@@ -494,11 +483,7 @@ const compensationAmount =
                     ...(user.role === UserRole.FLORIST && {
                         floristId:
                             user.floristId!,
-                    }),
-
-                    order: {
-                        deletedAt: null,
-                    },
+                    })
                 },
 
                 include: {
@@ -586,11 +571,7 @@ const compensationAmount =
                     ...(user.role === UserRole.FLORIST && {
                         floristId:
                             user.floristId!,
-                    }),
-
-                    order: {
-                        deletedAt: null,
-                    },
+                    })
                 },
             });
 
@@ -768,11 +749,7 @@ const compensationAmount =
                     ...(user.role === UserRole.FLORIST && {
                         floristId:
                             user.floristId!,
-                    }),
-
-                    order: {
-                        deletedAt: null,
-                    },
+                    })
                 },
             });
 

@@ -83,7 +83,6 @@ export class ProductsService {
 
             images: {
                 where: {
-                    deletedAt: null,
                     variantId: null,
                 },
                 orderBy: [
@@ -133,7 +132,6 @@ export class ProductsService {
     const product = await this.prisma.product.findFirst({
         where: {
             id,
-            deletedAt: null,
         },
 
         select: {
@@ -149,7 +147,6 @@ export class ProductsService {
             sortOrder: true,
             createdAt: true,
             updatedAt: true,
-            deletedAt: true,
 
             taxCode: {
                 select: {
@@ -172,9 +169,6 @@ export class ProductsService {
             },
 
             images: {
-                where: {
-                    deletedAt: null,
-                },
                 orderBy: [
                     {
                         isPrimary: 'desc',
@@ -192,7 +186,6 @@ export class ProductsService {
                     variantId: true,
                     createdAt: true,
                     updatedAt: true,
-                    deletedAt: true,
 
                     file: {
                         select: {
@@ -203,9 +196,6 @@ export class ProductsService {
             },
 
             components: {
-                where: {
-                    deletedAt: null,
-                },
                 orderBy: {
                     sortOrder: 'asc',
                 },
@@ -221,14 +211,10 @@ export class ProductsService {
                     active: true,
                     createdAt: true,
                     updatedAt: true,
-                    deletedAt: true,
                 },
             },
 
             variants: {
-                where: {
-                    deletedAt: null,
-                },
                 orderBy: {
                     sortOrder: 'asc',
                 },
@@ -243,12 +229,8 @@ export class ProductsService {
                     active: true,
                     createdAt: true,
                     updatedAt: true,
-                    deletedAt: true,
 
                     image: {
-                        where: {
-                            deletedAt: null,
-                        },
                         select: {
                             id: true,
                             fileId: true,
@@ -258,7 +240,6 @@ export class ProductsService {
                             variantId: true,
                             createdAt: true,
                             updatedAt: true,
-                            deletedAt: true,
 
                             file: {
                                 select: {
@@ -326,7 +307,6 @@ export class ProductsService {
                     images: {
                         where: {
                             variantId: null,
-                            deletedAt: null,
                         },
                         orderBy: [
                             {
@@ -376,7 +356,6 @@ export class ProductsService {
 
         return {
 
-            deletedAt: null,
 
             ...(query.search && {
                 OR: [
@@ -409,7 +388,6 @@ export class ProductsService {
             await this.prisma.product.findFirst({
                 where: {
                     id,
-                    deletedAt: null,
                 },
 
                 select: {
@@ -433,9 +411,6 @@ export class ProductsService {
                     },
 
                     components: {
-                        where: {
-                            deletedAt: null,
-                        },
                         orderBy: {
                             sortOrder: 'asc',
                         },
@@ -450,9 +425,6 @@ export class ProductsService {
                     },
 
                     variants: {
-                        where: {
-                            deletedAt: null,
-                        },
                         orderBy: {
                             sortOrder: 'asc',
                         },
@@ -479,7 +451,6 @@ export class ProductsService {
                     images: {
                         where: {
                             variantId: null,
-                            deletedAt: null,
                         },
                         orderBy: [
                             {
@@ -582,7 +553,6 @@ export class ProductsService {
             await this.prisma.category.findFirst({
                 where: {
                     id: categoryId,
-                    deletedAt: null,
                     active: true,
                 },
             });
@@ -603,7 +573,6 @@ export class ProductsService {
             await this.prisma.taxCode.findFirst({
                 where: {
                     id: taxCodeId,
-                    deletedAt: null,
                     active: true,
                 },
             });
@@ -626,8 +595,6 @@ export class ProductsService {
             await this.prisma.product.findFirst({
 
                 where: {
-
-                    deletedAt: null,
 
                     ...(excludeId !== undefined && {
                         id: {
@@ -1010,21 +977,14 @@ private validateVariantsAgainstBasePrice(
 
                 where: {
                     id,
-                    deletedAt: null,
                 },
 
                 include: {
 
                     components: {
-                        where: {
-                            deletedAt: null,
-                        },
                     },
 
                     variants: {
-                        where: {
-                            deletedAt: null,
-                        },
                     },
                 },
             });
@@ -1329,16 +1289,13 @@ private validateUpdatePricing(
             id,
         );
 
-        await this.prisma.product.update({
+        await this.prisma.product.delete({
 
             where: {
                 id,
             },
 
-            data: {
-                active: false,
-                deletedAt: new Date(),
-            },
+
         });
 
         return ApiResponse.success(
@@ -1355,8 +1312,7 @@ private validateUpdatePricing(
         const product =
             await this.prisma.product.findFirst({
                 where: {
-                    id,
-                    deletedAt: null,
+                    id
                 },
                 select: {
                     id: true,

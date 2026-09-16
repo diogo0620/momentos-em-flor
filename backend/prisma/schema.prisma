@@ -116,12 +116,10 @@ model Category {
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
 
   sortOrder Int @default(0)
 
   @@index([active])
-  @@index([deletedAt])
 }
 
 //
@@ -148,11 +146,9 @@ model Address {
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
 
   @@index([postalCode])
   @@index([city])
-  @@index([deletedAt])
 }
 
 //
@@ -191,11 +187,9 @@ floristComponentCompensationRules FloristComponentCompensationRule[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
 
   @@index([active])
   @@index([acceptingOrders])
-  @@index([deletedAt])
 }
 
 //
@@ -234,11 +228,9 @@ model User {
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
 
   @@index([role])
   @@index([active])
-  @@index([deletedAt])
 }
 
 //
@@ -291,11 +283,9 @@ model File {
   provider FileProvider
 
   uploadedAt DateTime  @default(now())
-  deletedAt  DateTime?
 
   productImages ProductImage[]
 
-  @@index([deletedAt])
 }
 
 //
@@ -318,10 +308,8 @@ model TaxCode {
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
 
   @@index([active])
-  @@index([deletedAt])
 }
 
 //
@@ -388,10 +376,8 @@ model Product {
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
 
   @@index([active])
-  @@index([deletedAt])
   @@index([categoryId])
   @@index([taxCodeId])
 }
@@ -453,12 +439,10 @@ model ProductComponent {
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
 
   @@unique([productId, name])
   @@index([productId])
   @@index([active])
-  @@index([deletedAt])
 }
 
 //
@@ -526,14 +510,12 @@ model ProductVariant {
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
 
   @@unique([productId, type, name])
   @@unique([productId, type, code])
   @@index([productId])
   @@index([type])
   @@index([active])
-  @@index([deletedAt])
 }
 
 //
@@ -568,12 +550,10 @@ model ProductImage {
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
 
   @@index([productId])
   @@index([variantId])
   @@index([fileId])
-  @@index([deletedAt])
 }
 
 //
@@ -680,7 +660,6 @@ model Order {
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
 
   assignedAt DateTime?
 
@@ -691,7 +670,6 @@ model Order {
   @@index([assignedFloristId])
   @@index([status])
   @@index([deliveryDate])
-  @@index([deletedAt])
 }
 
 //
@@ -972,14 +950,12 @@ model FloristCompensationRule {
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
 
   @@unique([floristId, productId, variantId])
   @@index([productId])
   @@index([floristId])
   @@index([variantId])
   @@index([active])
-  @@index([deletedAt])
 }
 
 model FloristComponentCompensationRule {
@@ -997,13 +973,11 @@ model FloristComponentCompensationRule {
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
 
   @@unique([floristId, componentId])
   @@index([floristId])
   @@index([componentId])
   @@index([active])
-  @@index([deletedAt])
 }
 
 //

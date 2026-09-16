@@ -148,7 +148,6 @@ type ProductWithAdminDetailRelations =
             sortOrder: true;
             createdAt: true;
             updatedAt: true;
-            deletedAt: true;
 
             taxCode: {
                 select: {
@@ -180,7 +179,6 @@ type ProductWithAdminDetailRelations =
                     variantId: true;
                     createdAt: true;
                     updatedAt: true;
-                    deletedAt: true;
 
                     file: {
                         select: {
@@ -203,7 +201,7 @@ type ProductWithAdminDetailRelations =
                     active: true;
                     createdAt: true;
                     updatedAt: true;
-                    deletedAt: true;
+
                 };
             };
 
@@ -219,7 +217,7 @@ type ProductWithAdminDetailRelations =
                     active: true;
                     createdAt: true;
                     updatedAt: true;
-                    deletedAt: true;
+
 
                     image: {
                         select: {
@@ -231,7 +229,7 @@ type ProductWithAdminDetailRelations =
                             variantId: true;
                             createdAt: true;
                             updatedAt: true;
-                            deletedAt: true;
+  
 
                             file: {
                                 select: {
@@ -380,7 +378,6 @@ toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDe
         sortOrder: product.sortOrder,
         createdAt: product.createdAt,
         updatedAt: product.updatedAt,
-        deletedAt: product.deletedAt,
 
         // Tax code
         taxCode: {
@@ -414,7 +411,6 @@ toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDe
             variantId: image.variantId,
             createdAt: image.createdAt,
             updatedAt: image.updatedAt,
-            deletedAt: image.deletedAt,
         })),
 
         // Components
@@ -443,7 +439,6 @@ toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDe
                 active: component.active,
                 createdAt: component.createdAt,
                 updatedAt: component.updatedAt,
-                deletedAt: component.deletedAt,
             }),
         ),
 
@@ -488,14 +483,13 @@ toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDe
                               variant.image.createdAt,
                           updatedAt:
                               variant.image.updatedAt,
-                          deletedAt:
-                              variant.image.deletedAt,
+
                       }
                     : null,
 
                 createdAt: variant.createdAt,
                 updatedAt: variant.updatedAt,
-                deletedAt: variant.deletedAt,
+
             }),
         ),
     };
