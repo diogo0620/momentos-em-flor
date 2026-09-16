@@ -182,11 +182,21 @@ export class OrderOffersService {
          * If it was not provided, keep the
          * current value.
          */
-        const compensationAmount =
-            dto.compensationAmount ??
-            Number(
-                offer.compensationAmount,
-            );
+        const currentCompensationAmount =
+    this.roundMoney(
+        offer.orderOfferItems.reduce(
+            (total, item) =>
+                total +
+                Number(
+                    item.totalCompensation,
+                ),
+            0,
+        ),
+    );
+
+const compensationAmount =
+    dto.compensationAmount ??
+    currentCompensationAmount;
 
         /*
          * Compensation cannot exceed the
@@ -352,8 +362,6 @@ export class OrderOffersService {
 
                         data: {
                             floristId,
-
-                            compensationAmount,
 
                             ...(dto.floristId !==
                                 undefined &&

@@ -1,53 +1,84 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+    ApiProperty,
+    ApiPropertyOptional,
+} from '@nestjs/swagger';
 
 class CompensationProductResponseDto {
-  @ApiProperty()
-  id: number;
 
-  @ApiProperty()
-  name: string;
+    @ApiProperty()
+    id: number;
 
-  @ApiProperty()
-  slug: string;
+    @ApiProperty()
+    name: string;
+
+    @ApiProperty()
+    slug: string;
+}
+
+class CompensationVariantResponseDto {
+
+    @ApiProperty()
+    id: number;
+
+    @ApiProperty()
+    type: string;
+
+    @ApiProperty()
+    name: string;
+
+    @ApiPropertyOptional({
+        nullable: true,
+    })
+    code: string | null;
 }
 
 class CompensationFloristResponseDto {
-  @ApiProperty()
-  id: number;
 
-  @ApiProperty()
-  name: string;
+    @ApiProperty()
+    id: number;
+
+    @ApiProperty()
+    name: string;
 }
 
 export class FloristCompensationRuleResponseDto {
-  @ApiProperty()
-  id: number;
 
-  @ApiProperty()
-  productId: number;
+    @ApiProperty()
+    id: number;
 
-  @ApiPropertyOptional({
-    nullable: true,
-  })
-  floristId: number | null;
+    @ApiProperty()
+    productId: number;
 
-  @ApiProperty()
-  compensationAmount: number;
+    @ApiPropertyOptional({
+        nullable: true,
+    })
+    variantId: number | null;
 
-  @ApiProperty()
-  active: boolean;
+    @ApiProperty()
+    floristId: number;
 
-  @ApiProperty()
-  product: CompensationProductResponseDto;
+    @ApiProperty()
+    compensationAmount: number;
 
-  @ApiPropertyOptional({
-    nullable: true,
-  })
-  florist: CompensationFloristResponseDto | null;
+    @ApiProperty()
+    active: boolean;
 
-  @ApiProperty()
-  createdAt: Date;
+    @ApiProperty()
+    product: CompensationProductResponseDto;
 
-  @ApiProperty()
-  updatedAt: Date;
+    @ApiPropertyOptional({
+        nullable: true,
+    })
+    variant: CompensationVariantResponseDto | null;
+
+    @ApiPropertyOptional({
+        nullable: true,
+    })
+    florist: CompensationFloristResponseDto | null;
+
+    @ApiProperty()
+    createdAt: Date;
+
+    @ApiProperty()
+    updatedAt: Date;
 }

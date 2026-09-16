@@ -33,6 +33,11 @@ const links = [
         icon: Package,
     },
     {
+        href: "/admin/tax-codes",
+        label: "Taxas de IVA",
+        icon: TicketPercent,
+    },
+    {
         href: "/admin/florists",
         label: "Floristas",
         icon: Flower2,

@@ -453,19 +453,17 @@ export class OrderDistributionService {
         const offer =
             await this.prisma.orderOffer.create({
                 data: {
-                    orderId,
-                    floristId,
-
-                    distanceKm,
-
-                    compensationAmount,
-
-                    expiresAt,
-
-                    orderOfferItems: {
-                        create: offerItems,
-                    },
-                },
+    orderId,
+    floristId,
+    distanceKm,
+    subtotal: order.subtotal,
+    taxAmount: order.taxAmount,
+    total: order.total,
+    expiresAt,
+    orderOfferItems: {
+        create: offerItems,
+    },
+},
 
                 include: {
                     order: true,

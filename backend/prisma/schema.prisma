@@ -185,6 +185,7 @@ model Florist {
 
   orderOffers              OrderOffer[]
   floristCompensationRules FloristCompensationRule[]
+floristComponentCompensationRules FloristComponentCompensationRule[]
   orderReviews             OrderReview[]
   assignedOrders           Order[]                   @relation("OrderAssignedFlorist")
 
@@ -444,6 +445,8 @@ model ProductComponent {
 
   floristCompensationPerAdditionalUnit Decimal @db.Decimal(10, 2)
 
+  floristCompensationRules FloristComponentCompensationRule[]
+
   sortOrder Int @default(0)
 
   active Boolean @default(true)
@@ -512,6 +515,8 @@ model ProductVariant {
    */
 
   floristCompensation Decimal @db.Decimal(10, 2)
+
+  floristCompensationRules FloristCompensationRule[]
 
   sortOrder Int @default(0)
 
@@ -683,10 +688,15 @@ model Order {
   cancellationReason OrderCancellationReason?
 
   @@index([customerId])
+  @@index([assignedFloristId])
   @@index([status])
   @@index([deliveryDate])
   @@index([deletedAt])
 }
+
+//
+// ORDER ITEM
+//
 
 //
 // ORDER ITEM
@@ -716,6 +726,20 @@ model OrderItem {
   productName        String
   productDescription String?
 
+  //
+  // Selected variant snapshot
+  //
+
+  variantId   Int?
+  variantType ProductVariantType?
+  variantName String?
+
+  //
+  // Components
+  //
+
+  components OrderItemComponent[]
+
   orderOfferItems OrderOfferItem[]
 
   quantity Int
@@ -739,6 +763,36 @@ model OrderItem {
 
   @@index([orderId])
   @@index([productId])
+  @@index([variantId])
+}
+
+//
+// ORDER ITEM COMPONENT
+//
+
+model OrderItemComponent {
+  id Int @id @default(autoincrement())
+
+  orderItemId Int
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  componentId Int
+
+  // Snapshot
+  componentName String
+
+  quantity Int
+  additionalUnits Int
+
+  customerPricePerAdditionalUnit Decimal @db.Decimal(10, 2)
+  customerTotalPrice             Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orderItemId, componentId])
+  @@index([orderItemId])
+  @@index([componentId])
 }
 
 //
@@ -770,6 +824,10 @@ model OrderStatusHistory {
 // ORDER OFFER
 //
 
+//
+// ORDER OFFER
+//
+
 model OrderOffer {
   id Int @id @default(autoincrement())
 
@@ -788,10 +846,12 @@ model OrderOffer {
   florist   Florist @relation(fields: [floristId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   //
-  // Snapshot
+  // Financial snapshot
   //
 
-  compensationAmount Decimal @db.Decimal(10, 2)
+  subtotal Decimal @db.Decimal(10, 2)
+  taxAmount Decimal @db.Decimal(10, 2)
+  total Decimal @db.Decimal(10, 2)
 
   orderOfferItems OrderOfferItem[]
 
@@ -823,6 +883,10 @@ model OrderOffer {
 // ORDER OFFER ITEM
 //
 
+//
+// ORDER OFFER ITEM
+//
+
 model OrderOfferItem {
   id Int @id @default(autoincrement())
 
@@ -844,12 +908,44 @@ model OrderOfferItem {
   unitCompensation  Decimal @db.Decimal(10, 2)
   totalCompensation Decimal @db.Decimal(10, 2)
 
+  components OrderOfferItemComponent[]
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([orderOfferId, orderItemId])
   @@index([orderOfferId])
   @@index([orderItemId])
   @@index([productId])
+}
+
+//
+// ORDER OFFER ITEM COMPONENT
+//
+
+model OrderOfferItemComponent {
+  id Int @id @default(autoincrement())
+
+  orderOfferItemId Int
+  orderOfferItem   OrderOfferItem @relation(fields: [orderOfferItemId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  componentId Int
+
+  // Snapshot
+  componentName String
+
+  quantity Int
+  additionalUnits Int
+
+  compensationPerAdditionalUnit Decimal @db.Decimal(10, 2)
+  totalCompensation               Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orderOfferItemId, componentId])
+  @@index([orderOfferItemId])
+  @@index([componentId])
 }
 
 //
@@ -865,6 +961,11 @@ model FloristCompensationRule {
   floristId Int
   florist   Florist @relation(fields: [floristId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
+  // Optional variant-specific override.
+  // null = product-level compensation override.
+  variantId Int?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
   compensationAmount Decimal @db.Decimal(10, 2)
 
   active Boolean @default(true)
@@ -873,9 +974,34 @@ model FloristCompensationRule {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  @@unique([productId, floristId])
+  @@unique([floristId, productId, variantId])
   @@index([productId])
   @@index([floristId])
+  @@index([variantId])
+  @@index([active])
+  @@index([deletedAt])
+}
+
+model FloristComponentCompensationRule {
+  id Int @id @default(autoincrement())
+
+  floristId Int
+  florist   Florist @relation(fields: [floristId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  componentId Int
+  component   ProductComponent @relation(fields: [componentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  compensationPerAdditionalUnit Decimal @db.Decimal(10, 2)
+
+  active Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@unique([floristId, componentId])
+  @@index([floristId])
+  @@index([componentId])
   @@index([active])
   @@index([deletedAt])
 }

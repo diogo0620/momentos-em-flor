@@ -1,90 +1,66 @@
-"use client";
+import Link from "next/link";
+import { ArrowLeft, Pencil } from "lucide-react";
+import { notFound } from "next/navigation";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-
+import PageHeader from "@/components/admin/common/PageHeader";
 import ProductForm from "@/components/admin/products/ProductForm";
-import {
-    getAdminProduct,
-    type ProductAdminDetail,
-} from "@/lib/api/products";
+import { getAdminProduct } from "@/lib/api/products";
 
-export default function EditProductPage() {
-    const params = useParams();
-    const router = useRouter();
+export default async function EditProductPage({
+    params,
+}: {
+    params: Promise<{ id: string }>;
+}) {
+    const { id } = await params;
+    const productId = Number(id);
 
-    const productId = Number(params.id);
-
-    const [product, setProduct] =
-        useState<ProductAdminDetail | null>(null);
-
-    const [loading, setLoading] =
-        useState(true);
-
-    const [error, setError] =
-        useState<string | null>(null);
-
-    useEffect(() => {
-        if (!Number.isInteger(productId)) {
-            setError("Produto inválido.");
-            setLoading(false);
-            return;
-        }
-
-        async function loadProduct() {
-            try {
-                setLoading(true);
-                setError(null);
-
-                const response =
-                    await getAdminProduct(productId);
-
-                setProduct(response);
-            } catch (err) {
-                setError(
-                    err instanceof Error
-                        ? err.message
-                        : "Não foi possível carregar o produto.",
-                );
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        loadProduct();
-    }, [productId]);
-
-    if (loading) {
-        return (
-            <div className="flex min-h-[400px] items-center justify-center">
-                <p className="text-sm text-muted-foreground">
-                    A carregar produto...
-                </p>
-            </div>
-        );
+    if (!Number.isInteger(productId)) {
+        notFound();
     }
 
-    if (error || !product) {
-        return (
-            <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
-                <p className="text-sm text-destructive">
-                    {error ?? "Produto não encontrado."}
-                </p>
+    let product;
 
-                <button
-                    type="button"
-                    onClick={() => router.back()}
-                    className="text-sm font-medium underline"
-                >
-                    Voltar
-                </button>
-            </div>
-        );
+    try {
+        product = await getAdminProduct(productId);
+    } catch {
+        notFound();
     }
 
     return (
-        <ProductForm
-            product={product}
-        />
+        <div className="space-y-8 pb-10">
+            {/* Header */}
+            <div>
+                <Link
+                    href={`/admin/products/${product.id}`}
+                    className="
+                        inline-flex
+                        items-center
+                        gap-2
+                        text-sm
+                        text-gray-500
+                        transition
+                        hover:text-[#55624A]
+                    "
+                >
+                    <ArrowLeft size={16} />
+                    Voltar ao produto
+                </Link>
+
+                <div className="mt-6 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                    <PageHeader
+                        title="Editar produto"
+                        subtitle={`Atualiza os dados e a configuração de ${product.name}.`}
+                    />
+
+                    <div className="inline-flex w-fit items-center gap-2 rounded-2xl bg-[#F3F5EE] px-4 py-3 text-sm font-semibold text-[#55624A]">
+                        <Pencil size={16} />
+                        Produto #{product.id}
+                    </div>
+                </div>
+            </div>
+
+            {/* Form */}
+            <ProductForm product={product} />
+        </div>
     );
 }

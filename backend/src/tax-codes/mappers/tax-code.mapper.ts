@@ -31,7 +31,7 @@ export class TaxCodeMapper
                 taxCode.code,
 
             name:
-                taxCode.name,
+                taxCode.code,
 
             rate:
                 taxCode.rate.toNumber(),

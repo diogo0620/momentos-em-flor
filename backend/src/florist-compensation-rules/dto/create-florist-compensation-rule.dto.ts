@@ -1,49 +1,63 @@
 import {
-  ApiProperty,
-  ApiPropertyOptional,
+    ApiProperty,
+    ApiPropertyOptional,
 } from '@nestjs/swagger';
+
 import {
-  IsBoolean,
-  IsInt,
-  IsNumber,
-  IsOptional,
-  IsPositive,
-  Min,
+    IsBoolean,
+    IsInt,
+    IsNumber,
+    IsOptional,
+    IsPositive,
+    Min,
 } from 'class-validator';
 
 export class CreateFloristCompensationRuleDto {
-  @ApiProperty({
-    example: 1,
-    description: 'Product to which the compensation rule applies.',
-  })
-  @IsInt()
-  @Min(1)
-  productId: number;
 
-  @ApiPropertyOptional({
-    example: 5,
-    description:
-      'Florist to which the rule applies',
-  })
-  @IsPositive()
-  @IsInt()
-  @Min(1)
-  floristId: number;
+    @ApiProperty({
+        example: 1,
+        description:
+            'Product to which the compensation rule applies.',
+    })
+    @IsInt()
+    @Min(1)
+    productId: number;
 
-  @ApiProperty({
-    example: 30,
-    description:
-      'Amount paid to the florist for this product.',
-  })
-  @IsNumber()
-  @Min(0)
-  compensationAmount: number;
+    @ApiPropertyOptional({
+        example: 5,
+        nullable: true,
+        description:
+            'Optional product variant to which the compensation rule applies.',
+    })
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    variantId?: number;
 
-  @ApiPropertyOptional({
-    example: true,
-    default: true,
-  })
-  @IsOptional()
-  @IsBoolean()
-  active?: boolean;
+    @ApiPropertyOptional({
+        example: 5,
+        description:
+            'Florist to which the rule applies.',
+    })
+    @IsPositive()
+    @IsInt()
+    @Min(1)
+    floristId: number;
+
+    @ApiProperty({
+        example: 30,
+        description:
+            'Amount paid to the florist for this product or variant.',
+    })
+    @IsNumber()
+    @Min(0)
+    compensationAmount: number;
+
+    @ApiPropertyOptional({
+        example: true,
+        default: true,
+    })
+    @IsOptional()
+    @IsBoolean()
+    active?: boolean;
 }

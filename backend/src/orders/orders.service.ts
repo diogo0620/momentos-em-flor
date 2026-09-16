@@ -89,47 +89,34 @@ export class OrdersService {
             }),
 
             ...(query.customerId &&
-                user.role ===
-                    UserRole.SYSTEM_ADMIN && {
-                customerId:
-                    query.customerId,
+                user.role === UserRole.SYSTEM_ADMIN && {
+                customerId: query.customerId,
             }),
 
             ...(query.search && {
                 OR: [
                     {
                         orderNumber: {
-                            contains:
-                                query.search,
-                            mode:
-                                'insensitive' as const,
+                            contains: query.search,
+                            mode: 'insensitive' as const,
                         },
                     },
-
                     {
                         customerEmail: {
-                            contains:
-                                query.search,
-                            mode:
-                                'insensitive' as const,
+                            contains: query.search,
+                            mode: 'insensitive' as const,
                         },
                     },
-
                     {
                         customerFirstName: {
-                            contains:
-                                query.search,
-                            mode:
-                                'insensitive' as const,
+                            contains: query.search,
+                            mode: 'insensitive' as const,
                         },
                     },
-
                     {
                         customerLastName: {
-                            contains:
-                                query.search,
-                            mode:
-                                'insensitive' as const,
+                            contains: query.search,
+                            mode: 'insensitive' as const,
                         },
                     },
                 ],
@@ -138,12 +125,10 @@ export class OrdersService {
 
         const orderBy = query.sort
             ? {
-                [query.sort]:
-                    query.order,
+                [query.sort]: query.order,
             }
             : {
-                createdAt:
-                    'desc' as const,
+                createdAt: 'desc' as const,
             };
 
         const orders =
@@ -152,8 +137,23 @@ export class OrdersService {
 
                 orderBy,
 
-                include: {
-                    items: true,
+                select: {
+                    id: true,
+                    orderNumber: true,
+                    customerId: true,
+                    customerFirstName: true,
+                    customerEmail: true,
+                    customerPhone: true,
+
+                    deliveryStreet: true,
+                    deliveryStreet2: true,
+                    deliveryPostalCode: true,
+                    deliveryCity: true,
+                    deliveryDistrict: true,
+                    deliveryCountryCode: true,
+
+                    total: true,
+                    status: true,
                 },
 
                 ...getPagination(
@@ -168,10 +168,7 @@ export class OrdersService {
             });
 
         return ApiResponse.paginated(
-            this.mapper.toResponses(
-                orders,
-            ),
-
+            this.mapper.toListResponses(orders),
             getPaginationResponse(
                 query.page,
                 query.pageSize,
@@ -179,6 +176,8 @@ export class OrdersService {
             ),
         );
     }
+
+
 
 
     async findOne(

@@ -289,110 +289,53 @@ export class OrderMapper {
         );
     }
 
-    toListResponse(
-        order: any,
-    ): OrderListResponseDto {
-        return {
-            id: order.id,
+toListResponse(
+    order: any,
+): OrderListResponseDto {
+    return {
+        id: order.id,
 
-            orderNumber:
-                order.orderNumber,
+        orderNumber:
+            order.orderNumber,
 
-            customerId:
-                order.customerId,
+        customerId:
+            order.customerId,
 
-            customerFirstName:
-                order.customerFirstName,
+        customerFirstName:
+            order.customerFirstName,
 
-            customerLastName:
-                order.customerLastName,
+        customerEmail:
+            order.customerEmail,
 
-            customerEmail:
-                order.customerEmail,
+        customerPhone:
+            order.customerPhone,
 
-            customerPhone:
-                order.customerPhone,
+        deliveryStreet:
+            order.deliveryStreet,
 
-            recipientFirstName:
-                order.recipientFirstName,
+        deliveryStreet2:
+            order.deliveryStreet2,
 
-            recipientLastName:
-                order.recipientLastName,
+        deliveryPostalCode:
+            order.deliveryPostalCode,
 
-            recipientPhone:
-                order.recipientPhone,
+        deliveryCity:
+            order.deliveryCity,
 
-            occasion:
-                order.occasion,
+        deliveryDistrict:
+            order.deliveryDistrict,
 
-            deliveryDate:
-                order.deliveryDate,
+        deliveryCountryCode:
+            order.deliveryCountryCode,
 
-            deliveryTimeSlot:
-                order.deliveryTimeSlot,
+        total:
+            Number(order.total),
 
-            deliveryInstructions:
-                order.deliveryInstructions,
+        status:
+            order.status,
+    };
+}
 
-            deliveryStreet:
-                order.deliveryStreet,
-
-            deliveryStreet2:
-                order.deliveryStreet2,
-
-            deliveryPostalCode:
-                order.deliveryPostalCode,
-
-            deliveryCity:
-                order.deliveryCity,
-
-            deliveryDistrict:
-                order.deliveryDistrict,
-
-            deliveryCountryCode:
-                order.deliveryCountryCode,
-
-            deliveryLatitude:
-                Number(
-                    order.deliveryLatitude,
-                ),
-
-            deliveryLongitude:
-                Number(
-                    order.deliveryLongitude,
-                ),
-
-            cardMessage:
-                order.cardMessage,
-
-            subtotal:
-                Number(order.subtotal),
-
-            deliveryFee:
-                Number(order.deliveryFee),
-
-            discount:
-                Number(order.discount),
-
-            total:
-                Number(order.total),
-
-            status:
-                order.status,
-
-            createdAt:
-                order.createdAt,
-
-            updatedAt:
-                order.updatedAt,
-
-            cancelledAt:
-                order.cancelledAt,
-
-            cancellationReason:
-                order.cancellationReason,
-        };
-    }
 
     toListResponses(
         orders: any[],

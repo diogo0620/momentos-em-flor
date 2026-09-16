@@ -10,19 +10,8 @@ export class OrderListResponseDto extends PickType(
 
         'customerId',
         'customerFirstName',
-        'customerLastName',
         'customerEmail',
         'customerPhone',
-
-        'recipientFirstName',
-        'recipientLastName',
-        'recipientPhone',
-
-        'occasion',
-
-        'deliveryDate',
-        'deliveryTimeSlot',
-        'deliveryInstructions',
 
         'deliveryStreet',
         'deliveryStreet2',
@@ -30,22 +19,8 @@ export class OrderListResponseDto extends PickType(
         'deliveryCity',
         'deliveryDistrict',
         'deliveryCountryCode',
-        'deliveryLatitude',
-        'deliveryLongitude',
 
-        'cardMessage',
-
-        'subtotal',
-        'deliveryFee',
-        'discount',
         'total',
-
         'status',
-
-        'createdAt',
-        'updatedAt',
-
-        'cancelledAt',
-        'cancellationReason'
     ] as const,
 ) {}

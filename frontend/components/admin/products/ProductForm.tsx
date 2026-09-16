@@ -4,6 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { getCategories } from "@/lib/api/categories";
+import type { Category } from "@/lib/api/categories";
+
+import { getTaxCodes } from "@/lib/api/tax-codes";
+import type { TaxCode } from "@/lib/api/tax-codes";
+
 import {
     createProduct,
     updateProduct,
@@ -14,8 +19,6 @@ import {
     type ProductConfigurationImage,
     type ProductConfigurationVariant,
 } from "@/lib/api/products";
-
-import type { Category } from "@/lib/api/categories";
 
 type Props = {
     product?: ProductAdminDetail;
@@ -39,7 +42,9 @@ const VARIANT_TYPES = [
     "OTHER",
 ] as const;
 
-function createComponent(sortOrder: number): ComponentForm {
+function createComponent(
+    sortOrder: number,
+): ComponentForm {
     return {
         name: "",
         minQuantity: 0,
@@ -52,7 +57,9 @@ function createComponent(sortOrder: number): ComponentForm {
     };
 }
 
-function createVariant(sortOrder: number): VariantForm {
+function createVariant(
+    sortOrder: number,
+): VariantForm {
     return {
         clientId: crypto.randomUUID(),
         type: "SIZE",
@@ -70,7 +77,10 @@ function normaliseComponents(
     components: ProductAdminDetail["components"],
 ): ComponentForm[] {
     return [...components]
-        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .sort(
+            (a, b) =>
+                a.sortOrder - b.sortOrder,
+        )
         .map((component, index) => ({
             id: component.id,
             name: component.name,
@@ -91,7 +101,10 @@ function normaliseVariants(
     variants: ProductAdminDetail["variants"],
 ): VariantForm[] {
     return [...variants]
-        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .sort(
+            (a, b) =>
+                a.sortOrder - b.sortOrder,
+        )
         .map((variant, index) => ({
             id: variant.id,
             type: variant.type,
@@ -102,7 +115,8 @@ function normaliseVariants(
                 variant.floristCompensation,
             active: variant.active,
             sortOrder: index,
-            imageId: variant.image?.id ?? null,
+            imageId:
+                variant.image?.id ?? null,
         }));
 }
 
@@ -110,7 +124,10 @@ function normaliseImages(
     images: ProductAdminDetail["images"],
 ): ImageForm[] {
     return [...images]
-        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .sort(
+            (a, b) =>
+                a.sortOrder - b.sortOrder,
+        )
         .map((image, index) => ({
             id: image.id,
             fileId: image.fileId,
@@ -133,6 +150,9 @@ export default function ProductForm({
     const [categories, setCategories] =
         useState<Category[]>([]);
 
+    const [taxCodes, setTaxCodes] =
+        useState<TaxCode[]>([]);
+
     const [name, setName] =
         useState(product?.name ?? "");
 
@@ -144,15 +164,24 @@ export default function ProductForm({
             product?.basePrice?.toString() ?? "",
         );
 
-    const [baseFloristCompensation, setBaseFloristCompensation] =
-        useState(
-            product?.baseFloristCompensation?.toString() ??
-                "",
-        );
+    const [
+        baseFloristCompensation,
+        setBaseFloristCompensation,
+    ] = useState(
+        product?.baseFloristCompensation?.toString() ??
+            "",
+    );
 
     const [categoryId, setCategoryId] =
         useState(
-            product?.category?.id?.toString() ?? "",
+            product?.category?.id?.toString() ??
+                "",
+        );
+
+    const [taxCodeId, setTaxCodeId] =
+        useState(
+            product?.taxCode?.id?.toString() ??
+                "",
         );
 
     const [active, setActive] =
@@ -161,14 +190,18 @@ export default function ProductForm({
     const [components, setComponents] =
         useState<ComponentForm[]>(
             product
-                ? normaliseComponents(product.components)
+                ? normaliseComponents(
+                      product.components,
+                  )
                 : [],
         );
 
     const [variants, setVariants] =
         useState<VariantForm[]>(
             product
-                ? normaliseVariants(product.variants)
+                ? normaliseVariants(
+                      product.variants,
+                  )
                 : [],
         );
 
@@ -179,8 +212,15 @@ export default function ProductForm({
                 : [],
         );
 
-    const [isLoadingCategories, setIsLoadingCategories] =
-        useState(true);
+    const [
+        isLoadingCategories,
+        setIsLoadingCategories,
+    ] = useState(true);
+
+    const [
+        isLoadingTaxCodes,
+        setIsLoadingTaxCodes,
+    ] = useState(true);
 
     const [isSubmitting, setIsSubmitting] =
         useState(false);
@@ -204,7 +244,10 @@ export default function ProductForm({
         }
 
         return null;
-    }, [components.length, variants.length]);
+    }, [
+        components.length,
+        variants.length,
+    ]);
 
     useEffect(() => {
         async function loadCategories() {
@@ -234,7 +277,37 @@ export default function ProductForm({
         loadCategories();
     }, [product?.category?.id]);
 
-    function reorder<T extends { sortOrder: number }>(
+    useEffect(() => {
+        async function loadTaxCodes() {
+            try {
+                setIsLoadingTaxCodes(true);
+
+                const response =
+                    await getTaxCodes();
+
+                setTaxCodes(
+                    response.filter(
+                        (taxCode) =>
+                            taxCode.active ||
+                            taxCode.id ===
+                                product?.taxCode?.id,
+                    ),
+                );
+            } catch {
+                setError(
+                    "Não foi possível carregar os códigos de IVA.",
+                );
+            } finally {
+                setIsLoadingTaxCodes(false);
+            }
+        }
+
+        loadTaxCodes();
+    }, [product?.taxCode?.id]);
+
+    function reorder<
+        T extends { sortOrder: number },
+    >(
         items: T[],
         fromIndex: number,
         toIndex: number,
@@ -347,7 +420,8 @@ export default function ProductForm({
             current.map((image) => {
                 const matchesExistingVariant =
                     variant.id != null &&
-                    image.variantId === variant.id;
+                    image.variantId ===
+                        variant.id;
 
                 const matchesNewVariant =
                     variant.clientId != null &&
@@ -399,7 +473,8 @@ export default function ProductForm({
     async function handleImageUpload(
         event: React.ChangeEvent<HTMLInputElement>,
     ) {
-        const file = event.target.files?.[0];
+        const file =
+            event.target.files?.[0];
 
         event.target.value = "";
 
@@ -440,13 +515,17 @@ export default function ProductForm({
         }
     }
 
-    function setPrimaryImage(index: number) {
+    function setPrimaryImage(
+        index: number,
+    ) {
         setImages((current) =>
-            current.map((image, imageIndex) => ({
-                ...image,
-                isPrimary:
-                    imageIndex === index,
-            })),
+            current.map(
+                (image, imageIndex) => ({
+                    ...image,
+                    isPrimary:
+                        imageIndex === index,
+                }),
+            ),
         );
     }
 
@@ -491,7 +570,8 @@ export default function ProductForm({
             setImages((current) =>
                 current.map(
                     (image, currentIndex) =>
-                        currentIndex === imageIndex
+                        currentIndex ===
+                        imageIndex
                             ? {
                                   ...image,
                                   variantId:
@@ -539,6 +619,7 @@ export default function ProductForm({
             setError(
                 `A variante "${variant.name || "sem nome"}" já tem uma imagem associada.`,
             );
+
             return;
         }
 
@@ -579,6 +660,10 @@ export default function ProductForm({
             return "Selecione uma categoria.";
         }
 
+        if (!taxCodeId) {
+            return "Selecione o código de IVA.";
+        }
+
         if (basePrice === "") {
             return "O preço base é obrigatório.";
         }
@@ -593,17 +678,23 @@ export default function ProductForm({
             Number(basePrice);
 
         const parsedCompensation =
-            Number(baseFloristCompensation);
+            Number(
+                baseFloristCompensation,
+            );
 
         if (
-            Number.isNaN(parsedBasePrice) ||
+            Number.isNaN(
+                parsedBasePrice,
+            ) ||
             parsedBasePrice < 0
         ) {
             return "O preço base é inválido.";
         }
 
         if (
-            Number.isNaN(parsedCompensation) ||
+            Number.isNaN(
+                parsedCompensation,
+            ) ||
             parsedCompensation < 0
         ) {
             return "A compensação da florista é inválida.";
@@ -697,7 +788,10 @@ export default function ProductForm({
             ) {
                 const assignedVariants =
                     images.filter(
-                        (otherImage, otherIndex) => {
+                        (
+                            otherImage,
+                            otherIndex,
+                        ) => {
                             if (
                                 otherIndex ===
                                 index
@@ -731,7 +825,7 @@ export default function ProductForm({
                     assignedVariants.length >
                     0
                 ) {
-                    return `Uma variante não pode ter mais do que uma imagem associada.`;
+                    return "Uma variante não pode ter mais do que uma imagem associada.";
                 }
             }
         }
@@ -795,10 +889,15 @@ export default function ProductForm({
             Number(basePrice);
 
         const parsedCompensation =
-            Number(baseFloristCompensation);
+            Number(
+                baseFloristCompensation,
+            );
 
         const parsedCategoryId =
             Number(categoryId);
+
+        const parsedTaxCodeId =
+            Number(taxCodeId);
 
         try {
             setIsSubmitting(true);
@@ -817,6 +916,8 @@ export default function ProductForm({
                             parsedCompensation,
                         categoryId:
                             parsedCategoryId,
+                        taxCodeId:
+                            parsedTaxCodeId,
                         active,
                     },
                 );
@@ -835,15 +936,22 @@ export default function ProductForm({
                 return;
             }
 
-            const response = await createProduct({
-    name: name.trim(),
-    description: description.trim() || undefined,
-    basePrice: parsedBasePrice,
-    baseFloristCompensation: parsedCompensation,
-    categoryId: parsedCategoryId,
-    taxCodeId: 1,
-    active,
-});
+            const response =
+                await createProduct({
+                    name: name.trim(),
+                    description:
+                        description.trim() ||
+                        undefined,
+                    basePrice:
+                        parsedBasePrice,
+                    baseFloristCompensation:
+                        parsedCompensation,
+                    categoryId:
+                        parsedCategoryId,
+                    taxCodeId:
+                        parsedTaxCodeId,
+                    active,
+                });
 
             const createdProduct =
                 response.data;
@@ -916,7 +1024,8 @@ export default function ProductForm({
                             value={name}
                             onChange={(event) =>
                                 setName(
-                                    event.target.value,
+                                    event.target
+                                        .value,
                                 )
                             }
                             className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
@@ -933,7 +1042,8 @@ export default function ProductForm({
                             value={description}
                             onChange={(event) =>
                                 setDescription(
-                                    event.target.value,
+                                    event.target
+                                        .value,
                                 )
                             }
                             rows={5}
@@ -951,7 +1061,8 @@ export default function ProductForm({
                             value={categoryId}
                             onChange={(event) =>
                                 setCategoryId(
-                                    event.target.value,
+                                    event.target
+                                        .value,
                                 )
                             }
                             disabled={
@@ -978,6 +1089,51 @@ export default function ProductForm({
                                         {
                                             category.name
                                         }
+                                    </option>
+                                ),
+                            )}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-700">
+                            Código de IVA
+                        </label>
+
+                        <select
+                            value={taxCodeId}
+                            onChange={(event) =>
+                                setTaxCodeId(
+                                    event.target
+                                        .value,
+                                )
+                            }
+                            disabled={
+                                isLoadingTaxCodes
+                            }
+                            className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
+                        >
+                            <option value="">
+                                {isLoadingTaxCodes
+                                    ? "A carregar..."
+                                    : "Selecionar código de IVA"}
+                            </option>
+
+                            {taxCodes.map(
+                                (taxCode) => (
+                                    <option
+                                        key={
+                                            taxCode.id
+                                        }
+                                        value={
+                                            taxCode.id
+                                        }
+                                    >
+                                        {taxCode.code}
+                                        {" · "}
+                                        {taxCode.name}
+                                        {" · "}
+                                        {taxCode.rate}%
                                     </option>
                                 ),
                             )}
@@ -1057,18 +1213,21 @@ export default function ProductForm({
                     </div>
                 </div>
 
-                {product?.taxCode && (
+                {taxCodeId && (
                     <div className="mt-6 rounded-lg bg-gray-50 p-4">
                         <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                            Tax Code
+                            IVA aplicado
                         </div>
 
                         <div className="mt-1 text-sm font-medium text-gray-900">
-                            {product.taxCode.code}
-                            {" · "}
-                            {product.taxCode.name}
-                            {" · "}
-                            {product.taxCode.rate}%
+                            {taxCodes.find(
+                                (taxCode) =>
+                                    taxCode.id ===
+                                    Number(
+                                        taxCodeId,
+                                    ),
+                            )?.rate ?? 0}
+                            %
                         </div>
                     </div>
                 )}
@@ -1989,7 +2148,9 @@ export default function ProductForm({
                                                                     value
                                                                 }
                                                             >
-                                                                {variant.type}{" "}
+                                                                {
+                                                                    variant.type
+                                                                }{" "}
                                                                 ·{" "}
                                                                 {variant.name ||
                                                                     `Variante ${variantIndex + 1}`}
@@ -2129,7 +2290,8 @@ export default function ProductForm({
                     type="submit"
                     disabled={
                         isSubmitting ||
-                        uploadingImage
+                        uploadingImage ||
+                        isLoadingTaxCodes
                     }
                     className="rounded-lg bg-black px-5 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
