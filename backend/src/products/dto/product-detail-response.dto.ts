@@ -5,6 +5,7 @@ import {
 
 import {
     ProductVariantType,
+    ProductType
 } from '@prisma/client';
 
 
@@ -188,4 +189,21 @@ export class ProductDetailResponseDto {
         example: true,
     })
     active: boolean;
+
+    @ApiProperty({
+        enum: ProductType,
+    })
+    type: ProductType;
+
+    @ApiProperty({
+        example: false,
+    })
+    featured: boolean;
+
+    @ApiPropertyOptional({
+        example: 50.00,
+        nullable: true,
+        description: 'Refundable deposit for rental products.',
+    })
+    rentalDeposit: number | null;
 }

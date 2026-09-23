@@ -2,6 +2,7 @@ import {
     ApiProperty,
     ApiPropertyOptional,
 } from '@nestjs/swagger';
+import { ProductType } from '@prisma/client';
 
 
 export class ProductAdminListImageDto {
@@ -54,6 +55,16 @@ export class ProductAdminListResponseDto {
         example: true,
     })
     active: boolean;
+
+    @ApiProperty({
+        enum: ProductType,
+    })
+    type: ProductType;
+
+    @ApiProperty({
+        example: false,
+    })
+    featured: boolean;
 
     @ApiProperty({
         type: ProductAdminListImageDto,

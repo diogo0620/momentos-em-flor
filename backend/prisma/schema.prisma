@@ -11,6 +11,11 @@ datasource db {
 // ENUMS
 //
 
+enum ProductType {
+  SALE
+  RENTAL
+}
+
 enum UserRole {
   SYSTEM_ADMIN
   FLORIST
@@ -114,8 +119,8 @@ model Category {
 
   products Product[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   sortOrder Int @default(0)
 
@@ -144,8 +149,8 @@ model Address {
 
   florist Florist?
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([postalCode])
   @@index([city])
@@ -179,14 +184,14 @@ model Florist {
 
   users User[]
 
-  orderOffers              OrderOffer[]
-  floristCompensationRules FloristCompensationRule[]
-floristComponentCompensationRules FloristComponentCompensationRule[]
-  orderReviews             OrderReview[]
-  assignedOrders           Order[]                   @relation("OrderAssignedFlorist")
+  orderOffers                       OrderOffer[]
+  floristCompensationRules          FloristCompensationRule[]
+  floristComponentCompensationRules FloristComponentCompensationRule[]
+  orderReviews                      OrderReview[]
+  assignedOrders                    Order[]                            @relation("OrderAssignedFlorist")
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([active])
   @@index([acceptingOrders])
@@ -226,8 +231,8 @@ model User {
 
   orders Order[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([role])
   @@index([active])
@@ -282,10 +287,9 @@ model File {
 
   provider FileProvider
 
-  uploadedAt DateTime  @default(now())
+  uploadedAt DateTime @default(now())
 
   productImages ProductImage[]
-
 }
 
 //
@@ -306,8 +310,8 @@ model TaxCode {
 
   products Product[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([active])
 }
@@ -323,7 +327,10 @@ model Product {
   slug        String
   description String?
 
-  active Boolean @default(true)
+  active   Boolean     @default(true)
+  type     ProductType @default(SALE)
+  featured Boolean     @default(false)
+  rentalDeposit Decimal? @db.Decimal(10, 2)
 
   /**
    * Base price BEFORE VAT.
@@ -374,8 +381,8 @@ model Product {
 
   floristCompensationRules FloristCompensationRule[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([active])
   @@index([categoryId])
@@ -437,8 +444,8 @@ model ProductComponent {
 
   active Boolean @default(true)
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([productId, name])
   @@index([productId])
@@ -506,10 +513,10 @@ model ProductVariant {
 
   active Boolean @default(true)
 
-  image               ProductImage?
+  image ProductImage?
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([productId, type, name])
   @@unique([productId, type, code])
@@ -536,7 +543,7 @@ model ProductImage {
    * Image belongs specifically to that variant.
    */
 
-  variantId Int? @unique
+  variantId Int?            @unique
   variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   fileId Int
@@ -548,8 +555,8 @@ model ProductImage {
 
   isPrimary Boolean @default(false)
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([productId])
   @@index([variantId])
@@ -658,8 +665,8 @@ model Order {
   offers        OrderOffer[]
   statusHistory OrderStatusHistory[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   assignedAt DateTime?
 
@@ -759,7 +766,7 @@ model OrderItemComponent {
   // Snapshot
   componentName String
 
-  quantity Int
+  quantity        Int
   additionalUnits Int
 
   customerPricePerAdditionalUnit Decimal @db.Decimal(10, 2)
@@ -827,9 +834,9 @@ model OrderOffer {
   // Financial snapshot
   //
 
-  subtotal Decimal @db.Decimal(10, 2)
+  subtotal  Decimal @db.Decimal(10, 2)
   taxAmount Decimal @db.Decimal(10, 2)
-  total Decimal @db.Decimal(10, 2)
+  total     Decimal @db.Decimal(10, 2)
 
   orderOfferItems OrderOfferItem[]
 
@@ -912,11 +919,11 @@ model OrderOfferItemComponent {
   // Snapshot
   componentName String
 
-  quantity Int
+  quantity        Int
   additionalUnits Int
 
   compensationPerAdditionalUnit Decimal @db.Decimal(10, 2)
-  totalCompensation               Decimal @db.Decimal(10, 2)
+  totalCompensation             Decimal @db.Decimal(10, 2)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -948,8 +955,8 @@ model FloristCompensationRule {
 
   active Boolean @default(true)
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([floristId, productId, variantId])
   @@index([productId])
@@ -971,8 +978,8 @@ model FloristComponentCompensationRule {
 
   active Boolean @default(true)
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([floristId, componentId])
   @@index([floristId])

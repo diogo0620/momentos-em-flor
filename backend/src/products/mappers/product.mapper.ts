@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
     Prisma,
     ProductVariantType,
+    ProductType
 } from '@prisma/client';
 
 import { BaseMapper } from '@/common/mappers/base.mapper';
@@ -40,6 +41,8 @@ type ProductWithListRelations =
             id: true;
             name: true;
             basePrice: true;
+            type: true,
+            featured: true,
 
             taxCode: {
                 select: {
@@ -75,6 +78,10 @@ type ProductWithDetailRelations =
             description: true;
             basePrice: true;
             active: true;
+            type: true;
+            featured: true,
+            rentalDeposit: true,
+
 
             taxCode: {
                 select: {
@@ -133,9 +140,9 @@ type ProductWithDetailRelations =
         };
     }>;
 
-    /**
- * Product used by the admin detail endpoint.
- */
+/**
+* Product used by the admin detail endpoint.
+*/
 type ProductWithAdminDetailRelations =
     Prisma.ProductGetPayload<{
         select: {
@@ -144,6 +151,9 @@ type ProductWithAdminDetailRelations =
             slug: true;
             description: true;
             active: true;
+            type: true;
+            featured: true;
+            rentalDeposit: true;
             basePrice: true;
             baseFloristCompensation: true;
             sortOrder: true;
@@ -230,7 +240,7 @@ type ProductWithAdminDetailRelations =
                             variantId: true;
                             createdAt: true;
                             updatedAt: true;
-  
+
 
                             file: {
                                 select: {
@@ -257,8 +267,8 @@ export class ProductMapper extends BaseMapper<
     }
 
     private toNumber(value: Prisma.Decimal): number {
-    return Number(value);
-}
+        return Number(value);
+    }
 
 
     /*
@@ -293,218 +303,227 @@ export class ProductMapper extends BaseMapper<
     }
 
 
-private getProductNetPrice(
-    product: {
-        basePrice: Prisma.Decimal | null;
-        variants?: Array<{
-            price: Prisma.Decimal;
-        }>;
-    },
-): number {
-    const variantPrice = product.variants?.[0]?.price;
+    private getProductNetPrice(
+        product: {
+            basePrice: Prisma.Decimal | null;
+            variants?: Array<{
+                price: Prisma.Decimal;
+            }>;
+        },
+    ): number {
+        const variantPrice = product.variants?.[0]?.price;
 
-    if (variantPrice) {
-        return variantPrice.toNumber();
+        if (variantPrice) {
+            return variantPrice.toNumber();
+        }
+
+        return product.basePrice?.toNumber() ?? 0;
     }
 
-    return product.basePrice?.toNumber() ?? 0;
-}
-
-toAdminListResponse(
-    product: {
-        id: number;
-        name: string;
-        slug: string;
-        basePrice: Prisma.Decimal;
-        active: boolean;
-        category: {
+    toAdminListResponse(
+        product: {
             id: number;
             name: string;
-        };
-        taxCode: {
-            rate: Prisma.Decimal;
-        };
-        images: {
-            id: number;
-            altText: string | null;
-            file: {
+            slug: string;
+            basePrice: Prisma.Decimal;
+            active: boolean;
+            type: ProductType;
+            featured: boolean;
+            category: {
                 id: number;
+                name: string;
             };
-        }[];
-    },
-): ProductAdminListResponseDto {
-    const taxRate = product.taxCode.rate.toNumber();
-    const netPrice = product.basePrice.toNumber();
-    const grossPrice = this.calculateGrossAmount(netPrice, taxRate);
-
-    const image = product.images[0]
-        ? {
-              url: `/api/files/${product.images[0].file.id}`,
-          }
-        : null;
-
-    return {
-        id: product.id,
-        name: product.name,
-        slug: product.slug,
-        price: grossPrice,
-        active: product.active,
-
-        image,
-
-        category: {
-            id: product.category.id,
-            name: product.category.name,
+            taxCode: {
+                rate: Prisma.Decimal;
+            };
+            images: {
+                id: number;
+                altText: string | null;
+                file: {
+                    id: number;
+                };
+            }[];
         },
-    };
-}
+    ): ProductAdminListResponseDto {
+        const taxRate = product.taxCode.rate.toNumber();
+        const netPrice = product.basePrice.toNumber();
+        const grossPrice = this.calculateGrossAmount(netPrice, taxRate);
 
-toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDetailResponseDto {
-    const taxRate = product.taxCode.rate.toNumber();
-    const netPrice = product.basePrice.toNumber();
-    const grossPrice = this.calculateGrossAmount(netPrice, taxRate);
+        const image = product.images[0]
+            ? {
+                url: `/api/files/${product.images[0].file.id}`,
+            }
+            : null;
 
-    return {
-        // Product
-        id: product.id,
-        name: product.name,
-        slug: product.slug,
-        description: product.description,
-        active: product.active,
+        return {
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            price: grossPrice,
+            active: product.active,
+            type: product.type,
+            featured: product.featured,
 
-        basePrice: this.toNumber(product.basePrice),
+            image,
 
-        baseFloristCompensation: this.toNumber(product.baseFloristCompensation),
-        price: grossPrice,
-        sortOrder: product.sortOrder,
-        createdAt: product.createdAt,
-        updatedAt: product.updatedAt,
+            category: {
+                id: product.category.id,
+                name: product.category.name,
+            },
+        };
+    }
 
-        // Tax code
-        taxCode: {
-            id: product.taxCode.id,
-            code: product.taxCode.code,
-            name: product.taxCode.name,
-            rate: this.toNumber(
-                product.taxCode.rate,
-            ),
-            active: product.taxCode.active,
-        },
+    toAdminDetailResponse(product: ProductWithAdminDetailRelations): ProductAdminDetailResponseDto {
+        const taxRate = product.taxCode.rate.toNumber();
+        const netPrice = product.basePrice.toNumber();
+        const grossPrice = this.calculateGrossAmount(netPrice, taxRate);
 
-        // Category
-        category: {
-            id: product.category.id,
-            name: product.category.name,
-            slug: product.category.slug,
-            description:
-                product.category.description,
-            active: product.category.active,
-        },
+        return {
+            // Product
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            description: product.description,
+            active: product.active,
+            type: product.type,
+            featured: product.featured,
+            rentalDeposit: product.rentalDeposit
+                ? this.toNumber(product.rentalDeposit)
+                : null,
 
-        // Product images
-        images: product.images.map((image) => ({
-            id: image.id,
-            fileId: image.fileId,
-            url:   `/api/files/${image.file.id}`,
-            altText: image.altText,
-            sortOrder: image.sortOrder,
-            isPrimary: image.isPrimary,
-            variantId: image.variantId,
-            createdAt: image.createdAt,
-            updatedAt: image.updatedAt,
-        })),
+            basePrice: this.toNumber(product.basePrice),
 
-        // Components
-        components: product.components.map(
-            (component) => ({
-                id: component.id,
-                name: component.name,
-                minQuantity:
-                    component.minQuantity,
-                recommendedQuantity:
-                    component.recommendedQuantity,
-                maxQuantity:
-                    component.maxQuantity,
+            baseFloristCompensation: this.toNumber(product.baseFloristCompensation),
+            price: grossPrice,
+            sortOrder: product.sortOrder,
+            createdAt: product.createdAt,
+            updatedAt: product.updatedAt,
 
-                customerPricePerAdditionalUnit:
-                    this.toNumber(
-                        component.customerPricePerAdditionalUnit,
-                    ),
-
-                floristCompensationPerAdditionalUnit:
-                    this.toNumber(
-                        component.floristCompensationPerAdditionalUnit,
-                    ),
-
-                sortOrder: component.sortOrder,
-                active: component.active,
-                createdAt: component.createdAt,
-                updatedAt: component.updatedAt,
-            }),
-        ),
-
-        // Variants
-        variants: product.variants.map(
-            (variant) => ({
-                id: variant.id,
-                type: variant.type,
-                name: variant.name,
-                code: variant.code,
-
-                // Persisted value — NO VAT calculation
-                price: this.toNumber(
-                    variant.price,
+            // Tax code
+            taxCode: {
+                id: product.taxCode.id,
+                code: product.taxCode.code,
+                name: product.taxCode.name,
+                rate: this.toNumber(
+                    product.taxCode.rate,
                 ),
+                active: product.taxCode.active,
+            },
 
-                // Persisted value — NO calculation
-                floristCompensation:
-                    this.toNumber(
-                        variant.floristCompensation,
+            // Category
+            category: {
+                id: product.category.id,
+                name: product.category.name,
+                slug: product.category.slug,
+                description:
+                    product.category.description,
+                active: product.category.active,
+            },
+
+            // Product images
+            images: product.images.map((image) => ({
+                id: image.id,
+                fileId: image.fileId,
+                url: `/api/files/${image.file.id}`,
+                altText: image.altText,
+                sortOrder: image.sortOrder,
+                isPrimary: image.isPrimary,
+                variantId: image.variantId,
+                createdAt: image.createdAt,
+                updatedAt: image.updatedAt,
+            })),
+
+            // Components
+            components: product.components.map(
+                (component) => ({
+                    id: component.id,
+                    name: component.name,
+                    minQuantity:
+                        component.minQuantity,
+                    recommendedQuantity:
+                        component.recommendedQuantity,
+                    maxQuantity:
+                        component.maxQuantity,
+
+                    customerPricePerAdditionalUnit:
+                        this.toNumber(
+                            component.customerPricePerAdditionalUnit,
+                        ),
+
+                    floristCompensationPerAdditionalUnit:
+                        this.toNumber(
+                            component.floristCompensationPerAdditionalUnit,
+                        ),
+
+                    sortOrder: component.sortOrder,
+                    active: component.active,
+                    createdAt: component.createdAt,
+                    updatedAt: component.updatedAt,
+                }),
+            ),
+
+            // Variants
+            variants: product.variants.map(
+                (variant) => ({
+                    id: variant.id,
+                    type: variant.type,
+                    name: variant.name,
+                    code: variant.code,
+
+                    // Persisted value — NO VAT calculation
+                    price: this.toNumber(
+                        variant.price,
                     ),
 
-                sortOrder: variant.sortOrder,
-                active: variant.active,
+                    // Persisted value — NO calculation
+                    floristCompensation:
+                        this.toNumber(
+                            variant.floristCompensation,
+                        ),
 
-                image: variant.image
-                    ? {
-                          id: variant.image.id,
-                          fileId:
-                              variant.image.fileId,
-                          url:
-                              `/api/files/${variant.image.file.id}`,
-                          altText:
-                              variant.image.altText,
-                          sortOrder:
-                              variant.image.sortOrder,
-                          isPrimary:
-                              variant.image.isPrimary,
-                          variantId:
-                              variant.image.variantId,
-                          createdAt:
-                              variant.image.createdAt,
-                          updatedAt:
-                              variant.image.updatedAt,
+                    sortOrder: variant.sortOrder,
+                    active: variant.active,
 
-                      }
-                    : null,
+                    image: variant.image
+                        ? {
+                            id: variant.image.id,
+                            fileId:
+                                variant.image.fileId,
+                            url:
+                                `/api/files/${variant.image.file.id}`,
+                            altText:
+                                variant.image.altText,
+                            sortOrder:
+                                variant.image.sortOrder,
+                            isPrimary:
+                                variant.image.isPrimary,
+                            variantId:
+                                variant.image.variantId,
+                            createdAt:
+                                variant.image.createdAt,
+                            updatedAt:
+                                variant.image.updatedAt,
 
-                createdAt: variant.createdAt,
-                updatedAt: variant.updatedAt,
+                        }
+                        : null,
 
-            }),
-        ),
-    };
-}
+                    createdAt: variant.createdAt,
+                    updatedAt: variant.updatedAt,
+
+                }),
+            ),
+        };
+    }
 
 
 
     private mapListImage(
-    image: ProductWithListRelations['images'][number],
-) {
-    return {
-        url: `/api/files/${image.file.id}`,
-    };
-}
+        image: ProductWithListRelations['images'][number],
+    ) {
+        return {
+            url: `/api/files/${image.file.id}`,
+        };
+    }
 
 
     /**
@@ -603,10 +622,10 @@ toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDe
                             variantGrossPrice,
 
                         image: variant.image
-    ? {
-        url: `/api/files/${variant.image.file.id}`,
-    }
-    : null,
+                            ? {
+                                url: `/api/files/${variant.image.file.id}`,
+                            }
+                            : null,
                     };
                 },
             );
@@ -620,34 +639,38 @@ toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDe
      */
 
     toListResponse(
-    product: ProductWithListRelations,
-): ProductListResponseDto {
-    const taxRate =
-        product.taxCode.rate.toNumber();
+        product: ProductWithListRelations,
+    ): ProductListResponseDto {
+        const taxRate =
+            product.taxCode.rate.toNumber();
 
-    const netPrice = product.basePrice?.toNumber() ?? 0;
+        const netPrice = product.basePrice?.toNumber() ?? 0;
 
-    const grossPrice =
-        this.calculateGrossAmount(
-            netPrice,
-            taxRate,
-        );
+        const grossPrice =
+            this.calculateGrossAmount(
+                netPrice,
+                taxRate,
+            );
 
-    const image =
-        product.images[0] ?? null;
+        const image =
+            product.images[0] ?? null;
 
-    return {
-        id: product.id,
+        return {
+            id: product.id,
 
-        name: product.name,
+            name: product.name,
 
-        price: grossPrice,
+            type: product.type,
 
-        image: image
-            ? this.mapListImage(image)
-            : null,
-    };
-}
+            featured: product.featured,
+
+            price: grossPrice,
+
+            image: image
+                ? this.mapListImage(image)
+                : null,
+        };
+    }
 
 
     /*
@@ -773,7 +796,17 @@ toAdminDetailResponse(product: ProductWithAdminDetailRelations) : ProductAdminDe
             variants:
                 variants,
 
-                active: product.active,
+            active: product.active,
+
+            type: product.type,
+
+            featured:
+                product.featured,
+
+            rentalDeposit:
+                product.rentalDeposit
+                    ? this.toNumber(product.rentalDeposit)
+                    : null,
         };
     }
 }

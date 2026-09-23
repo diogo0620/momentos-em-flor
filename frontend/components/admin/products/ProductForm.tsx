@@ -156,6 +156,17 @@ export default function ProductForm({
     const [name, setName] =
         useState(product?.name ?? "");
 
+    const [type, setType] =
+        useState(product?.type ?? "SALE");
+
+    const [rentalDeposit, setRentalDeposit] =
+        useState(
+            product?.rentalDeposit?.toString() ?? "",
+        );
+
+    const [featured, setFeatured] =
+        useState(product?.featured ?? false);
+
     const [description, setDescription] =
         useState(product?.description ?? "");
 
@@ -169,19 +180,19 @@ export default function ProductForm({
         setBaseFloristCompensation,
     ] = useState(
         product?.baseFloristCompensation?.toString() ??
-            "",
+        "",
     );
 
     const [categoryId, setCategoryId] =
         useState(
             product?.category?.id?.toString() ??
-                "",
+            "",
         );
 
     const [taxCodeId, setTaxCodeId] =
         useState(
             product?.taxCode?.id?.toString() ??
-                "",
+            "",
         );
 
     const [active, setActive] =
@@ -191,8 +202,8 @@ export default function ProductForm({
         useState<ComponentForm[]>(
             product
                 ? normaliseComponents(
-                      product.components,
-                  )
+                    product.components,
+                )
                 : [],
         );
 
@@ -200,8 +211,8 @@ export default function ProductForm({
         useState<VariantForm[]>(
             product
                 ? normaliseVariants(
-                      product.variants,
-                  )
+                    product.variants,
+                )
                 : [],
         );
 
@@ -262,7 +273,7 @@ export default function ProductForm({
                         (category) =>
                             category.active ||
                             category.id ===
-                                product?.category?.id,
+                            product?.category?.id,
                     ),
                 );
             } catch {
@@ -290,7 +301,7 @@ export default function ProductForm({
                         (taxCode) =>
                             taxCode.active ||
                             taxCode.id ===
-                                product?.taxCode?.id,
+                            product?.taxCode?.id,
                     ),
                 );
             } catch {
@@ -421,12 +432,12 @@ export default function ProductForm({
                 const matchesExistingVariant =
                     variant.id != null &&
                     image.variantId ===
-                        variant.id;
+                    variant.id;
 
                 const matchesNewVariant =
                     variant.clientId != null &&
                     image.variantClientId ===
-                        variant.clientId;
+                    variant.clientId;
 
                 if (
                     matchesExistingVariant ||
@@ -552,7 +563,7 @@ export default function ProductForm({
                 if (
                     variant.clientId != null &&
                     image.variantClientId ===
-                        variant.clientId
+                    variant.clientId
                 ) {
                     return true;
                 }
@@ -571,14 +582,14 @@ export default function ProductForm({
                 current.map(
                     (image, currentIndex) =>
                         currentIndex ===
-                        imageIndex
+                            imageIndex
                             ? {
-                                  ...image,
-                                  variantId:
-                                      null,
-                                  variantClientId:
-                                      null,
-                              }
+                                ...image,
+                                variantId:
+                                    null,
+                                variantClientId:
+                                    null,
+                            }
                             : image,
                 ),
             );
@@ -644,7 +655,7 @@ export default function ProductForm({
                             variant.id
                                 ? null
                                 : variant.clientId ??
-                                  null,
+                                null,
                     };
                 },
             ),
@@ -700,6 +711,18 @@ export default function ProductForm({
             return "A compensação da florista é inválida.";
         }
 
+        if (type === "RENTAL") {
+            if (rentalDeposit.trim() === "") {
+                return "Indique o valor da caução do aluguer.";
+            }
+
+            const parsedDeposit = Number(rentalDeposit);
+
+            if (!Number.isFinite(parsedDeposit) || parsedDeposit < 0) {
+                return "O valor da caução é inválido.";
+            }
+        }
+
         if (components.length > 0) {
             for (
                 let index = 0;
@@ -715,20 +738,20 @@ export default function ProductForm({
 
                 if (
                     component.minQuantity <
-                        0 ||
+                    0 ||
                     component.recommendedQuantity <
-                        component.minQuantity ||
+                    component.minQuantity ||
                     component.maxQuantity <
-                        component.recommendedQuantity
+                    component.recommendedQuantity
                 ) {
                     return `As quantidades do componente "${component.name}" são inválidas.`;
                 }
 
                 if (
                     component.customerPricePerAdditionalUnit <
-                        0 ||
+                    0 ||
                     component.floristCompensationPerAdditionalUnit <
-                        0
+                    0
                 ) {
                     return `Os valores do componente "${component.name}" são inválidos.`;
                 }
@@ -801,18 +824,18 @@ export default function ProductForm({
 
                             if (
                                 image.variantId !=
-                                    null &&
+                                null &&
                                 otherImage.variantId ===
-                                    image.variantId
+                                image.variantId
                             ) {
                                 return true;
                             }
 
                             if (
                                 image.variantClientId !=
-                                    null &&
+                                null &&
                                 otherImage.variantClientId ===
-                                    image.variantClientId
+                                image.variantClientId
                             ) {
                                 return true;
                             }
@@ -899,6 +922,9 @@ export default function ProductForm({
         const parsedTaxCodeId =
             Number(taxCodeId);
 
+        const parsedRentalDeposit =
+            type === "RENTAL" ? Number(rentalDeposit) : null;
+
         try {
             setIsSubmitting(true);
 
@@ -919,6 +945,8 @@ export default function ProductForm({
                         taxCodeId:
                             parsedTaxCodeId,
                         active,
+                        featured,
+                        rentalDeposit: parsedRentalDeposit,
                     },
                 );
 
@@ -951,6 +979,9 @@ export default function ProductForm({
                     taxCodeId:
                         parsedTaxCodeId,
                     active,
+                    type,
+                    featured,
+                    rentalDeposit: parsedRentalDeposit,
                 });
 
             const createdProduct =
@@ -1097,6 +1128,36 @@ export default function ProductForm({
 
                     <div>
                         <label className="mb-2 block text-sm font-medium text-gray-700">
+                            Tipo de produto
+                        </label>
+
+                        <select
+                            value={type}
+                            onChange={(event) =>
+                                setType(
+                                    event.target.value as "SALE" | "RENTAL",
+                                )
+                            }
+                            disabled={isEditing}
+                            className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100 disabled:text-gray-500"
+                        >
+                            <option value="SALE">
+                                Venda
+                            </option>
+                            <option value="RENTAL">
+                                Aluguer
+                            </option>
+                        </select>
+
+                        {isEditing && (
+                            <p className="mt-1 text-xs text-gray-500">
+                                O tipo do produto não pode ser alterado depois de criado.
+                            </p>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-700">
                             Código de IVA
                         </label>
 
@@ -1211,6 +1272,35 @@ export default function ProductForm({
                             </span>
                         </div>
                     </div>
+                    {type === "RENTAL" && (
+                        <div className="md:col-span-2">
+                            <label className="mb-2 block text-sm font-medium text-gray-700">
+                                Caução do aluguer
+                            </label>
+
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    required
+                                    value={rentalDeposit}
+                                    onChange={(event) =>
+                                        setRentalDeposit(event.target.value)
+                                    }
+                                    className="w-full rounded-lg border px-3 py-2 pr-12 text-sm outline-none focus:ring-2 focus:ring-black"
+                                    placeholder="0.00"
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                                    €
+                                </span>
+                            </div>
+
+                            <p className="mt-1 text-xs text-gray-500">
+                                A caução é independente do preço do aluguer.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {taxCodeId && (
@@ -1250,12 +1340,11 @@ export default function ProductForm({
                         <button
                             type="button"
                             onClick={addComponent}
-                            className={`rounded-lg border px-4 py-2 text-sm font-medium ${
-                                configurationMode ===
+                            className={`rounded-lg border px-4 py-2 text-sm font-medium ${configurationMode ===
                                 "components"
-                                    ? "bg-black text-white"
-                                    : "bg-white text-gray-700"
-                            }`}
+                                ? "bg-black text-white"
+                                : "bg-white text-gray-700"
+                                }`}
                         >
                             + Componente
                         </button>
@@ -1263,12 +1352,11 @@ export default function ProductForm({
                         <button
                             type="button"
                             onClick={addVariant}
-                            className={`rounded-lg border px-4 py-2 text-sm font-medium ${
-                                configurationMode ===
+                            className={`rounded-lg border px-4 py-2 text-sm font-medium ${configurationMode ===
                                 "variants"
-                                    ? "bg-black text-white"
-                                    : "bg-white text-gray-700"
-                            }`}
+                                ? "bg-black text-white"
+                                : "bg-white text-gray-700"
+                                }`}
                         >
                             + Variante
                         </button>
@@ -1325,7 +1413,7 @@ export default function ProductForm({
                                                 disabled={
                                                     index ===
                                                     components.length -
-                                                        1
+                                                    1
                                                 }
                                                 className="rounded border px-2 py-1 text-xs disabled:opacity-40"
                                             >
@@ -1369,11 +1457,11 @@ export default function ProductForm({
                                                                     itemIndex,
                                                                 ) =>
                                                                     itemIndex ===
-                                                                    index
+                                                                        index
                                                                         ? {
-                                                                              ...item,
-                                                                              name: event.target.value,
-                                                                          }
+                                                                            ...item,
+                                                                            name: event.target.value,
+                                                                        }
                                                                         : item,
                                                             ),
                                                     )
@@ -1407,16 +1495,16 @@ export default function ProductForm({
                                                                     itemIndex,
                                                                 ) =>
                                                                     itemIndex ===
-                                                                    index
+                                                                        index
                                                                         ? {
-                                                                              ...item,
-                                                                              minQuantity:
-                                                                                  Number(
-                                                                                      event
-                                                                                          .target
-                                                                                          .value,
-                                                                                  ),
-                                                                          }
+                                                                            ...item,
+                                                                            minQuantity:
+                                                                                Number(
+                                                                                    event
+                                                                                        .target
+                                                                                        .value,
+                                                                                ),
+                                                                        }
                                                                         : item,
                                                             ),
                                                     )
@@ -1449,16 +1537,16 @@ export default function ProductForm({
                                                                     itemIndex,
                                                                 ) =>
                                                                     itemIndex ===
-                                                                    index
+                                                                        index
                                                                         ? {
-                                                                              ...item,
-                                                                              recommendedQuantity:
-                                                                                  Number(
-                                                                                      event
-                                                                                          .target
-                                                                                          .value,
-                                                                                  ),
-                                                                          }
+                                                                            ...item,
+                                                                            recommendedQuantity:
+                                                                                Number(
+                                                                                    event
+                                                                                        .target
+                                                                                        .value,
+                                                                                ),
+                                                                        }
                                                                         : item,
                                                             ),
                                                     )
@@ -1491,16 +1579,16 @@ export default function ProductForm({
                                                                     itemIndex,
                                                                 ) =>
                                                                     itemIndex ===
-                                                                    index
+                                                                        index
                                                                         ? {
-                                                                              ...item,
-                                                                              maxQuantity:
-                                                                                  Number(
-                                                                                      event
-                                                                                          .target
-                                                                                          .value,
-                                                                                  ),
-                                                                          }
+                                                                            ...item,
+                                                                            maxQuantity:
+                                                                                Number(
+                                                                                    event
+                                                                                        .target
+                                                                                        .value,
+                                                                                ),
+                                                                        }
                                                                         : item,
                                                             ),
                                                     )
@@ -1534,16 +1622,16 @@ export default function ProductForm({
                                                                     itemIndex,
                                                                 ) =>
                                                                     itemIndex ===
-                                                                    index
+                                                                        index
                                                                         ? {
-                                                                              ...item,
-                                                                              customerPricePerAdditionalUnit:
-                                                                                  Number(
-                                                                                      event
-                                                                                          .target
-                                                                                          .value,
-                                                                                  ),
-                                                                          }
+                                                                            ...item,
+                                                                            customerPricePerAdditionalUnit:
+                                                                                Number(
+                                                                                    event
+                                                                                        .target
+                                                                                        .value,
+                                                                                ),
+                                                                        }
                                                                         : item,
                                                             ),
                                                     )
@@ -1577,16 +1665,16 @@ export default function ProductForm({
                                                                     itemIndex,
                                                                 ) =>
                                                                     itemIndex ===
-                                                                    index
+                                                                        index
                                                                         ? {
-                                                                              ...item,
-                                                                              floristCompensationPerAdditionalUnit:
-                                                                                  Number(
-                                                                                      event
-                                                                                          .target
-                                                                                          .value,
-                                                                                  ),
-                                                                          }
+                                                                            ...item,
+                                                                            floristCompensationPerAdditionalUnit:
+                                                                                Number(
+                                                                                    event
+                                                                                        .target
+                                                                                        .value,
+                                                                                ),
+                                                                        }
                                                                         : item,
                                                             ),
                                                     )
@@ -1614,11 +1702,11 @@ export default function ProductForm({
                                                                     itemIndex,
                                                                 ) =>
                                                                     itemIndex ===
-                                                                    index
+                                                                        index
                                                                         ? {
-                                                                              ...item,
-                                                                              active: event.target.checked,
-                                                                          }
+                                                                            ...item,
+                                                                            active: event.target.checked,
+                                                                        }
                                                                         : item,
                                                             ),
                                                     )
@@ -1684,7 +1772,7 @@ export default function ProductForm({
                                                 disabled={
                                                     index ===
                                                     variants.length -
-                                                        1
+                                                    1
                                                 }
                                                 className="rounded border px-2 py-1 text-xs disabled:opacity-40"
                                             >
@@ -1728,11 +1816,11 @@ export default function ProductForm({
                                                                     itemIndex,
                                                                 ) =>
                                                                     itemIndex ===
-                                                                    index
+                                                                        index
                                                                         ? {
-                                                                              ...item,
-                                                                              type: event.target.value,
-                                                                          }
+                                                                            ...item,
+                                                                            type: event.target.value,
+                                                                        }
                                                                         : item,
                                                             ),
                                                     )
@@ -1782,11 +1870,11 @@ export default function ProductForm({
                                                                     itemIndex,
                                                                 ) =>
                                                                     itemIndex ===
-                                                                    index
+                                                                        index
                                                                         ? {
-                                                                              ...item,
-                                                                              name: event.target.value,
-                                                                          }
+                                                                            ...item,
+                                                                            name: event.target.value,
+                                                                        }
                                                                         : item,
                                                             ),
                                                     )
@@ -1819,11 +1907,11 @@ export default function ProductForm({
                                                                     itemIndex,
                                                                 ) =>
                                                                     itemIndex ===
-                                                                    index
+                                                                        index
                                                                         ? {
-                                                                              ...item,
-                                                                              code: event.target.value,
-                                                                          }
+                                                                            ...item,
+                                                                            code: event.target.value,
+                                                                        }
                                                                         : item,
                                                             ),
                                                     )
@@ -1858,16 +1946,16 @@ export default function ProductForm({
                                                                     itemIndex,
                                                                 ) =>
                                                                     itemIndex ===
-                                                                    index
+                                                                        index
                                                                         ? {
-                                                                              ...item,
-                                                                              price:
-                                                                                  Number(
-                                                                                      event
-                                                                                          .target
-                                                                                          .value,
-                                                                                  ),
-                                                                          }
+                                                                            ...item,
+                                                                            price:
+                                                                                Number(
+                                                                                    event
+                                                                                        .target
+                                                                                        .value,
+                                                                                ),
+                                                                        }
                                                                         : item,
                                                             ),
                                                     )
@@ -1901,16 +1989,16 @@ export default function ProductForm({
                                                                     itemIndex,
                                                                 ) =>
                                                                     itemIndex ===
-                                                                    index
+                                                                        index
                                                                         ? {
-                                                                              ...item,
-                                                                              floristCompensation:
-                                                                                  Number(
-                                                                                      event
-                                                                                          .target
-                                                                                          .value,
-                                                                                  ),
-                                                                          }
+                                                                            ...item,
+                                                                            floristCompensation:
+                                                                                Number(
+                                                                                    event
+                                                                                        .target
+                                                                                        .value,
+                                                                                ),
+                                                                        }
                                                                         : item,
                                                             ),
                                                     )
@@ -1939,11 +2027,11 @@ export default function ProductForm({
                                                                     itemIndex,
                                                                 ) =>
                                                                     itemIndex ===
-                                                                    index
+                                                                        index
                                                                         ? {
-                                                                              ...item,
-                                                                              active: event.target.checked,
-                                                                          }
+                                                                            ...item,
+                                                                            active: event.target.checked,
+                                                                        }
                                                                         : item,
                                                             ),
                                                     )
@@ -1960,13 +2048,13 @@ export default function ProductForm({
 
                 {configurationMode ===
                     null && (
-                    <div className="mt-6 rounded-lg border border-dashed p-8 text-center">
-                        <p className="text-sm text-gray-500">
-                            Este produto não tem
-                            configuração.
-                        </p>
-                    </div>
-                )}
+                        <div className="mt-6 rounded-lg border border-dashed p-8 text-center">
+                            <p className="text-sm text-gray-500">
+                                Este produto não tem
+                                configuração.
+                            </p>
+                        </div>
+                    )}
             </section>
 
             <section className="rounded-xl border bg-white p-6 shadow-sm">
@@ -2082,7 +2170,7 @@ export default function ProductForm({
                                                     disabled={
                                                         index ===
                                                         images.length -
-                                                            1
+                                                        1
                                                     }
                                                     className="rounded border px-2 py-1 text-xs disabled:opacity-40"
                                                 >
@@ -2102,8 +2190,8 @@ export default function ProductForm({
                                                         null
                                                         ? `id:${image.variantId}`
                                                         : image.variantClientId
-                                                          ? `client:${image.variantClientId}`
-                                                          : ""
+                                                            ? `client:${image.variantClientId}`
+                                                            : ""
                                                 }
                                                 onChange={(
                                                     event,
@@ -2133,7 +2221,7 @@ export default function ProductForm({
                                                     ) => {
                                                         const value =
                                                             variant.id !=
-                                                            null
+                                                                null
                                                                 ? `id:${variant.id}`
                                                                 : `client:${variant.clientId}`;
 
@@ -2162,13 +2250,13 @@ export default function ProductForm({
 
                                             {variants.length ===
                                                 0 && (
-                                                <p className="mt-1 text-xs text-gray-400">
-                                                    Adiciona primeiro
-                                                    uma variante para
-                                                    poder associar a
-                                                    imagem.
-                                                </p>
-                                            )}
+                                                    <p className="mt-1 text-xs text-gray-400">
+                                                        Adiciona primeiro
+                                                        uma variante para
+                                                        poder associar a
+                                                        imagem.
+                                                    </p>
+                                                )}
                                         </div>
 
                                         <div>
@@ -2194,11 +2282,11 @@ export default function ProductForm({
                                                                     itemIndex,
                                                                 ) =>
                                                                     itemIndex ===
-                                                                    index
+                                                                        index
                                                                         ? {
-                                                                              ...item,
-                                                                              altText: event.target.value,
-                                                                          }
+                                                                            ...item,
+                                                                            altText: event.target.value,
+                                                                        }
                                                                         : item,
                                                             ),
                                                     )
@@ -2272,6 +2360,21 @@ export default function ProductForm({
                         Produto ativo
                     </span>
                 </label>
+
+                <label className="mt-5 flex cursor-pointer items-center gap-3">
+                    <input
+                        type="checkbox"
+                        checked={featured}
+                        onChange={(event) =>
+                            setFeatured(event.target.checked)
+                        }
+                        className="h-4 w-4"
+                    />
+
+                    <span className="text-sm font-medium text-gray-700">
+                        Produto em destaque
+                    </span>
+                </label>
             </section>
 
             <div className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:justify-end">
@@ -2298,8 +2401,8 @@ export default function ProductForm({
                     {isSubmitting
                         ? "A guardar..."
                         : isEditing
-                          ? "Guardar alterações"
-                          : "Criar produto"}
+                            ? "Guardar alterações"
+                            : "Criar produto"}
                 </button>
             </div>
         </form>

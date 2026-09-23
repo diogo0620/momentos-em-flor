@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ProductType } from '@prisma/client';
 
 export class ProductAdminTaxCodeDto {
     @ApiProperty()
@@ -159,6 +160,17 @@ export class ProductAdminDetailResponseDto {
 
     @ApiProperty()
     active: boolean;
+
+    @ApiProperty({
+        enum: ProductType,
+    })
+    type: ProductType;
+
+    @ApiProperty()
+    featured: boolean;
+
+    @ApiPropertyOptional()
+    rentalDeposit: number | null;
 
     @ApiProperty()
     basePrice: number;

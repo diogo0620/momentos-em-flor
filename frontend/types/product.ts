@@ -1,16 +1,25 @@
-export type ProductPricingType =
-    | "FIXED"
-    | "PER_UNIT";
+export type ProductType =
+    | "SALE"
+    | "RENTAL";
 
 export type ProductListImage = {
     url: string;
 };
 
 export type ProductListItem = {
+
     id: number;
+
     name: string;
+
+    type: ProductType;
+
+    featured: boolean;
+
     price: number;
+
     image: ProductListImage | null;
+
 };
 
 export type ProductCategory = {
@@ -45,7 +54,9 @@ export type ProductDetail = {
     name: string;
     slug: string;
     description: string | null;
-    pricingType: ProductPricingType;
+    type: ProductType;
+    featured: boolean;
+    rentalDeposit: number | null;
     price: number;
     category: ProductCategory;
     images: ProductImage[];

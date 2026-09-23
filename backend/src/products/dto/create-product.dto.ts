@@ -19,6 +19,7 @@ import { Type } from 'class-transformer';
 import { CreateProductComponentDto } from './create-product-component.dto';
 import { CreateProductVariantDto } from './create-product-variant.dto';
 import { CreateProductImageDto } from './create-product-image.dto';
+import { ProductType } from '@prisma/client';
 
 export class CreateProductDto {
 
@@ -35,6 +36,30 @@ export class CreateProductDto {
     @IsOptional()
     @IsString()
     description?: string;
+
+    @ApiPropertyOptional({
+        enum: ProductType,
+        default: ProductType.SALE,
+    })
+    @IsOptional()
+    type?: ProductType;
+
+    @ApiPropertyOptional({
+        example: false,
+        default: false,
+    })
+    @IsOptional()
+    @IsBoolean()
+    featured?: boolean;
+
+    @ApiPropertyOptional({
+        example: 50.00,
+        description: 'Refundable deposit for rental products.',
+    })
+    @IsOptional()
+    @IsNumber()
+    @Min(0)
+    rentalDeposit?: number;
 
     @ApiProperty({
         example: 29.90,

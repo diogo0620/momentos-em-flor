@@ -6,6 +6,7 @@ import {
     Package,
     Pencil,
     Receipt,
+    Star,
     Tag,
     Users,
 } from "lucide-react";
@@ -192,7 +193,7 @@ export default async function ProductDetailPage({
                 SUMMARY
             ================================================================== */}
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <SummaryCard
                     icon={Package}
                     label="Estado"
@@ -211,15 +212,28 @@ export default async function ProductDetailPage({
                 />
 
                 <SummaryCard
-                    icon={Receipt}
-                    label="Tax Code"
-                    value={product.taxCode.code}
-                    description={`${product.taxCode.name} · IVA ${formatRate(
-                        product.taxCode.rate,
-                    )}`}
+                    label="Tipo"
+                    value={product.type === "RENTAL" ? "Aluguer" : "Venda"}
+                    description={
+                        product.type === "RENTAL"
+                            ? "Produto para aluguer"
+                            : "Produto para venda"
+                    }
                 />
 
                 <SummaryCard
+                    icon={Star}
+                    label="Destaque"
+                    value={product.featured ? "Sim" : "Não"}
+                    valueClassName={
+                        product.featured
+                            ? "text-[#55624A]"
+                            : "text-gray-500"
+                    }
+                />
+
+                <SummaryCard
+                    icon={Receipt}
                     label="Preço final"
                     value={formatPrice(product.price)}
                     description="Preço apresentado ao cliente"
@@ -250,6 +264,20 @@ export default async function ProductDetailPage({
                     <InfoItem
                         label="Categoria"
                         value={product.category?.name || "—"}
+                    />
+
+                    <InfoItem
+                        label="Tipo de produto"
+                        value={
+                            product.type === "RENTAL"
+                                ? "Aluguer"
+                                : "Venda"
+                        }
+                    />
+
+                    <InfoItem
+                        label="Destaque"
+                        value={product.featured ? "Sim" : "Não"}
                     />
 
                     <InfoItem
@@ -289,7 +317,7 @@ export default async function ProductDetailPage({
                     description="Valores comerciais configurados para este produto."
                 />
 
-                <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                     <PriceCard
                         label="Preço base"
                         value={formatPrice(product.basePrice)}
@@ -318,6 +346,14 @@ export default async function ProductDetailPage({
                         )}
                         description="Valor pago ao florista"
                     />
+
+                    {product.type === "RENTAL" && (
+                        <PriceCard
+                            label="Caução"
+                            value={formatPrice(product.rentalDeposit)}
+                            description="Caução do aluguer"
+                        />
+                    )}
                 </div>
 
                 <div className="mt-6 rounded-2xl border border-gray-100 bg-[#FAFBF8] p-5">

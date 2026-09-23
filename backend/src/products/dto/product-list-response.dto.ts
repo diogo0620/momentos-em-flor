@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { ProductType } from '@prisma/client';
 
 export class ProductListImageDto {
     @ApiProperty({
@@ -17,6 +18,16 @@ export class ProductListResponseDto {
         example: 'Ramo Primavera',
     })
     name: string;
+
+    @ApiProperty({
+        enum: ProductType,
+    })
+    type: ProductType;
+
+    @ApiProperty({
+        example: false,
+    })
+    featured: boolean;
 
     @ApiProperty({
         example: 49.08,
