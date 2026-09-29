@@ -22,5 +22,8 @@ export class OrderListResponseDto extends PickType(
 
         'total',
         'status',
+
+        'createdAt',
+        'deliveryDate'
     ] as const,
 ) {}

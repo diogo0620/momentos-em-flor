@@ -327,10 +327,10 @@ model Product {
   slug        String
   description String?
 
-  active   Boolean     @default(true)
-  type     ProductType @default(SALE)
-  featured Boolean     @default(false)
-  rentalDeposit Decimal? @db.Decimal(10, 2)
+  active        Boolean     @default(true)
+  type          ProductType @default(SALE)
+  featured      Boolean     @default(false)
+  rentalDeposit Decimal?    @db.Decimal(10, 2)
 
   /**
    * Base price BEFORE VAT.
@@ -1028,4 +1028,11 @@ model OrderReviewRating {
   createdAt DateTime @default(now())
 
   @@unique([reviewId, category])
+}
+
+model StoreSettings {
+  id          Int      @id @default(1)
+  deliveryFee Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

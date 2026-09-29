@@ -333,6 +333,12 @@ toListResponse(
 
         status:
             order.status,
+
+        createdAt:
+            order.createdAt,
+
+        deliveryDate: 
+            order.deliveryDate
     };
 }
 

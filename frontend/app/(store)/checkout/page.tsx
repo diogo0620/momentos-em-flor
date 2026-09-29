@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useCart } from "@/contexts/CartContext";
@@ -10,6 +10,29 @@ import {
     createOrder,
     type CreateOrderData,
 } from "@/lib/api/orders";
+
+import { getStoreSettings } from "@/lib/api/store-settings";
+
+const PORTUGAL_DISTRICTS = [
+    "Aveiro",
+    "Beja",
+    "Braga",
+    "Bragança",
+    "Castelo Branco",
+    "Coimbra",
+    "Évora",
+    "Faro",
+    "Guarda",
+    "Leiria",
+    "Lisboa",
+    "Portalegre",
+    "Porto",
+    "Santarém",
+    "Setúbal",
+    "Viana do Castelo",
+    "Vila Real",
+    "Viseu",
+];
 
 export default function CheckoutPage() {
     const router = useRouter();
@@ -63,6 +86,12 @@ export default function CheckoutPage() {
     const [cardMessage, setCardMessage] =
         useState("");
 
+    const [deliveryFee, setDeliveryFee] =
+        useState<number | null>(null);
+
+    const [isLoadingDeliveryFee, setIsLoadingDeliveryFee] =
+        useState(false);
+
     const [isSubmitting, setIsSubmitting] =
         useState(false);
 
@@ -75,6 +104,49 @@ export default function CheckoutPage() {
             item.price * item.quantity,
         0,
     );
+
+    const hasCompleteDeliveryAddress =
+        deliveryStreet.trim() !== "" &&
+        deliveryPostalCode.trim() !== "" &&
+        deliveryCity.trim() !== "" &&
+        deliveryDistrict.trim() !== "";
+
+    useEffect(() => {
+        if (!hasCompleteDeliveryAddress) {
+            setDeliveryFee(null);
+            return;
+        }
+
+        async function loadDeliveryFee() {
+            try {
+                setIsLoadingDeliveryFee(true);
+
+                const response =
+                    await getStoreSettings();
+
+                setDeliveryFee(
+                    response.data.deliveryFee,
+                );
+            } catch {
+                setDeliveryFee(null);
+            } finally {
+                setIsLoadingDeliveryFee(false);
+            }
+        }
+
+        loadDeliveryFee();
+    }, [
+        hasCompleteDeliveryAddress,
+        deliveryStreet,
+        deliveryPostalCode,
+        deliveryCity,
+        deliveryDistrict,
+    ]);
+
+    const grandTotal =
+        deliveryFee !== null
+            ? total + deliveryFee
+            : null;
 
     async function handleSubmit(
         event: React.FormEvent<HTMLFormElement>,
@@ -555,7 +627,7 @@ export default function CheckoutPage() {
 
                             </div>
 
-                            <input
+                            <select
                                 required
                                 value={
                                     deliveryDistrict
@@ -565,9 +637,27 @@ export default function CheckoutPage() {
                                         e.target.value,
                                     )
                                 }
-                                placeholder="Distrito *"
-                                className="w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-[#55624A]"
-                            />
+                                className="w-full rounded-xl border border-gray-200 bg-white p-3 outline-none focus:border-[#55624A]"
+                            >
+                                <option value="">
+                                    Distrito *
+                                </option>
+
+                                {PORTUGAL_DISTRICTS.map(
+                                    (district) => (
+                                        <option
+                                            key={
+                                                district
+                                            }
+                                            value={
+                                                district
+                                            }
+                                        >
+                                            {district}
+                                        </option>
+                                    ),
+                                )}
+                            </select>
 
                             <textarea
                                 value={
@@ -678,12 +768,12 @@ export default function CheckoutPage() {
 
                         </div>
 
-                        <div className="mt-8 border-t pt-6">
+                        <div className="mt-8 space-y-3 border-t pt-6">
 
-                            <div className="flex justify-between text-xl font-bold text-[#2F3B2A]">
+                            <div className="flex justify-between text-sm text-gray-500">
 
                                 <span>
-                                    Total
+                                    Subtotal
                                 </span>
 
                                 <span>
@@ -691,6 +781,40 @@ export default function CheckoutPage() {
                                         2,
                                     )}{" "}
                                     €
+                                </span>
+
+                            </div>
+
+                            <div className="flex justify-between text-sm text-gray-500">
+
+                                <span>
+                                    Entrega
+                                </span>
+
+                                <span>
+                                    {!hasCompleteDeliveryAddress
+                                        ? "A calcular..."
+                                        : isLoadingDeliveryFee
+                                          ? "A calcular..."
+                                          : deliveryFee !==
+                                              null
+                                            ? `${deliveryFee.toFixed(2)} €`
+                                            : "Indisponível"}
+                                </span>
+
+                            </div>
+
+                            <div className="flex justify-between pt-3 text-xl font-bold text-[#2F3B2A]">
+
+                                <span>
+                                    Total
+                                </span>
+
+                                <span>
+                                    {grandTotal !==
+                                    null
+                                        ? `${grandTotal.toFixed(2)} €`
+                                        : `${total.toFixed(2)} € + entrega`}
                                 </span>
 
                             </div>

@@ -281,11 +281,6 @@ export default async function ProductDetailPage({
                     />
 
                     <InfoItem
-                        label="Tax Code"
-                        value={product.taxCode.code}
-                    />
-
-                    <InfoItem
                         label="Taxa de IVA"
                         value={formatRate(product.taxCode.rate)}
                     />
@@ -364,7 +359,6 @@ export default async function ProductDetailPage({
                             </p>
 
                             <p className="mt-1 text-sm text-gray-400">
-                                {product.taxCode.code} ·{" "}
                                 {product.taxCode.name}
                             </p>
                         </div>

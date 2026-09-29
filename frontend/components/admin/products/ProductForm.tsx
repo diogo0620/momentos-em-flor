@@ -293,15 +293,13 @@ export default function ProductForm({
             try {
                 setIsLoadingTaxCodes(true);
 
-                const response =
-                    await getTaxCodes();
+                const response = await getTaxCodes();
 
                 setTaxCodes(
-                    response.filter(
+                    response.data.filter(
                         (taxCode) =>
                             taxCode.active ||
-                            taxCode.id ===
-                            product?.taxCode?.id,
+                            taxCode.id === product?.taxCode?.id,
                     ),
                 );
             } catch {
@@ -1190,8 +1188,6 @@ export default function ProductForm({
                                             taxCode.id
                                         }
                                     >
-                                        {taxCode.code}
-                                        {" · "}
                                         {taxCode.name}
                                         {" · "}
                                         {taxCode.rate}%

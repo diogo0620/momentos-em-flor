@@ -154,6 +154,9 @@ export class OrdersService {
 
                     total: true,
                     status: true,
+
+                    createdAt: true,
+                    deliveryDate: true,
                 },
 
                 ...getPagination(

@@ -11,9 +11,9 @@ import {
     ShoppingCart,
     Flower2,
     Users,
-    TicketPercent,
     Settings,
     LogOut,
+    Tags,
 } from "lucide-react";
 
 const links = [
@@ -28,14 +28,14 @@ const links = [
         icon: ShoppingCart,
     },
     {
+        href: "/admin/categories",
+        label: "Categorias",
+        icon: Tags,
+    },
+    {
         href: "/admin/products",
         label: "Produtos",
         icon: Package,
-    },
-    {
-        href: "/admin/tax-codes",
-        label: "Taxas de IVA",
-        icon: TicketPercent,
     },
     {
         href: "/admin/florists",
@@ -47,7 +47,11 @@ const links = [
         label: "Clientes",
         icon: Users,
     },
-  
+    {
+        href: "/admin/settings",
+        label: "Definições",
+        icon: Settings,
+    },
 ];
 
 export default function AdminSidebar() {

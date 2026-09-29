@@ -18,6 +18,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ReviewsModule } from './reviews/reviews.module';
 import { TaxCodesModule } from './tax-codes/tax-codes.module';
+import { StoreSettingsModule } from './store-settings/store-settings.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { TaxCodesModule } from './tax-codes/tax-codes.module';
     OrderOffersModule,
     ReviewsModule,
     TaxCodesModule,
+    StoreSettingsModule
   ],
 })
 export class AppModule { }
