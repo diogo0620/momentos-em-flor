@@ -10,20 +10,30 @@ import {
     OrderStatus,
     OrderCancellationReason
 } from '@prisma/client';
+
 import { OrderStatusHistoryResponseDto } from './order-status-history-response.dto';
 
 class OrderItemResponseDto {
     @ApiProperty()
     id: number;
 
-    @ApiProperty()
-    productId: number;
+    @ApiPropertyOptional()
+    productId: number | null;
 
     @ApiProperty()
     productName: string;
 
     @ApiPropertyOptional()
-    productDescription: string | null;
+    description: string | null;
+
+    @ApiPropertyOptional()
+    variantId: number | null;
+
+    @ApiPropertyOptional()
+    variantType: string | null;
+
+    @ApiPropertyOptional()
+    variantName: string | null;
 
     @ApiProperty()
     quantity: number;
@@ -32,31 +42,21 @@ class OrderItemResponseDto {
     unitPrice: number;
 
     @ApiProperty()
-    lineTotal: number;
+    netAmount: number;
+
+    @ApiProperty()
+    taxRate: number;
+
+    @ApiProperty()
+    taxAmount: number;
+
+    @ApiProperty()
+    grossAmount: number;
+
+    @ApiPropertyOptional()
+    taxCodeId: number | null;
 }
 
-class OrderOfferItemResponseDto {
-    @ApiProperty()
-    id: number;
-
-    @ApiProperty()
-    orderItemId: number;
-
-    @ApiProperty()
-    productId: number;
-
-    @ApiProperty()
-    productName: string;
-
-    @ApiProperty()
-    quantity: number;
-
-    @ApiProperty()
-    unitCompensation: number;
-
-    @ApiProperty()
-    totalCompensation: number;
-}
 
 class OrderOfferFloristResponseDto {
     @ApiProperty()
@@ -101,10 +101,6 @@ class OrderOfferResponseDto {
     @ApiPropertyOptional()
     declineReason: string | null;
 
-    @ApiProperty({
-        type: [OrderOfferItemResponseDto],
-    })
-    items: OrderOfferItemResponseDto[];
 
     @ApiProperty()
     createdAt: Date;
@@ -189,6 +185,9 @@ export class OrderResponseDto {
 
     @ApiProperty()
     subtotal: number;
+
+    @ApiProperty()
+    taxAmount: number;
 
     @ApiProperty()
     deliveryFee: number;

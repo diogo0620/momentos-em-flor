@@ -1,36 +1,70 @@
-
 import {
     Injectable,
-    NotFoundException,
 } from '@nestjs/common';
 
 import {
     Prisma,
 } from '@prisma/client';
-import { ProductType } from '@prisma/client';
 
-import { PrismaService } from '@/prisma/prisma.service';
+import {
+    ProductType,
+} from '@prisma/client';
 
-import { ProductMapper } from './mappers/product.mapper';
+import {
+    PrismaService,
+} from '@/prisma/prisma.service';
 
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
+import {
+    ProductMapper,
+} from './mappers/product.mapper';
 
-import { ProductQueryDto } from './query/product-query.dto';
+import {
+    CreateProductDto,
+} from './dto/create-product.dto';
 
-import { generateSlug } from '@/common/utils/slug';
-import { Exceptions } from '@/common/exceptions/exceptions';
+import {
+    UpdateProductDto,
+} from './dto/update-product.dto';
 
-import { CATEGORY_MESSAGES } from '@/categories/constants/category.messages';
-import { PRODUCT_MESSAGES } from './constants/product.messages';
+import {
+    ProductQueryDto,
+} from './query/product-query.dto';
 
-import { ApiResponse } from '@/common/responses/api-response';
-import { getPagination } from '@/common/database/pagination';
-import { getPaginationResponse } from '@/common/database/pagination-response';
+import {
+    generateSlug,
+} from '@/common/utils/slug';
 
-import { ProductAdminDetailResponseDto } from './dto/admin/product-admin-detail-response.dto';
-import { ProductAdminListResponseDto } from './dto/admin/product-admin-list-response.dto';
-import { Decimal } from '@prisma/client/runtime/library';
+import {
+    Exceptions,
+} from '@/common/exceptions/exceptions';
+
+import {
+    CATEGORY_MESSAGES,
+} from '@/categories/constants/category.messages';
+
+import {
+    PRODUCT_MESSAGES,
+} from './constants/product.messages';
+
+import {
+    ApiResponse,
+} from '@/common/responses/api-response';
+
+import {
+    getPagination,
+} from '@/common/database/pagination';
+
+import {
+    getPaginationResponse,
+} from '@/common/database/pagination-response';
+
+import {
+    ProductAdminDetailResponseDto,
+} from './dto/admin/product-admin-detail-response.dto';
+
+import {
+    ProductAdminListResponseDto,
+} from './dto/admin/product-admin-list-response.dto';
 
 
 @Injectable()
@@ -41,84 +75,43 @@ export class ProductsService {
         private readonly productMapper: ProductMapper,
     ) { }
 
+
+    // =========================================================
+    // ADMIN LIST
+    // =========================================================
+
     async findAllAdmin(
         query: ProductQueryDto,
     ) {
+
         const where = this.buildListWhere(query);
+        const orderBy = this.buildOrderBy(query);
 
-        const orderBy = query.sort
-            ? {
-                [query.sort]: query.order,
-            }
-            : {
-                sortOrder: 'asc' as const,
-            };
+        const [
+            products,
+            total,
+        ] = await Promise.all([
+            this.prisma.product.findMany({
+                where,
+                ...getPagination(
+                    query.page,
+                    query.pageSize,
+                ),
+                select: this.getAdminListSelect(),
+                orderBy,
+            }),
 
-        const products = await this.prisma.product.findMany({
-            where,
-
-            ...getPagination(
-                query.page,
-                query.pageSize,
-            ),
-
-            select: {
-                id: true,
-                name: true,
-                slug: true,
-                basePrice: true,
-                active: true,
-                type: true,
-                featured: true,
-
-                category: {
-                    select: {
-                        id: true,
-                        name: true,
-                    },
-                },
-
-                taxCode: {
-                    select: {
-                        rate: true,
-                    },
-                },
-
-                images: {
-                    where: {
-                        variantId: null,
-                    },
-                    orderBy: [
-                        {
-                            isPrimary: 'desc',
-                        },
-                        {
-                            sortOrder: 'asc',
-                        },
-                    ],
-                    take: 1,
-                    select: {
-                        id: true,
-                        altText: true,
-                        file: {
-                            select: {
-                                id: true,
-                            },
-                        },
-                    },
-                },
-            },
-
-            orderBy,
-        });
-
-        const total = await this.prisma.product.count({
-            where,
-        });
+            this.prisma.product.count({
+                where,
+            }),
+        ]);
 
         return ApiResponse.paginated(
-            products.map((product) =>
-                this.productMapper.toAdminListResponse(product),
+            products.map(
+                (product) =>
+                    this.productMapper.toAdminListResponse(
+                        product,
+                    ),
             ),
             getPaginationResponse(
                 query.page,
@@ -129,146 +122,29 @@ export class ProductsService {
     }
 
 
+    // =========================================================
+    // ADMIN DETAIL
+    // =========================================================
+
     async findOneAdmin(
         id: number,
     ): Promise<ProductAdminDetailResponseDto> {
-        const product = await this.prisma.product.findFirst({
-            where: {
-                id,
-            },
 
-            select: {
-                id: true,
-                name: true,
-                slug: true,
-                description: true,
-                active: true,
-                type: true,
-                featured: true,
-                rentalDeposit: true,
-                basePrice: true,
-                baseFloristCompensation: true,
-                taxCodeId: true,
-                categoryId: true,
-                sortOrder: true,
-                createdAt: true,
-                updatedAt: true,
-
-                taxCode: {
-                    select: {
-                        id: true,
-                        code: true,
-                        name: true,
-                        rate: true,
-                        active: true,
-                    },
+        const product =
+            await this.prisma.product.findFirst({
+                where: {
+                    id,
                 },
+                select: this.getAdminDetailSelect(),
+            });
 
-                category: {
-                    select: {
-                        id: true,
-                        name: true,
-                        slug: true,
-                        description: true,
-                        active: true,
-                    },
-                },
-
-                images: {
-                    orderBy: [
-                        {
-                            isPrimary: 'desc',
-                        },
-                        {
-                            sortOrder: 'asc',
-                        },
-                    ],
-                    select: {
-                        id: true,
-                        fileId: true,
-                        altText: true,
-                        sortOrder: true,
-                        isPrimary: true,
-                        variantId: true,
-                        createdAt: true,
-                        updatedAt: true,
-
-                        file: {
-                            select: {
-                                id: true,
-                            },
-                        },
-                    },
-                },
-
-                components: {
-                    orderBy: {
-                        sortOrder: 'asc',
-                    },
-                    select: {
-                        id: true,
-                        name: true,
-                        minQuantity: true,
-                        recommendedQuantity: true,
-                        maxQuantity: true,
-                        customerPricePerAdditionalUnit: true,
-                        floristCompensationPerAdditionalUnit: true,
-                        sortOrder: true,
-                        active: true,
-                        createdAt: true,
-                        updatedAt: true,
-                    },
-                },
-
-                variants: {
-                    orderBy: {
-                        sortOrder: 'asc',
-                    },
-                    select: {
-                        id: true,
-                        type: true,
-                        name: true,
-                        code: true,
-                        price: true,
-                        floristCompensation: true,
-                        sortOrder: true,
-                        active: true,
-                        createdAt: true,
-                        updatedAt: true,
-
-                        image: {
-                            select: {
-                                id: true,
-                                fileId: true,
-                                altText: true,
-                                sortOrder: true,
-                                isPrimary: true,
-                                variantId: true,
-                                createdAt: true,
-                                updatedAt: true,
-
-                                file: {
-                                    select: {
-                                        id: true,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        });
-
-        if (!product) {
-            Exceptions.notFound(
-                PRODUCT_MESSAGES.NOT_FOUND,
-            );
-        }
+        this.ensureProductExists(product);
 
         return this.productMapper.toAdminDetailResponse(
             product,
         );
     }
+
 
     // =========================================================
     // PUBLIC LIST
@@ -277,77 +153,35 @@ export class ProductsService {
     async findAll(
         query: ProductQueryDto,
     ) {
-        const where =
-            this.buildListWhere(query);
 
-        const orderBy =
-            query.sort
-                ? {
-                    [query.sort]:
-                        query.order,
-                }
-                : {
-                    sortOrder: 'asc' as const,
-                };
+        const where = this.buildListWhere(query);
+        const orderBy = this.buildOrderBy(query);
 
-        const products =
-            await this.prisma.product.findMany({
+        const [
+            products,
+            total,
+        ] = await Promise.all([
+            this.prisma.product.findMany({
                 where,
-
                 ...getPagination(
                     query.page,
                     query.pageSize,
                 ),
-
-                select: {
-                    id: true,
-                    name: true,
-                    basePrice: true,
-                    type: true,
-                    featured: true,
-
-                    taxCode: {
-                        select: {
-                            rate: true,
-                        },
-                    },
-
-                    images: {
-                        where: {
-                            variantId: null,
-                        },
-                        orderBy: [
-                            {
-                                isPrimary: 'desc',
-                            },
-                            {
-                                sortOrder: 'asc',
-                            },
-                        ],
-                        take: 1,
-                        select: {
-                            file: {
-                                select: {
-                                    id: true,
-                                },
-                            },
-                        },
-                    },
-                },
-
+                select: this.getPublicListSelect(),
                 orderBy,
-            });
+            }),
 
-        const total =
-            await this.prisma.product.count({
+            this.prisma.product.count({
                 where,
-            });
+            }),
+        ]);
 
         return ApiResponse.paginated(
-            products.map((product) =>
-                this.productMapper.toListResponse(
-                    product,
-                ),
+            products.map(
+                (product) =>
+                    this.productMapper.toListResponse(
+                        product,
+                    ),
             ),
             getPaginationResponse(
                 query.page,
@@ -358,148 +192,29 @@ export class ProductsService {
     }
 
 
-    private buildListWhere(
-        query: ProductQueryDto,
-    ): Prisma.ProductWhereInput {
-
-        return {
-
-
-            ...(query.search && {
-                OR: [
-                    {
-                        name: {
-                            contains: query.search,
-                            mode: 'insensitive',
-                        },
-                    },
-                    {
-                        description: {
-                            contains: query.search,
-                            mode: 'insensitive',
-                        },
-                    },
-                ],
-            }),
-        };
-    }
-
-
     // =========================================================
-    // DETAIL
+    // PUBLIC DETAIL
     // =========================================================
 
     async findOne(
         id: number,
     ) {
+
         const product =
             await this.prisma.product.findFirst({
                 where: {
                     id,
                 },
-
-                select: {
-                    id: true,
-                    name: true,
-                    slug: true,
-                    description: true,
-                    basePrice: true,
-                    active: true,
-                    type: true,
-                    featured: true,
-                    rentalDeposit: true,
-
-                    taxCode: {
-                        select: {
-                            rate: true,
-                        },
-                    },
-
-                    category: {
-                        select: {
-                            id: true,
-                            name: true,
-                        },
-                    },
-
-                    components: {
-                        orderBy: {
-                            sortOrder: 'asc',
-                        },
-                        select: {
-                            id: true,
-                            name: true,
-                            minQuantity: true,
-                            recommendedQuantity: true,
-                            maxQuantity: true,
-                            customerPricePerAdditionalUnit: true,
-                        },
-                    },
-
-                    variants: {
-                        orderBy: {
-                            sortOrder: 'asc',
-                        },
-                        select: {
-                            id: true,
-                            type: true,
-                            name: true,
-                            code: true,
-                            price: true,
-                            active: true,
-
-                            image: {
-                                select: {
-                                    file: {
-                                        select: {
-                                            id: true,
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-
-                    images: {
-                        where: {
-                            variantId: null,
-                        },
-                        orderBy: [
-                            {
-                                isPrimary: 'desc',
-                            },
-                            {
-                                sortOrder: 'asc',
-                            },
-                        ],
-                        select: {
-                            file: {
-                                select: {
-                                    id: true,
-                                },
-                            },
-                        },
-                    },
-                },
+                select: this.getPublicDetailSelect(),
             });
 
         this.ensureProductExists(product);
 
         return ApiResponse.success(
-            this.productMapper.toResponse(product),
+            this.productMapper.toResponse(
+                product,
+            ),
         );
-    }
-
-
-    private ensureProductExists(
-        product: unknown,
-    ): asserts product is NonNullable<typeof product> {
-
-        if (!product) {
-            Exceptions.notFound(
-                PRODUCT_MESSAGES.NOT_FOUND,
-            );
-        }
     }
 
 
@@ -511,13 +226,7 @@ export class ProductsService {
         dto: CreateProductDto,
     ) {
 
-        await this.validateCategory(
-            dto.categoryId,
-        );
-
-        await this.validateTaxCode(
-            dto.taxCodeId,
-        );
+        await this.validateCreate(dto);
 
         const slug =
             generateSlug(dto.name);
@@ -525,15 +234,6 @@ export class ProductsService {
         await this.validateProductUniqueness(
             dto.name,
             slug,
-        );
-
-        this.validateProductConfiguration(
-            dto.components,
-            dto.variants,
-        );
-
-        this.validateCreatePricing(
-            dto,
         );
 
         const data =
@@ -556,6 +256,42 @@ export class ProductsService {
     // =========================================================
     // CREATE - VALIDATION
     // =========================================================
+
+    private async validateCreate(
+        dto: CreateProductDto,
+    ): Promise<void> {
+
+        await this.validateCategory(
+            dto.categoryId,
+        );
+
+        await this.validateTaxCode(
+            dto.taxCodeId,
+        );
+
+        this.validateProductConfiguration(
+            dto.components,
+            dto.variants,
+        );
+
+        this.validateProductPricing(
+            dto.customerPrice,
+            dto.floristPrice,
+        );
+
+        this.validateRentalDeposit(
+            dto.type,
+            dto.rentalDeposit,
+        );
+
+        if (this.hasItems(dto.variants)) {
+            this.validateVariants(
+                dto.customerPrice,
+                dto.variants,
+            );
+        }
+    }
+
 
     private async validateCategory(
         categoryId: number,
@@ -605,9 +341,7 @@ export class ProductsService {
 
         const product =
             await this.prisma.product.findFirst({
-
                 where: {
-
                     ...(excludeId !== undefined && {
                         id: {
                             not: excludeId,
@@ -639,10 +373,14 @@ export class ProductsService {
     ): void {
 
         const hasComponents =
-            this.hasItems(components);
+            this.hasItems(
+                components,
+            );
 
         const hasVariants =
-            this.hasItems(variants);
+            this.hasItems(
+                variants,
+            );
 
         if (
             hasComponents &&
@@ -655,101 +393,93 @@ export class ProductsService {
     }
 
 
-    private validateCreatePricing(
-        dto: CreateProductDto,
+    private validateProductPricing(
+        customerPrice: number,
+        floristPrice: number,
     ): void {
 
-        this.validateBasePricing(
-            dto.basePrice,
-            dto.baseFloristCompensation,
-        );
-
-        if (dto.type === ProductType.RENTAL) {
-            if (dto.rentalDeposit === undefined || dto.rentalDeposit === null) {
-                Exceptions.badRequest(
-                    'Rental products must have a rental deposit.',
-                );
-            }
+        if (customerPrice < 0) {
+            Exceptions.badRequest(
+                'Customer price cannot be negative.',
+            );
         }
 
-        if (dto.type === ProductType.SALE && dto.rentalDeposit !== undefined && dto.rentalDeposit !== null) {
+        if (floristPrice < 0) {
+            Exceptions.badRequest(
+                'Florist price cannot be negative.',
+            );
+        }
+
+        if (floristPrice >= customerPrice) {
+            Exceptions.badRequest(
+                'Florist price must be less than customer price.',
+            );
+        }
+    }
+
+
+    private validateRentalDeposit(
+        type: ProductType | undefined,
+        rentalDeposit: number | null | undefined,
+    ): void {
+
+        if (
+            type === ProductType.RENTAL &&
+            (
+                rentalDeposit === undefined ||
+                rentalDeposit === null
+            )
+        ) {
+            Exceptions.badRequest(
+                'Rental products must have a rental deposit.',
+            );
+        }
+
+        if (
+            type === ProductType.SALE &&
+            rentalDeposit !== undefined &&
+            rentalDeposit !== null
+        ) {
             Exceptions.badRequest(
                 'Sale products cannot have a rental deposit.',
             );
         }
-
-        if (this.hasItems(dto.variants)) {
-            this.validateVariantsAgainstBasePrice(
-                dto.basePrice,
-                dto.variants!,
-            );
-
-            this.validateVariantsPricing(
-                dto.variants!,
-            );
-        }
     }
 
-    private validateVariantsAgainstBasePrice(
-        basePrice: number,
+
+    private validateVariants(
+        baseCustomerPrice: number,
         variants: Array<{
-            price: number | Decimal;
+            customerPrice: number | Prisma.Decimal;
+            floristPrice: number | Prisma.Decimal;
         }>,
     ): void {
-        for (const variant of variants) {
-            const variantPrice =
-                typeof variant.price === 'number'
-                    ? variant.price
-                    : variant.price.toNumber();
 
-            if (variantPrice < basePrice) {
+        for (const variant of variants) {
+
+            const customerPrice =
+                this.toNumber(
+                    variant.customerPrice,
+                );
+
+            const floristPrice =
+                this.toNumber(
+                    variant.floristPrice,
+                );
+
+            if (
+                customerPrice <
+                baseCustomerPrice
+            ) {
                 Exceptions.badRequest(
-                    'Base price must be less than or equal to every variant price.',
+                    'Base customer price must be less than or equal to every variant customer price.',
                 );
             }
-        }
-    }
 
-
-    private validateBasePricing(
-        basePrice: number,
-        baseFloristCompensation: number,
-    ): void {
-
-        if (
-            baseFloristCompensation >=
-            basePrice
-        ) {
-            Exceptions.badRequest(
-                PRODUCT_MESSAGES
-                    .COMPENSATION_MUST_BE_LESS_THAN_PRICE,
+            this.validateProductPricing(
+                customerPrice,
+                floristPrice,
             );
-        }
-    }
-
-
-    private validateVariantsPricing(
-        variants: Array<{
-            price: number | Decimal;
-            floristCompensation: number | Decimal;
-        }>,
-    ): void {
-        for (const variant of variants) {
-            const price =
-                typeof variant.price === 'number'
-                    ? variant.price
-                    : variant.price.toNumber();
-
-            const floristCompensation =
-                typeof variant.floristCompensation === 'number'
-                    ? variant.floristCompensation
-                    : variant.floristCompensation.toNumber();
-
-            if (floristCompensation >= price) {
-                Exceptions.badRequest(
-                    PRODUCT_MESSAGES.COMPENSATION_MUST_BE_LESS_THAN_PRICE,
-                );
-            }
         }
     }
 
@@ -764,32 +494,28 @@ export class ProductsService {
     ): Prisma.ProductCreateInput {
 
         return {
-
-            name:
-                dto.name,
+            name: dto.name,
 
             slug,
 
             description:
                 dto.description,
 
-            basePrice:
-                dto.basePrice,
+            customerPrice:
+                dto.customerPrice,
 
-            baseFloristCompensation:
-                dto.baseFloristCompensation,
+            floristPrice:
+                dto.floristPrice,
 
             category: {
                 connect: {
-                    id:
-                        dto.categoryId,
+                    id: dto.categoryId,
                 },
             },
 
             taxCode: {
                 connect: {
-                    id:
-                        dto.taxCodeId,
+                    id: dto.taxCodeId,
                 },
             },
 
@@ -829,37 +555,10 @@ export class ProductsService {
 
             ...(this.hasItems(dto.images) && {
                 images: {
-                    create: dto.images!.map(
-                        (image) => ({
-                            file: {
-                                connect: {
-                                    id: image.fileId,
-                                },
-                            },
-
-                            altText:
-                                image.altText ??
-                                null,
-
-                            sortOrder:
-                                image.sortOrder ??
-                                0,
-
-                            isPrimary:
-                                image.isPrimary ??
-                                false,
-
-                            ...(image.variantId !== undefined &&
-                                image.variantId !== null && {
-                                variant: {
-                                    connect: {
-                                        id:
-                                            image.variantId,
-                                    },
-                                },
-                            }),
-                        }),
-                    ),
+                    create:
+                        this.buildImageCreateData(
+                            dto.images!,
+                        ),
                 },
             }),
         };
@@ -873,8 +572,7 @@ export class ProductsService {
     ) {
 
         return components.map(
-            component => ({
-
+            (component) => ({
                 name:
                     component.name,
 
@@ -890,8 +588,8 @@ export class ProductsService {
                 customerPricePerAdditionalUnit:
                     component.customerPricePerAdditionalUnit,
 
-                floristCompensationPerAdditionalUnit:
-                    component.floristCompensationPerAdditionalUnit,
+                floristPricePerAdditionalUnit:
+                    component.floristPricePerAdditionalUnit,
 
                 sortOrder:
                     component.sortOrder ??
@@ -910,21 +608,24 @@ export class ProductsService {
             CreateProductDto['variants']
         >,
     ) {
+
         return variants.map(
             (variant) => ({
-                type: variant.type,
+                type:
+                    variant.type,
 
-                name: variant.name,
+                name:
+                    variant.name,
 
                 code:
                     variant.code ??
                     null,
 
-                price:
-                    variant.price,
+                customerPrice:
+                    variant.customerPrice,
 
-                floristCompensation:
-                    variant.floristCompensation,
+                floristPrice:
+                    variant.floristPrice,
 
                 sortOrder:
                     variant.sortOrder ??
@@ -933,6 +634,45 @@ export class ProductsService {
                 active:
                     variant.active ??
                     true,
+            }),
+        );
+    }
+
+
+    private buildImageCreateData(
+        images: NonNullable<
+            CreateProductDto['images']
+        >,
+    ) {
+
+        return images.map(
+            (image) => ({
+                file: {
+                    connect: {
+                        id: image.fileId,
+                    },
+                },
+
+                altText:
+                    image.altText ??
+                    null,
+
+                sortOrder:
+                    image.sortOrder ??
+                    0,
+
+                isPrimary:
+                    image.isPrimary ??
+                    false,
+
+                ...(image.variantId !== undefined &&
+                    image.variantId !== null && {
+                    variant: {
+                        connect: {
+                            id: image.variantId,
+                        },
+                    },
+                }),
             }),
         );
     }
@@ -952,7 +692,8 @@ export class ProductsService {
                 id,
             );
 
-        await this.validateUpdateRelations(
+        await this.validateUpdate(
+            currentProduct,
             dto,
         );
 
@@ -962,7 +703,6 @@ export class ProductsService {
             );
 
         if (slug) {
-
             await this.validateProductUniqueness(
                 dto.name!,
                 slug,
@@ -976,30 +716,16 @@ export class ProductsService {
                 dto,
             );
 
-        this.validateUpdatePricing(
-            currentProduct,
-            dto,
-            configuration.hasVariants,
-        );
-
-        this.validateRentalDepositUpdate(
-            currentProduct.type,
-            dto.rentalDeposit,
-        );
-
         const data =
             this.buildUpdateData(
                 dto,
                 slug,
-                configuration,
             );
 
         await this.prisma.product.update({
-
             where: {
                 id,
             },
-
             data,
         });
 
@@ -1007,9 +733,63 @@ export class ProductsService {
     }
 
 
-    // =========================================================
-    // UPDATE - CURRENT PRODUCT
-    // =========================================================
+    private async validateUpdate(
+        currentProduct: Awaited<
+            ReturnType<
+                ProductsService['getProductForUpdate']
+            >
+        >,
+        dto: UpdateProductDto,
+    ): Promise<void> {
+
+        await this.validateUpdateRelations(
+            dto,
+        );
+
+        const configuration =
+            this.resolveUpdateConfiguration(
+                currentProduct,
+                dto,
+            );
+
+        const customerPrice =
+            dto.customerPrice !== undefined
+                ? dto.customerPrice
+                : this.toNumber(
+                    currentProduct.customerPrice,
+                );
+
+        const floristPrice =
+            dto.floristPrice !== undefined
+                ? dto.floristPrice
+                : this.toNumber(
+                    currentProduct.floristPrice,
+                );
+
+        this.validateProductPricing(
+            customerPrice,
+            floristPrice,
+        );
+
+        this.validateRentalDeposit(
+            currentProduct.type,
+            dto.rentalDeposit,
+        );
+
+        if (configuration.hasVariants) {
+
+            const variants =
+                dto.variants !== undefined
+                    ? dto.variants
+                    : currentProduct.variants;
+
+            this.validateVariants(
+                customerPrice,
+                variants,
+            );
+        }
+    }
+
 
     private async getProductForUpdate(
         id: number,
@@ -1017,34 +797,22 @@ export class ProductsService {
 
         const product =
             await this.prisma.product.findFirst({
-
                 where: {
                     id,
                 },
-
                 include: {
-
-                    components: {
-                    },
-
-                    variants: {
-                    },
+                    components: true,
+                    variants: true,
                 },
             });
 
-        if (!product) {
-            Exceptions.notFound(
-                PRODUCT_MESSAGES.NOT_FOUND,
-            );
-        }
+        this.ensureProductExists(
+            product,
+        );
 
         return product;
     }
 
-
-    // =========================================================
-    // UPDATE - VALIDATION
-    // =========================================================
 
     private async validateUpdateRelations(
         dto: UpdateProductDto,
@@ -1084,10 +852,6 @@ export class ProductsService {
     }
 
 
-    // =========================================================
-    // UPDATE - CONFIGURATION
-    // =========================================================
-
     private resolveUpdateConfiguration(
         currentProduct: Awaited<
             ReturnType<
@@ -1107,10 +871,6 @@ export class ProductsService {
                 dto.variants,
             );
 
-        /*
-         * When both are explicitly supplied,
-         * both cannot contain items.
-         */
         if (
             hasComponentUpdate &&
             hasVariantUpdate &&
@@ -1128,10 +888,6 @@ export class ProductsService {
         let hasVariants =
             currentProduct.variants.length > 0;
 
-        /*
-         * An explicitly supplied collection
-         * replaces the existing configuration.
-         */
         if (hasComponentUpdate) {
             hasComponents =
                 this.hasItems(
@@ -1162,66 +918,6 @@ export class ProductsService {
     }
 
 
-    private validateUpdatePricing(
-        currentProduct: Awaited<
-            ReturnType<
-                ProductsService['getProductForUpdate']
-            >
-        >,
-        dto: UpdateProductDto,
-        hasVariants: boolean,
-    ): void {
-
-        const basePrice =
-            dto.basePrice !== undefined
-                ? dto.basePrice
-                : currentProduct.basePrice.toNumber();
-
-        const baseFloristCompensation =
-            dto.baseFloristCompensation !== undefined
-                ? dto.baseFloristCompensation
-                : currentProduct.baseFloristCompensation.toNumber();
-
-        this.validateBasePricing(
-            basePrice,
-            baseFloristCompensation,
-        );
-
-        if (hasVariants) {
-
-            const variants =
-                dto.variants !== undefined
-                    ? dto.variants
-                    : currentProduct.variants;
-
-            this.validateVariantsPricing(
-                variants,
-            );
-
-            this.validateVariantsAgainstBasePrice(
-                basePrice,
-                variants,
-            );
-        }
-    }
-
-    private validateRentalDepositUpdate(
-        type: ProductType,
-        rentalDeposit?: number,
-    ): void {
-
-        if (
-            type === ProductType.SALE &&
-            rentalDeposit !== undefined &&
-            rentalDeposit !== null
-        ) {
-            Exceptions.badRequest(
-                'Sale products cannot have a rental deposit.',
-            );
-        }
-    }
-
-
     // =========================================================
     // UPDATE - DATA
     // =========================================================
@@ -1229,10 +925,6 @@ export class ProductsService {
     private buildUpdateData(
         dto: UpdateProductDto,
         slug: string | undefined,
-        configuration: {
-            hasComponents: boolean;
-            hasVariants: boolean;
-        },
     ): Prisma.ProductUpdateInput {
 
         const data: Prisma.ProductUpdateInput = {
@@ -1274,14 +966,14 @@ export class ProductsService {
                     dto.active,
             }),
 
-            ...(dto.basePrice !== undefined && {
-                basePrice:
-                    dto.basePrice,
+            ...(dto.customerPrice !== undefined && {
+                customerPrice:
+                    dto.customerPrice,
             }),
 
-            ...(dto.baseFloristCompensation !== undefined && {
-                baseFloristCompensation:
-                    dto.baseFloristCompensation,
+            ...(dto.floristPrice !== undefined && {
+                floristPrice:
+                    dto.floristPrice,
             }),
 
             ...(dto.featured !== undefined && {
@@ -1296,19 +988,11 @@ export class ProductsService {
         };
 
 
-
-
-
-        /*
-         * Replace components.
-         */
-
         if (
             dto.components !== undefined
         ) {
 
             data.components = {
-
                 deleteMany: {},
 
                 ...(this.hasItems(dto.components) && {
@@ -1321,16 +1005,11 @@ export class ProductsService {
         }
 
 
-        /*
-         * Replace variants.
-         */
-
         if (
             dto.variants !== undefined
         ) {
 
             data.variants = {
-
                 deleteMany: {},
 
                 ...(this.hasItems(dto.variants) && {
@@ -1341,6 +1020,24 @@ export class ProductsService {
                 }),
             };
         }
+
+
+        if (
+            dto.images !== undefined
+        ) {
+
+            data.images = {
+                deleteMany: {},
+
+                ...(this.hasItems(dto.images) && {
+                    create:
+                        this.buildImageCreateData(
+                            dto.images,
+                        ),
+                }),
+            };
+        }
+
 
         return data;
     }
@@ -1359,12 +1056,9 @@ export class ProductsService {
         );
 
         await this.prisma.product.delete({
-
             where: {
                 id,
             },
-
-
         });
 
         return ApiResponse.success(
@@ -1381,12 +1075,420 @@ export class ProductsService {
         const product =
             await this.prisma.product.findFirst({
                 where: {
-                    id
+                    id,
                 },
                 select: {
                     id: true,
                 },
             });
+
+        this.ensureProductExists(
+            product,
+        );
+    }
+
+
+    // =========================================================
+    // QUERIES
+    // =========================================================
+
+    private buildListWhere(
+        query: ProductQueryDto,
+    ): Prisma.ProductWhereInput {
+
+        return {
+
+            ...(query.search && {
+                OR: [
+                    {
+                        name: {
+                            contains:
+                                query.search,
+                            mode:
+                                'insensitive',
+                        },
+                    },
+                    {
+                        description: {
+                            contains:
+                                query.search,
+                            mode:
+                                'insensitive',
+                        },
+                    },
+                ],
+            }),
+        };
+    }
+
+
+    private buildOrderBy(
+        query: ProductQueryDto,
+    ) {
+
+        if (query.sort) {
+            return {
+                [query.sort]:
+                    query.order,
+            };
+        }
+
+        return {
+            sortOrder:
+                'asc' as const,
+        };
+    }
+
+
+    private getAdminListSelect() {
+
+        return {
+            id: true,
+            name: true,
+            slug: true,
+            customerPrice: true,
+            active: true,
+            type: true,
+            featured: true,
+
+            category: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
+
+            taxCode: {
+                select: {
+                    rate: true,
+                },
+            },
+
+            images: {
+                where: {
+                    variantId: null,
+                },
+
+                orderBy: [
+                    {
+                        isPrimary:
+                            'desc' as const,
+                    },
+                    {
+                        sortOrder:
+                            'asc' as const,
+                    },
+                ],
+
+                take: 1,
+
+                select: {
+                    id: true,
+                    altText: true,
+
+                    file: {
+                        select: {
+                            id: true,
+                        },
+                    },
+                },
+            },
+        };
+    }
+
+
+    private getAdminDetailSelect() {
+
+        return {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            active: true,
+            type: true,
+            featured: true,
+            rentalDeposit: true,
+            customerPrice: true,
+            floristPrice: true,
+            taxCodeId: true,
+            categoryId: true,
+            sortOrder: true,
+            createdAt: true,
+            updatedAt: true,
+
+            taxCode: {
+                select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                    rate: true,
+                    active: true,
+                },
+            },
+
+            category: {
+                select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                    description: true,
+                    active: true,
+                },
+            },
+
+            images: this.getImageSelect(),
+
+            components: {
+                orderBy: {
+                    sortOrder:
+                        'asc' as const,
+                },
+
+                select: {
+                    id: true,
+                    name: true,
+                    minQuantity: true,
+                    recommendedQuantity: true,
+                    maxQuantity: true,
+                    customerPricePerAdditionalUnit: true,
+                    floristPricePerAdditionalUnit: true,
+                    sortOrder: true,
+                    active: true,
+                    createdAt: true,
+                    updatedAt: true,
+                },
+            },
+
+            variants: {
+                orderBy: {
+                    sortOrder:
+                        'asc' as const,
+                },
+
+                select: {
+                    id: true,
+                    type: true,
+                    name: true,
+                    code: true,
+                    customerPrice: true,
+                    floristPrice: true,
+                    sortOrder: true,
+                    active: true,
+                    createdAt: true,
+                    updatedAt: true,
+
+                    image: this.getVariantImageSelect(),
+                },
+            },
+        };
+    }
+
+
+    private getPublicListSelect() {
+
+        return {
+            id: true,
+            name: true,
+            customerPrice: true,
+            type: true,
+            featured: true,
+
+            taxCode: {
+                select: {
+                    rate: true,
+                },
+            },
+
+            images: {
+                where: {
+                    variantId: null,
+                },
+
+                orderBy: [
+                    {
+                        isPrimary:
+                            'desc' as const,
+                    },
+                    {
+                        sortOrder:
+                            'asc' as const,
+                    },
+                ],
+
+                take: 1,
+
+                select: {
+                    file: {
+                        select: {
+                            id: true,
+                        },
+                    },
+                },
+            },
+        };
+    }
+
+
+    private getPublicDetailSelect() {
+
+        return {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            customerPrice: true,
+            active: true,
+            type: true,
+            featured: true,
+            rentalDeposit: true,
+
+            taxCode: {
+                select: {
+                    rate: true,
+                },
+            },
+
+            category: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
+
+            components: {
+                orderBy: {
+                    sortOrder:
+                        'asc' as const,
+                },
+
+                select: {
+                    id: true,
+                    name: true,
+                    minQuantity: true,
+                    recommendedQuantity: true,
+                    maxQuantity: true,
+                    customerPricePerAdditionalUnit: true,
+                },
+            },
+
+            variants: {
+                orderBy: {
+                    sortOrder:
+                        'asc' as const,
+                },
+
+                select: {
+                    id: true,
+                    type: true,
+                    name: true,
+                    code: true,
+                    customerPrice: true,
+                    active: true,
+
+                    image: {
+                        select: {
+                            file: {
+                                select: {
+                                    id: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+
+            images: {
+                where: {
+                    variantId: null,
+                },
+
+                orderBy: [
+                    {
+                        isPrimary:
+                            'desc' as const,
+                    },
+                    {
+                        sortOrder:
+                            'asc' as const,
+                    },
+                ],
+
+                select: {
+                    file: {
+                        select: {
+                            id: true,
+                        },
+                    },
+                },
+            },
+        };
+    }
+
+
+    private getImageSelect() {
+
+        return {
+            orderBy: [
+                {
+                    isPrimary:
+                        'desc' as const,
+                },
+                {
+                    sortOrder:
+                        'asc' as const,
+                },
+            ],
+
+            select: {
+                id: true,
+                fileId: true,
+                altText: true,
+                sortOrder: true,
+                isPrimary: true,
+                variantId: true,
+                createdAt: true,
+                updatedAt: true,
+
+                file: {
+                    select: {
+                        id: true,
+                    },
+                },
+            },
+        };
+    }
+
+
+    private getVariantImageSelect() {
+
+        return {
+            select: {
+                id: true,
+                fileId: true,
+                altText: true,
+                sortOrder: true,
+                isPrimary: true,
+                variantId: true,
+                createdAt: true,
+                updatedAt: true,
+
+                file: {
+                    select: {
+                        id: true,
+                    },
+                },
+            },
+        };
+    }
+
+
+    // =========================================================
+    // HELPERS
+    // =========================================================
+
+    private ensureProductExists(
+        product: unknown,
+    ): asserts product is NonNullable<typeof product> {
 
         if (!product) {
             Exceptions.notFound(
@@ -1396,17 +1498,26 @@ export class ProductsService {
     }
 
 
-    // =========================================================
-    // HELPERS
-    // =========================================================
-
     private hasItems<T>(
-        value: T[] | null | undefined,
+        value:
+            | T[]
+            | null
+            | undefined,
     ): value is T[] {
 
         return (
             Array.isArray(value) &&
             value.length > 0
         );
+    }
+
+
+    private toNumber(
+        value: number | Prisma.Decimal,
+    ): number {
+
+        return typeof value === 'number'
+            ? value
+            : value.toNumber();
     }
 }

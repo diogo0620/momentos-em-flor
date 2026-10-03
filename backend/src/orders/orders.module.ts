@@ -9,11 +9,12 @@ import { OrderDistributionService } from './services/order-distribution.service'
 import { OrderCreatedListener } from '@/events/order/order-created.listener';
 import { OrderStatusService } from './services/order-status.service';
 import { GeocodingModule } from '@/geocoding/geocoding.module';
+import { StoreSettingsService } from '@/store-settings/store-settings.service';
 
 @Module({
   imports: [PrismaModule,GeocodingModule],
   controllers: [OrdersController],
-  providers: [OrdersService, OrderMapper, OrderDistributionService,OrderStatusService, OrderCreatedListener],
+  providers: [OrdersService, OrderMapper, OrderDistributionService,OrderStatusService, OrderCreatedListener, StoreSettingsService],
   exports: [OrdersService,OrderStatusService,OrderDistributionService],
 })
 export class OrdersModule {}

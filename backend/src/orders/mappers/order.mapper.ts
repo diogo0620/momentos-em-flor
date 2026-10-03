@@ -3,11 +3,17 @@ import { OrderListResponseDto } from '../dto/order-list-response.dto';
 import { OrderResponseDto } from '../dto/order-response.dto';
 
 export class OrderMapper {
+
+    // =========================================================
+    // DETAIL
+    // =========================================================
+
     toResponse(
         order: any,
     ): OrderResponseDto {
         return {
-            id: order.id,
+            id:
+                order.id,
 
             orderNumber:
                 order.orderNumber,
@@ -80,19 +86,36 @@ export class OrderMapper {
                 order.cardMessage,
 
             subtotal:
-                Number(order.subtotal),
+                Number(
+                    order.subtotal,
+                ),
+
+            taxAmount:
+                Number(
+                    order.taxAmount,
+                ),
 
             deliveryFee:
-                Number(order.deliveryFee),
+                Number(
+                    order.deliveryFee,
+                ),
 
             discount:
-                Number(order.discount),
+                Number(
+                    order.discount,
+                ),
 
             total:
-                Number(order.total),
+                Number(
+                    order.total,
+                ),
 
             status:
                 order.status,
+
+            // =================================================
+            // ITEMS
+            // =================================================
 
             items:
                 (order.items ?? []).map(
@@ -104,25 +127,65 @@ export class OrderMapper {
                             item.productId,
 
                         productName:
+                            item.name ??
                             item.productName,
 
                         productDescription:
-                            item.productDescription,
+                            item.description,
 
                         quantity:
                             item.quantity,
 
+                        /*
+                         * unitPrice is the price paid
+                         * by the customer INCLUDING VAT.
+                         */
                         unitPrice:
                             Number(
-                                item.unitPrice,
+                                item.customerPrice,
                             ),
 
-                        lineTotal:
+                        /*
+                         * Snapshot of the VAT rate
+                         * at the time of purchase.
+                         */
+                        taxRate:
                             Number(
-                                item.lineTotal,
+                                item.taxRate,
                             ),
+
+                        /*
+                         * Amount BEFORE VAT.
+                         */
+                        netAmount:
+                            Number(
+                                item.netAmount,
+                            ),
+
+                        /*
+                         * VAT amount.
+                         */
+                        taxAmount:
+                            Number(
+                                item.taxAmount,
+                            ),
+
+                        /*
+                         * Total line amount INCLUDING VAT.
+                         */
+                        grossAmount:
+                            Number(
+                                item.grossAmount,
+                            ),
+
+                        taxCodeId:
+                            item.taxCodeId,
                     }),
                 ),
+
+            // =================================================
+            // OFFERS
+            // =================================================
 
             offers:
                 (order.offers ?? []).map(
@@ -133,17 +196,25 @@ export class OrderMapper {
                         floristId:
                             offer.floristId,
 
-                        florist: {
-                            id:
-                                offer.florist.id,
+                        florist:
+                            offer.florist
+                                ? {
+                                    id:
+                                        offer.florist.id,
 
-                            name:
-                                offer.florist.name,
-                        },
+                                    name:
+                                        offer.florist.name,
+                                }
+                                : null,
 
+                        /*
+                         * Actual amount offered to
+                         * the florist.
+                         */
                         compensationAmount:
                             Number(
-                                offer.compensationAmount,
+                                offer.compensationAmount ??
+                                offer.price,
                             ),
 
                         distanceKm:
@@ -169,39 +240,6 @@ export class OrderMapper {
                         declineReason:
                             offer.declineReason,
 
-                        items:
-                            (
-                                offer.orderOfferItems ??
-                                []
-                            ).map(
-                                (item: any) => ({
-                                    id:
-                                        item.id,
-
-                                    orderItemId:
-                                        item.orderItemId,
-
-                                    productId:
-                                        item.productId,
-
-                                    productName:
-                                        item.productName,
-
-                                    quantity:
-                                        item.quantity,
-
-                                    unitCompensation:
-                                        Number(
-                                            item.unitCompensation,
-                                        ),
-
-                                    totalCompensation:
-                                        Number(
-                                            item.totalCompensation,
-                                        ),
-                                }),
-                            ),
-
                         createdAt:
                             offer.createdAt,
 
@@ -209,6 +247,10 @@ export class OrderMapper {
                             offer.updatedAt,
                     }),
                 ),
+
+            // =================================================
+            // STATUS HISTORY
+            // =================================================
 
             statusHistory:
                 (
@@ -280,68 +322,87 @@ export class OrderMapper {
         };
     }
 
+
+    // =========================================================
+    // MULTIPLE DETAILS
+    // =========================================================
+
     toResponses(
         orders: any[],
     ): OrderResponseDto[] {
         return orders.map(
             (order) =>
-                this.toResponse(order),
+                this.toResponse(
+                    order,
+                ),
         );
     }
 
-toListResponse(
-    order: any,
-): OrderListResponseDto {
-    return {
-        id: order.id,
 
-        orderNumber:
-            order.orderNumber,
+    // =========================================================
+    // LIST
+    // =========================================================
 
-        customerId:
-            order.customerId,
+    toListResponse(
+        order: any,
+    ): OrderListResponseDto {
+        return {
+            id:
+                order.id,
 
-        customerFirstName:
-            order.customerFirstName,
+            orderNumber:
+                order.orderNumber,
 
-        customerEmail:
-            order.customerEmail,
+            customerId:
+                order.customerId,
 
-        customerPhone:
-            order.customerPhone,
+            customerFirstName:
+                order.customerFirstName,
 
-        deliveryStreet:
-            order.deliveryStreet,
+            customerEmail:
+                order.customerEmail,
 
-        deliveryStreet2:
-            order.deliveryStreet2,
+            customerPhone:
+                order.customerPhone,
 
-        deliveryPostalCode:
-            order.deliveryPostalCode,
+            deliveryStreet:
+                order.deliveryStreet,
 
-        deliveryCity:
-            order.deliveryCity,
+            deliveryStreet2:
+                order.deliveryStreet2,
 
-        deliveryDistrict:
-            order.deliveryDistrict,
+            deliveryPostalCode:
+                order.deliveryPostalCode,
 
-        deliveryCountryCode:
-            order.deliveryCountryCode,
+            deliveryCity:
+                order.deliveryCity,
 
-        total:
-            Number(order.total),
+            deliveryDistrict:
+                order.deliveryDistrict,
 
-        status:
-            order.status,
+            deliveryCountryCode:
+                order.deliveryCountryCode,
 
-        createdAt:
-            order.createdAt,
+            total:
+                Number(
+                    order.total,
+                ),
 
-        deliveryDate: 
-            order.deliveryDate
-    };
-}
+            status:
+                order.status,
 
+            createdAt:
+                order.createdAt,
+
+            deliveryDate:
+                order.deliveryDate,
+        };
+    }
+
+
+    // =========================================================
+    // MULTIPLE LIST
+    // =========================================================
 
     toListResponses(
         orders: any[],
@@ -354,11 +415,17 @@ toListResponse(
         );
     }
 
+
+    // =========================================================
+    // CREATE
+    // =========================================================
+
     toCreateResponse(
         order: any,
     ): OrderCreateResponseDto {
         return {
-            id: order.id,
+            id:
+                order.id,
 
             orderNumber:
                 order.orderNumber,

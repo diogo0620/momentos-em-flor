@@ -25,7 +25,7 @@ import MetricCard from "@/components/admin/common/MetricCard";
 import PageHeader from "@/components/admin/common/PageHeader";
 import SectionCard from "@/components/admin/common/SectionCard";
 
-import { apiFetch } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/common/client";
 
 /* ========================================================================== */
 /* TYPES                                                                      */

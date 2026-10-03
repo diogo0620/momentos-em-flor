@@ -85,7 +85,7 @@ export class ProductAdminComponentDto {
     customerPricePerAdditionalUnit: number;
 
     @ApiProperty()
-    floristCompensationPerAdditionalUnit: number;
+    floristPricePerAdditionalUnit: number;
 
     @ApiProperty()
     sortOrder: number;
@@ -115,10 +115,10 @@ export class ProductAdminVariantDto {
     code: string | null;
 
     @ApiProperty()
-    price: number;
+    customerPrice: number;
 
     @ApiProperty()
-    floristCompensation: number;
+    floristPrice: number;
 
     @ApiProperty()
     sortOrder: number;
@@ -173,13 +173,10 @@ export class ProductAdminDetailResponseDto {
     rentalDeposit: number | null;
 
     @ApiProperty()
-    basePrice: number;
+    customerPrice: number;
 
     @ApiProperty()
-    baseFloristCompensation: number;
-
-    @ApiProperty()
-    price: number;
+    floristPrice: number;
 
 
     @ApiProperty()

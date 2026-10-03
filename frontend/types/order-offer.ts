@@ -69,3 +69,13 @@ export interface OrderOffer {
     createdAt: string;
     updatedAt: string;
 }
+
+export interface CreateOrderOffer {
+    orderId: number;
+    floristId: number;
+    price: number;
+}
+
+export interface UpdateOrderOffer {
+    price: number;
+}

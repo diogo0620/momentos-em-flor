@@ -30,14 +30,14 @@ export class CreateProductVariantDto {
         description:
             'Variant net price, before VAT.',
     })
-    price: number;
+    customerPrice: number;
 
     @ApiProperty({
         example: 25.00,
         description:
             'Florist compensation for this variant.',
     })
-    floristCompensation: number;
+    floristPrice: number;
 
     @ApiPropertyOptional({
         example: true,

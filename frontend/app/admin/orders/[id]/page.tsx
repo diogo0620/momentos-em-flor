@@ -15,10 +15,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 
 import { getOrder } from "@/lib/api/orders";
 
-import {
-    acceptOrderOffer,
-    declineOrderOffer,
-} from "@/lib/api/order-offers";
+
 
 import type {
     Order,
@@ -28,6 +25,7 @@ import type {
 import type { OrderOffer } from "@/types/order-offer";
 
 import OrderOfferForm from "@/components/admin/orders/OrderOfferForm";
+import { orderOffersApi } from "@/lib/api/order-offers";
 
 type Props = {
     params: Promise<{
@@ -371,9 +369,7 @@ export default function AdminOrderDetailPage({
 
             setError(null);
 
-            await acceptOrderOffer(
-                offer.id,
-            );
+            await orderOffersApi.accept(offer.id);
 
             if (orderId) {
                 await loadOrder(orderId);
@@ -418,10 +414,7 @@ export default function AdminOrderDetailPage({
 
             setError(null);
 
-            await declineOrderOffer(
-                offer.id,
-                reason,
-            );
+            await orderOffersApi.decline(offer.id,reason);
 
             setDecliningOfferId(null);
             setDeclineReason("");
@@ -868,7 +861,7 @@ export default function AdminOrderDetailPage({
 
                                 <p className="text-lg font-bold text-[#55624A]">
                                     {formatCurrency(
-                                        item.lineTotal,
+                                        item.grossAmount,
                                     )}
                                 </p>
 

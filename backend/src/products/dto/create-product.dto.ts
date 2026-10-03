@@ -67,7 +67,7 @@ export class CreateProductDto {
     })
     @IsNumber()
     @Min(0)
-    basePrice: number;
+    customerPrice: number;
 
     @ApiProperty({
         example: 25.00,
@@ -76,7 +76,7 @@ export class CreateProductDto {
     })
     @IsNumber()
     @Min(0)
-    baseFloristCompensation: number;
+    floristPrice: number;
 
     @ApiProperty({
         example: 1,

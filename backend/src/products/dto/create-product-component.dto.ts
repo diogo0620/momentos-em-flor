@@ -32,7 +32,7 @@ export class CreateProductComponentDto {
     @ApiProperty({
         example: 1.50,
     })
-    floristCompensationPerAdditionalUnit: number;
+    floristPricePerAdditionalUnit: number;
 
     @ApiPropertyOptional({
         example: true,

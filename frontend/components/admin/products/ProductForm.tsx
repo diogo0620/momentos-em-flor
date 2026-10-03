@@ -14,14 +14,14 @@ import {
     updateProduct,
     updateProductConfiguration,
     uploadProductImage,
-    type ProductAdminDetail,
+    type AdminProductDetail,
     type ProductConfigurationComponent,
     type ProductConfigurationImage,
     type ProductConfigurationVariant,
 } from "@/lib/api/products";
 
 type Props = {
-    product?: ProductAdminDetail;
+    product?: AdminProductDetail;
 };
 
 type ComponentForm = ProductConfigurationComponent;
@@ -51,7 +51,7 @@ function createComponent(
         recommendedQuantity: 1,
         maxQuantity: 1,
         customerPricePerAdditionalUnit: 0,
-        floristCompensationPerAdditionalUnit: 0,
+        floristPricePerAdditionalUnit: 0,
         active: true,
         sortOrder,
     };
@@ -65,8 +65,8 @@ function createVariant(
         type: "SIZE",
         name: "",
         code: "",
-        price: 0,
-        floristCompensation: 0,
+        customerPrice: 0,
+        floristPrice: 0,
         active: true,
         sortOrder,
         imageId: null,
@@ -74,7 +74,7 @@ function createVariant(
 }
 
 function normaliseComponents(
-    components: ProductAdminDetail["components"],
+    components: AdminProductDetail["components"],
 ): ComponentForm[] {
     return [...components]
         .sort(
@@ -90,15 +90,15 @@ function normaliseComponents(
             maxQuantity: component.maxQuantity,
             customerPricePerAdditionalUnit:
                 component.customerPricePerAdditionalUnit,
-            floristCompensationPerAdditionalUnit:
-                component.floristCompensationPerAdditionalUnit,
+            floristPricePerAdditionalUnit:
+                component.floristPricePerAdditionalUnit,
             active: component.active,
             sortOrder: index,
         }));
 }
 
 function normaliseVariants(
-    variants: ProductAdminDetail["variants"],
+    variants: AdminProductDetail["variants"],
 ): VariantForm[] {
     return [...variants]
         .sort(
@@ -110,9 +110,8 @@ function normaliseVariants(
             type: variant.type,
             name: variant.name,
             code: variant.code,
-            price: variant.price,
-            floristCompensation:
-                variant.floristCompensation,
+            customerPrice: variant.customerPrice,
+            floristPrice: variant.floristPrice,
             active: variant.active,
             sortOrder: index,
             imageId:
@@ -121,7 +120,7 @@ function normaliseVariants(
 }
 
 function normaliseImages(
-    images: ProductAdminDetail["images"],
+    images: AdminProductDetail["images"],
 ): ImageForm[] {
     return [...images]
         .sort(
@@ -170,18 +169,11 @@ export default function ProductForm({
     const [description, setDescription] =
         useState(product?.description ?? "");
 
-    const [basePrice, setBasePrice] =
-        useState(
-            product?.basePrice?.toString() ?? "",
-        );
+    const [customerPrice, setCustomerPrice] =
+        useState(product?.customerPrice?.toString() ?? "");
 
-    const [
-        baseFloristCompensation,
-        setBaseFloristCompensation,
-    ] = useState(
-        product?.baseFloristCompensation?.toString() ??
-        "",
-    );
+    const [floristPrice, setFloristPrice] =
+        useState(product?.floristPrice?.toString() ?? "");
 
     const [categoryId, setCategoryId] =
         useState(
@@ -293,13 +285,15 @@ export default function ProductForm({
             try {
                 setIsLoadingTaxCodes(true);
 
-                const response = await getTaxCodes();
+                const response =
+                    await getTaxCodes();
 
                 setTaxCodes(
                     response.data.filter(
                         (taxCode) =>
                             taxCode.active ||
-                            taxCode.id === product?.taxCode?.id,
+                            taxCode.id ===
+                            product?.taxCode?.id,
                     ),
                 );
             } catch {
@@ -660,7 +654,7 @@ export default function ProductForm({
         );
     }
 
-    function validateForm(): string | null {
+    function validateBasicInfo(): string | null {
         if (!name.trim()) {
             return "O nome do produto é obrigatório.";
         }
@@ -673,185 +667,120 @@ export default function ProductForm({
             return "Selecione o código de IVA.";
         }
 
-        if (basePrice === "") {
-            return "O preço base é obrigatório.";
+        return null;
+    }
+
+    function validatePricing(): string | null {
+        if (customerPrice === "") {
+            return "O preço para o cliente é obrigatório.";
         }
 
-        if (
-            baseFloristCompensation === ""
-        ) {
-            return "A compensação da florista é obrigatória.";
+        if (floristPrice === "") {
+            return "O preço para a florista é obrigatório.";
         }
 
-        const parsedBasePrice =
-            Number(basePrice);
+        const customer = Number(customerPrice);
+        const florist = Number(floristPrice);
 
-        const parsedCompensation =
-            Number(
-                baseFloristCompensation,
-            );
-
-        if (
-            Number.isNaN(
-                parsedBasePrice,
-            ) ||
-            parsedBasePrice < 0
-        ) {
-            return "O preço base é inválido.";
+        if (!Number.isFinite(customer) || customer < 0) {
+            return "O preço para o cliente é inválido.";
         }
 
-        if (
-            Number.isNaN(
-                parsedCompensation,
-            ) ||
-            parsedCompensation < 0
-        ) {
-            return "A compensação da florista é inválida.";
+        if (!Number.isFinite(florist) || florist < 0) {
+            return "O preço para a florista é inválido.";
         }
 
         if (type === "RENTAL") {
-            if (rentalDeposit.trim() === "") {
+            if (!rentalDeposit.trim()) {
                 return "Indique o valor da caução do aluguer.";
             }
 
-            const parsedDeposit = Number(rentalDeposit);
+            const deposit = Number(rentalDeposit);
 
-            if (!Number.isFinite(parsedDeposit) || parsedDeposit < 0) {
+            if (!Number.isFinite(deposit) || deposit < 0) {
                 return "O valor da caução é inválido.";
             }
         }
 
-        if (components.length > 0) {
-            for (
-                let index = 0;
-                index < components.length;
-                index++
-            ) {
-                const component =
-                    components[index];
+        return null;
+    }
 
-                if (!component.name.trim()) {
-                    return `Indica o nome do componente ${index + 1}.`;
-                }
-
-                if (
-                    component.minQuantity <
-                    0 ||
-                    component.recommendedQuantity <
-                    component.minQuantity ||
-                    component.maxQuantity <
-                    component.recommendedQuantity
-                ) {
-                    return `As quantidades do componente "${component.name}" são inválidas.`;
-                }
-
-                if (
-                    component.customerPricePerAdditionalUnit <
-                    0 ||
-                    component.floristCompensationPerAdditionalUnit <
-                    0
-                ) {
-                    return `Os valores do componente "${component.name}" são inválidos.`;
-                }
+    function validateComponents(): string | null {
+        for (const [index, component] of components.entries()) {
+            if (!component.name.trim()) {
+                return `Indica o nome do componente ${index + 1}.`;
             }
-        }
-
-        if (variants.length > 0) {
-            for (
-                let index = 0;
-                index < variants.length;
-                index++
-            ) {
-                const variant =
-                    variants[index];
-
-                if (!variant.name.trim()) {
-                    return `Indica o nome da variante ${index + 1}.`;
-                }
-
-                if (variant.price < 0) {
-                    return `O preço da variante "${variant.name}" é inválido.`;
-                }
-
-                if (
-                    variant.floristCompensation <
-                    0
-                ) {
-                    return `A compensação da variante "${variant.name}" é inválida.`;
-                }
-
-                if (
-                    variant.floristCompensation >=
-                    variant.price
-                ) {
-                    return `A compensação da variante "${variant.name}" deve ser inferior ao preço.`;
-                }
-
-                if (
-                    variant.price <
-                    parsedBasePrice
-                ) {
-                    return `A variante "${variant.name}" não pode ter um preço inferior ao preço base.`;
-                }
-            }
-        }
-
-        for (
-            let index = 0;
-            index < images.length;
-            index++
-        ) {
-            const image = images[index];
 
             if (
-                image.variantId != null ||
-                image.variantClientId != null
+                component.minQuantity < 0 ||
+                component.recommendedQuantity < component.minQuantity ||
+                component.maxQuantity < component.recommendedQuantity
             ) {
-                const assignedVariants =
-                    images.filter(
-                        (
-                            otherImage,
-                            otherIndex,
-                        ) => {
-                            if (
-                                otherIndex ===
-                                index
-                            ) {
-                                return false;
-                            }
+                return `As quantidades do componente "${component.name}" são inválidas.`;
+            }
 
-                            if (
-                                image.variantId !=
-                                null &&
-                                otherImage.variantId ===
-                                image.variantId
-                            ) {
-                                return true;
-                            }
-
-                            if (
-                                image.variantClientId !=
-                                null &&
-                                otherImage.variantClientId ===
-                                image.variantClientId
-                            ) {
-                                return true;
-                            }
-
-                            return false;
-                        },
-                    );
-
-                if (
-                    assignedVariants.length >
-                    0
-                ) {
-                    return "Uma variante não pode ter mais do que uma imagem associada.";
-                }
+            if (
+                component.customerPricePerAdditionalUnit < 0 ||
+                component.floristPricePerAdditionalUnit < 0
+            ) {
+                return `Os valores do componente "${component.name}" são inválidos.`;
             }
         }
 
         return null;
+    }
+
+    function validateVariants(): string | null {
+        for (const [index, variant] of variants.entries()) {
+            if (!variant.name.trim()) {
+                return `Indica o nome da variante ${index + 1}.`;
+            }
+
+            if (variant.customerPrice < 0) {
+                return `O preço para o cliente da variante "${variant.name}" é inválido.`;
+            }
+
+            if (variant.floristPrice < 0) {
+                return `O preço para a florista da variante "${variant.name}" é inválido.`;
+            }
+        }
+
+        return null;
+    }
+
+    function validateImages(): string | null {
+        const assignedVariants = new Set<string>();
+
+        for (const image of images) {
+            const variantKey =
+                image.variantId != null
+                    ? `id:${image.variantId}`
+                    : image.variantClientId
+                        ? `client:${image.variantClientId}`
+                        : null;
+
+            if (!variantKey) {
+                continue;
+            }
+
+            if (assignedVariants.has(variantKey)) {
+                return "Uma variante não pode ter mais do que uma imagem associada.";
+            }
+
+            assignedVariants.add(variantKey);
+        }
+
+        return null;
+    }
+
+    function validateForm(): string | null {
+        return (
+            validateBasicInfo() ??
+            validatePricing() ??
+            validateComponents() ??
+            validateVariants() ??
+            validateImages()
+        );
     }
 
     function buildConfiguration() {
@@ -906,13 +835,8 @@ export default function ProductForm({
             return;
         }
 
-        const parsedBasePrice =
-            Number(basePrice);
-
-        const parsedCompensation =
-            Number(
-                baseFloristCompensation,
-            );
+        const parsedCustomerPrice = Number(customerPrice);
+        const parsedFloristPrice = Number(floristPrice);
 
         const parsedCategoryId =
             Number(categoryId);
@@ -934,10 +858,8 @@ export default function ProductForm({
                         description:
                             description.trim() ||
                             undefined,
-                        basePrice:
-                            parsedBasePrice,
-                        baseFloristCompensation:
-                            parsedCompensation,
+                        customerPrice: parsedCustomerPrice,
+                        floristPrice: parsedFloristPrice,
                         categoryId:
                             parsedCategoryId,
                         taxCodeId:
@@ -968,10 +890,8 @@ export default function ProductForm({
                     description:
                         description.trim() ||
                         undefined,
-                    basePrice:
-                        parsedBasePrice,
-                    baseFloristCompensation:
-                        parsedCompensation,
+                    customerPrice: parsedCustomerPrice,
+                    floristPrice: parsedFloristPrice,
                     categoryId:
                         parsedCategoryId,
                     taxCodeId:
@@ -1206,16 +1126,14 @@ export default function ProductForm({
                     </h2>
 
                     <p className="mt-1 text-sm text-gray-500">
-                        O preço base é sempre
-                        obrigatório. O preço apresentado
-                        ao cliente inclui IVA.
+                        Ambos os preços são valores finais e incluem IVA.
                     </p>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
                     <div>
                         <label className="mb-2 block text-sm font-medium text-gray-700">
-                            Preço base
+                            Preço (Cliente)
                         </label>
 
                         <div className="relative">
@@ -1223,9 +1141,9 @@ export default function ProductForm({
                                 type="number"
                                 min="0"
                                 step="0.01"
-                                value={basePrice}
+                                value={customerPrice}
                                 onChange={(event) =>
-                                    setBasePrice(
+                                    setCustomerPrice(
                                         event.target
                                             .value,
                                     )
@@ -1242,7 +1160,7 @@ export default function ProductForm({
 
                     <div>
                         <label className="mb-2 block text-sm font-medium text-gray-700">
-                            Compensação da florista
+                            Preço (Florista)
                         </label>
 
                         <div className="relative">
@@ -1250,14 +1168,9 @@ export default function ProductForm({
                                 type="number"
                                 min="0"
                                 step="0.01"
-                                value={
-                                    baseFloristCompensation
-                                }
+                                value={floristPrice}
                                 onChange={(event) =>
-                                    setBaseFloristCompensation(
-                                        event.target
-                                            .value,
-                                    )
+                                    setFloristPrice(event.target.value)
                                 }
                                 className="w-full rounded-lg border px-3 py-2 pr-12 text-sm outline-none focus:ring-2 focus:ring-black"
                                 placeholder="0.00"
@@ -1595,7 +1508,7 @@ export default function ProductForm({
 
                                         <div>
                                             <label className="mb-1 block text-xs font-medium text-gray-600">
-                                                Preço adicional
+                                                Preço Adicional (Cliente)
                                             </label>
 
                                             <input
@@ -1638,7 +1551,7 @@ export default function ProductForm({
 
                                         <div>
                                             <label className="mb-1 block text-xs font-medium text-gray-600">
-                                                Compensação adicional
+                                                Preço Adicional (Florista)
                                             </label>
 
                                             <input
@@ -1646,7 +1559,7 @@ export default function ProductForm({
                                                 min="0"
                                                 step="0.01"
                                                 value={
-                                                    component.floristCompensationPerAdditionalUnit
+                                                    component.floristPricePerAdditionalUnit
                                                 }
                                                 onChange={(
                                                     event,
@@ -1664,7 +1577,7 @@ export default function ProductForm({
                                                                         index
                                                                         ? {
                                                                             ...item,
-                                                                            floristCompensationPerAdditionalUnit:
+                                                                            floristPricePerAdditionalUnit:
                                                                                 Number(
                                                                                     event
                                                                                         .target
@@ -1919,7 +1832,7 @@ export default function ProductForm({
 
                                         <div>
                                             <label className="mb-1 block text-xs font-medium text-gray-600">
-                                                Preço
+                                                Preço (Cliente)
                                             </label>
 
                                             <input
@@ -1927,7 +1840,7 @@ export default function ProductForm({
                                                 min="0"
                                                 step="0.01"
                                                 value={
-                                                    variant.price
+                                                    variant.customerPrice
                                                 }
                                                 onChange={(
                                                     event,
@@ -1945,7 +1858,7 @@ export default function ProductForm({
                                                                         index
                                                                         ? {
                                                                             ...item,
-                                                                            price:
+                                                                            customerPrice:
                                                                                 Number(
                                                                                     event
                                                                                         .target
@@ -1962,7 +1875,7 @@ export default function ProductForm({
 
                                         <div>
                                             <label className="mb-1 block text-xs font-medium text-gray-600">
-                                                Compensação
+                                                Preço (Florista)
                                             </label>
 
                                             <input
@@ -1970,7 +1883,7 @@ export default function ProductForm({
                                                 min="0"
                                                 step="0.01"
                                                 value={
-                                                    variant.floristCompensation
+                                                    variant.floristPrice
                                                 }
                                                 onChange={(
                                                     event,
@@ -1988,7 +1901,7 @@ export default function ProductForm({
                                                                         index
                                                                         ? {
                                                                             ...item,
-                                                                            floristCompensation:
+                                                                            floristPrice:
                                                                                 Number(
                                                                                     event
                                                                                         .target

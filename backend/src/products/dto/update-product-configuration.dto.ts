@@ -40,7 +40,7 @@ export class UpdateProductComponentItemDto {
 
     @IsNumber()
     @Min(0)
-    floristCompensationPerAdditionalUnit: number;
+    floristPricePerAdditionalUnit: number;
 
     @IsBoolean()
     @IsOptional()
@@ -69,11 +69,11 @@ export class UpdateProductVariantItemDto {
 
     @IsNumber()
     @Min(0)
-    price: number;
+    customerPrice: number;
 
     @IsNumber()
     @Min(0)
-    floristCompensation: number;
+    floristPrice: number;
 
     @IsBoolean()
     @IsOptional()

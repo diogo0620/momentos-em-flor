@@ -49,7 +49,7 @@ export class ProductAdminListResponseDto {
         example: 49.08,
         description: 'Final customer price including VAT.',
     })
-    price: number;
+    customerPrice: number;
 
     @ApiProperty({
         example: true,

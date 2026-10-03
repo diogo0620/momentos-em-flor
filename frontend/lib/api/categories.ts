@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/common/client";
 
 export type Category = {
     id: number;

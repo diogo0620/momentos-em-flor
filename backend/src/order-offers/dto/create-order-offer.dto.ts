@@ -23,9 +23,9 @@ export class CreateOrderOfferDto {
     @ApiProperty({
         example: 35,
         description:
-            'Total compensation offered to the florist',
+            'Price offered to the florist',
     })
     @IsNumber()
     @IsPositive()
-    compensationAmount: number;
+    price: number;
 }

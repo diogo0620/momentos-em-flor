@@ -25,12 +25,32 @@ export type OrderStatusHistory = {
 
 export type OrderItem = {
     id: number;
-    productId: number;
-    productName: string;
-    productDescription: string | null;
+
+    productId: number | null;
+
+    name: string;
+
+    description: string | null;
+
+    variantId: number | null;
+
+    variantType: string | null;
+
+    variantName: string | null;
+
     quantity: number;
+
     unitPrice: number;
-    lineTotal: number;
+
+    netAmount: number;
+
+    taxRate: number;
+
+    taxAmount: number;
+
+    grossAmount: number;
+
+    taxCodeId: number | null;
 };
 
 export type OrderOffer = {

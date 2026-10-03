@@ -13,7 +13,7 @@ import {
     useState,
 } from "react";
 
-import { apiFetch } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/common/client";
 
 /* ========================================================================== */
 /* TYPES                                                                      */

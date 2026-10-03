@@ -17,8 +17,7 @@ import DeleteProductButton from "@/components/admin/products/DeleteProductButton
 
 import {
     getAdminProduct,
-    type ProductAdminDetail,
-    type ProductAdminImage,
+    type AdminProductDetail,
 } from "@/lib/api/products";
 
 /* ==========================================================================
@@ -91,11 +90,11 @@ export default async function ProductDetailPage({
         );
     }
 
-    let product: ProductAdminDetail;
+    let product: AdminProductDetail;
 
     try {
         product = await getAdminProduct(productId);
-    } catch {
+    } catch (error) {
         return (
             <div>
                 <Link
@@ -127,10 +126,7 @@ export default async function ProductDetailPage({
     const hasVariants = product.variants.length > 0;
     const hasComponents = product.components.length > 0;
 
-    const vatAmount =
-        product.price - product.basePrice;
-
-    return (
+        return (
         <div className="space-y-8 pb-10">
             {/* ==================================================================
                 HEADER
@@ -234,8 +230,8 @@ export default async function ProductDetailPage({
 
                 <SummaryCard
                     icon={Receipt}
-                    label="Preço final"
-                    value={formatPrice(product.price)}
+                    label="Preço para o cliente"
+                    value={formatPrice(product.customerPrice)}
                     description="Preço apresentado ao cliente"
                 />
             </div>
@@ -308,38 +304,28 @@ export default async function ProductDetailPage({
 
             <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
                 <SectionHeader
-                    title="Preços e compensações"
-                    description="Valores comerciais configurados para este produto."
+                    title="Preços"
+                    description="Preços finais configurados para este produto."
                 />
 
-                <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <PriceCard
-                        label="Preço base"
-                        value={formatPrice(product.basePrice)}
-                        description="Preço antes de IVA"
-                    />
-
-                    <PriceCard
-                        label="IVA"
-                        value={formatPrice(vatAmount)}
-                        description={`Taxa ${formatRate(
-                            product.taxCode.rate,
-                        )}`}
-                    />
-
-                    <PriceCard
-                        label="Preço final"
-                        value={formatPrice(product.price)}
-                        description="Preço final para o cliente"
+                        label="Preço para o cliente"
+                        value={formatPrice(product.customerPrice)}
+                        description="Preço final, com IVA incluído"
                         highlight
                     />
 
                     <PriceCard
-                        label="Compensação base"
-                        value={formatPrice(
-                            product.baseFloristCompensation,
-                        )}
-                        description="Valor pago ao florista"
+                        label="Preço para a florista"
+                        value={formatPrice(product.floristPrice)}
+                        description="Preço final, com IVA incluído"
+                    />
+
+                    <PriceCard
+                        label="IVA"
+                        value={formatRate(product.taxCode.rate)}
+                        description="Taxa aplicada"
                     />
 
                     {product.type === "RENTAL" && (
@@ -351,29 +337,6 @@ export default async function ProductDetailPage({
                     )}
                 </div>
 
-                <div className="mt-6 rounded-2xl border border-gray-100 bg-[#FAFBF8] p-5">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <p className="text-sm font-semibold text-[#2F3B2A]">
-                                Configuração fiscal
-                            </p>
-
-                            <p className="mt-1 text-sm text-gray-400">
-                                {product.taxCode.name}
-                            </p>
-                        </div>
-
-                        <div className="text-left sm:text-right">
-                            <p className="text-xs uppercase tracking-wide text-gray-400">
-                                IVA aplicado
-                            </p>
-
-                            <p className="mt-1 text-lg font-bold text-[#55624A]">
-                                {formatRate(product.taxCode.rate)}
-                            </p>
-                        </div>
-                    </div>
-                </div>
             </section>
 
             {/* ==================================================================
@@ -448,11 +411,11 @@ export default async function ProductDetailPage({
                                     </th>
 
                                     <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                        Preço
+                                        Cliente
                                     </th>
 
                                     <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                        Compensação
+                                        Florista
                                     </th>
 
                                     <th className="px-5 py-4 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -515,7 +478,7 @@ export default async function ProductDetailPage({
                                         <td className="px-5 py-5 text-right">
                                             <p className="font-bold text-[#2F3B2A]">
                                                 {formatPrice(
-                                                    variant.price,
+                                                    variant.customerPrice,
                                                 )}
                                             </p>
                                         </td>
@@ -523,7 +486,7 @@ export default async function ProductDetailPage({
                                         <td className="px-5 py-5 text-right">
                                             <p className="font-semibold text-gray-600">
                                                 {formatPrice(
-                                                    variant.floristCompensation,
+                                                    variant.floristPrice,
                                                 )}
                                             </p>
                                         </td>
@@ -586,11 +549,11 @@ export default async function ProductDetailPage({
                                     </th>
 
                                     <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                        Preço adicional
+                                        Preço adicional — cliente
                                     </th>
 
                                     <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                        Compensação
+                                        Preço adicional — florista
                                     </th>
 
                                     <th className="px-5 py-4 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">

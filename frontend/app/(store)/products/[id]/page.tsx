@@ -77,7 +77,8 @@ export default async function ProductPage({
                 </div>
             </div>
         );
-    } catch {
+    } catch (error) {
+        console.error("Error loading product:", error);
         return (
             <div className="mx-auto max-w-7xl px-4 py-12">
                 <Link

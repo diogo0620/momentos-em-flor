@@ -1,15 +1,15 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 
-import {
-    createOrderOffer,
-    updateOrderOffer,
-} from "@/lib/api/order-offers";
-
+import { orderOffersApi } from "@/lib/api/order-offers";
 import { getFlorists } from "@/lib/api/florists";
 
-import type { OrderOffer } from "@/types/order-offer";
+import type {
+    CreateOrderOffer,
+    OrderOffer,
+} from "@/types/order-offer";
 
 type Florist = {
     id: number;
@@ -31,48 +31,32 @@ export default function OrderOfferForm({
 }: Props) {
     const isEditing = !!offer;
 
-    const [florists, setFlorists] =
-        useState<Florist[]>([]);
+    const [florists, setFlorists] = useState<Florist[]>([]);
 
-    const [floristId, setFloristId] =
-        useState(
-            offer?.floristId
-                ? String(offer.floristId)
-                : "",
-        );
+    const [floristId, setFloristId] = useState(
+        offer?.floristId ? String(offer.floristId) : "",
+    );
 
-    const [compensationAmount, setCompensationAmount] =
-        useState(
-            offer
-                ? String(offer.compensationAmount)
-                : "",
-        );
+    const [compensationAmount, setCompensationAmount] = useState(
+        offer ? String(offer.compensationAmount) : "",
+    );
 
-    const [loading, setLoading] =
-        useState(false);
-
-    const [loadingFlorists, setLoadingFlorists] =
-        useState(true);
-
-    const [error, setError] =
-        useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [loadingFlorists, setLoadingFlorists] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         async function loadFlorists() {
             try {
-                const response =
-                    await getFlorists({
-                        page: 1,
-                        pageSize: 100,
-                    });
+                const response = await getFlorists({
+                    page: 1,
+                    pageSize: 100,
+                });
 
                 setFlorists(response.data);
             } catch (err) {
                 console.error(err);
-
-                setError(
-                    "Não foi possível carregar as floristas.",
-                );
+                setError("Não foi possível carregar as floristas.");
             } finally {
                 setLoadingFlorists(false);
             }
@@ -86,25 +70,18 @@ export default function OrderOfferForm({
     ) {
         event.preventDefault();
 
-        if (!floristId) {
-            setError(
-                "Selecione uma florista.",
-            );
-
+        if (!isEditing && !floristId) {
+            setError("Selecione uma florista.");
             return;
         }
 
-        const compensation =
-            Number(compensationAmount);
+        const compensation = Number(compensationAmount);
 
         if (
             !Number.isFinite(compensation) ||
             compensation <= 0
         ) {
-            setError(
-                "Introduza uma compensação válida.",
-            );
-
+            setError("Introduza uma compensação válida.");
             return;
         }
 
@@ -112,24 +89,18 @@ export default function OrderOfferForm({
             setLoading(true);
             setError(null);
 
-            if (isEditing) {
-                await updateOrderOffer(
-                    offer.id,
-                    {
-                        floristId:
-                            Number(floristId),
-                        compensationAmount:
-                            compensation,
-                    },
-                );
-            } else {
-                await createOrderOffer({
-                    orderId,
-                    floristId:
-                        Number(floristId),
-                    compensationAmount:
-                        compensation,
+            if (isEditing && offer) {
+                await orderOffersApi.update(offer.id, {
+                    price: compensation,
                 });
+            } else {
+                const data: CreateOrderOffer = {
+                    orderId,
+                    floristId: Number(floristId),
+                    price: compensation,
+                };
+
+                await orderOffersApi.create(data);
             }
 
             onSuccess();
@@ -147,13 +118,8 @@ export default function OrderOfferForm({
     }
 
     return (
-        <form
-            onSubmit={handleSubmit}
-            className="space-y-6"
-        >
-
+        <form onSubmit={handleSubmit} className="space-y-6">
             {/* FLORISTA */}
-
             <div>
                 <label
                     htmlFor="florist"
@@ -165,29 +131,18 @@ export default function OrderOfferForm({
                 <select
                     id="florist"
                     value={floristId}
-                    onChange={(event) =>
-                        setFloristId(
-                            event.target.value,
-                        )
-                    }
+                    onChange={(event) => setFloristId(event.target.value)}
                     disabled={
                         loading ||
-                        loadingFlorists
+                        loadingFlorists ||
+                        isEditing
                     }
                     className="
-                        w-full
-                        rounded-xl
-                        border
-                        border-gray-200
-                        bg-white
-                        px-4
-                        py-3
-                        text-sm
-                        outline-none
-                        transition
-                        focus:border-[#55624A]
-                        focus:ring-4
-                        focus:ring-[#55624A]/10
+                        w-full rounded-xl border border-gray-200
+                        bg-white px-4 py-3 text-sm outline-none
+                        transition focus:border-[#55624A]
+                        focus:ring-4 focus:ring-[#55624A]/10
+                        disabled:cursor-not-allowed disabled:bg-gray-50
                     "
                 >
                     <option value="">
@@ -196,21 +151,15 @@ export default function OrderOfferForm({
                             : "Selecionar florista"}
                     </option>
 
-                    {florists.map(
-                        (florist) => (
-                            <option
-                                key={florist.id}
-                                value={florist.id}
-                            >
-                                {florist.name}
-                            </option>
-                        ),
-                    )}
+                    {florists.map((florist) => (
+                        <option key={florist.id} value={florist.id}>
+                            {florist.name}
+                        </option>
+                    ))}
                 </select>
             </div>
 
             {/* COMPENSAÇÃO */}
-
             <div>
                 <label
                     htmlFor="compensation"
@@ -220,49 +169,35 @@ export default function OrderOfferForm({
                 </label>
 
                 <div className="relative">
-
                     <input
                         id="compensation"
                         type="number"
                         min="0.01"
                         step="0.01"
-                        value={
-                            compensationAmount
-                        }
+                        value={compensationAmount}
                         onChange={(event) =>
-                            setCompensationAmount(
-                                event.target.value,
-                            )
+                            setCompensationAmount(event.target.value)
                         }
                         disabled={loading}
                         placeholder="35.00"
                         className="
-                            w-full
-                            rounded-xl
-                            border
-                            border-gray-200
-                            bg-white
-                            px-4
-                            py-3
-                            pr-12
-                            text-sm
-                            outline-none
-                            transition
-                            focus:border-[#55624A]
-                            focus:ring-4
-                            focus:ring-[#55624A]/10
+                            w-full rounded-xl border border-gray-200
+                            bg-white px-4 py-3 pr-12 text-sm
+                            outline-none transition focus:border-[#55624A]
+                            focus:ring-4 focus:ring-[#55624A]/10
                         "
                     />
 
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                    <span className="
+                        absolute right-4 top-1/2
+                        -translate-y-1/2 text-sm text-gray-400
+                    ">
                         €
                     </span>
-
                 </div>
             </div>
 
             {/* ERROR */}
-
             {error && (
                 <div className="rounded-xl bg-red-50 p-4 text-sm text-red-600">
                     {error}
@@ -270,24 +205,15 @@ export default function OrderOfferForm({
             )}
 
             {/* ACTIONS */}
-
             <div className="flex justify-end gap-3">
-
                 <button
                     type="button"
                     onClick={onCancel}
                     disabled={loading}
                     className="
-                        rounded-full
-                        border
-                        border-gray-200
-                        px-5
-                        py-2.5
-                        text-sm
-                        font-medium
-                        text-gray-600
-                        transition
-                        hover:bg-gray-50
+                        rounded-full border border-gray-200
+                        px-5 py-2.5 text-sm font-medium
+                        text-gray-600 transition hover:bg-gray-50
                         disabled:opacity-50
                     "
                 >
@@ -296,22 +222,12 @@ export default function OrderOfferForm({
 
                 <button
                     type="submit"
-                    disabled={
-                        loading ||
-                        loadingFlorists
-                    }
+                    disabled={loading || loadingFlorists}
                     className="
-                        rounded-full
-                        bg-[#55624A]
-                        px-5
-                        py-2.5
-                        text-sm
-                        font-medium
-                        text-white
-                        transition
-                        hover:opacity-90
-                        disabled:cursor-not-allowed
-                        disabled:opacity-50
+                        rounded-full bg-[#55624A]
+                        px-5 py-2.5 text-sm font-medium
+                        text-white transition hover:opacity-90
+                        disabled:cursor-not-allowed disabled:opacity-50
                     "
                 >
                     {loading
@@ -320,9 +236,7 @@ export default function OrderOfferForm({
                             ? "Guardar alterações"
                             : "Criar proposta"}
                 </button>
-
             </div>
-
         </form>
     );
 }

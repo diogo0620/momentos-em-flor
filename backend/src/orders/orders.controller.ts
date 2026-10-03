@@ -63,7 +63,7 @@ export class OrdersController {
 @UseGuards(OptionalJwtAuthGuard)
 create(
     @CurrentUser()
-    user: AuthenticatedUser | null,
+    user: AuthenticatedUser,
 
     @Body()
     dto: CreateOrderDto,

@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
+
 import {
     Prisma,
-    ProductVariantType,
-    ProductType
 } from '@prisma/client';
 
 import { BaseMapper } from '@/common/mappers/base.mapper';
@@ -15,34 +14,30 @@ import {
 import {
     ProductDetailResponseDto,
 } from '../dto/product-detail-response.dto';
-import { ProductAdminDetailResponseDto } from '../dto/admin/product-admin-detail-response.dto';
-import { ProductAdminListResponseDto } from '../dto/admin/product-admin-list-response.dto';
+
+import {
+    ProductAdminDetailResponseDto,
+} from '../dto/admin/product-admin-detail-response.dto';
+
+import {
+    ProductAdminListResponseDto,
+} from '../dto/admin/product-admin-list-response.dto';
 
 
 /*
  * ============================================================
  * PRISMA TYPES
  * ============================================================
- *
- * List:
- * Only load what is necessary to calculate/display the card.
- *
- * Detail:
- * Load all information required by the product detail page.
  */
 
-
-/**
- * Product used by the catalogue/list endpoint.
- */
 type ProductWithListRelations =
     Prisma.ProductGetPayload<{
         select: {
             id: true;
             name: true;
-            basePrice: true;
-            type: true,
-            featured: true,
+            customerPrice: true;
+            type: true;
+            featured: true;
 
             taxCode: {
                 select: {
@@ -63,12 +58,6 @@ type ProductWithListRelations =
     }>;
 
 
-/**
- * Product used by the detail endpoint.
- */
-/**
- * Product used by the detail endpoint.
- */
 type ProductWithDetailRelations =
     Prisma.ProductGetPayload<{
         select: {
@@ -76,12 +65,11 @@ type ProductWithDetailRelations =
             name: true;
             slug: true;
             description: true;
-            basePrice: true;
+            customerPrice: true;
             active: true;
             type: true;
-            featured: true,
-            rentalDeposit: true,
-
+            featured: true;
+            rentalDeposit: true;
 
             taxCode: {
                 select: {
@@ -123,7 +111,7 @@ type ProductWithDetailRelations =
                     type: true;
                     name: true;
                     code: true;
-                    price: true;
+                    customerPrice: true;
                     active: true;
 
                     image: {
@@ -140,9 +128,7 @@ type ProductWithDetailRelations =
         };
     }>;
 
-/**
-* Product used by the admin detail endpoint.
-*/
+
 type ProductWithAdminDetailRelations =
     Prisma.ProductGetPayload<{
         select: {
@@ -154,8 +140,8 @@ type ProductWithAdminDetailRelations =
             type: true;
             featured: true;
             rentalDeposit: true;
-            basePrice: true;
-            baseFloristCompensation: true;
+            customerPrice: true;
+            floristPrice: true;
             sortOrder: true;
             createdAt: true;
             updatedAt: true;
@@ -207,12 +193,11 @@ type ProductWithAdminDetailRelations =
                     recommendedQuantity: true;
                     maxQuantity: true;
                     customerPricePerAdditionalUnit: true;
-                    floristCompensationPerAdditionalUnit: true;
+                    floristPricePerAdditionalUnit: true;
                     sortOrder: true;
                     active: true;
                     createdAt: true;
                     updatedAt: true;
-
                 };
             };
 
@@ -222,13 +207,12 @@ type ProductWithAdminDetailRelations =
                     type: true;
                     name: true;
                     code: true;
-                    price: true;
-                    floristCompensation: true;
+                    customerPrice: true;
+                    floristPrice: true;
                     sortOrder: true;
                     active: true;
                     createdAt: true;
                     updatedAt: true;
-
 
                     image: {
                         select: {
@@ -240,7 +224,6 @@ type ProductWithAdminDetailRelations =
                             variantId: true;
                             createdAt: true;
                             updatedAt: true;
-
 
                             file: {
                                 select: {
@@ -254,6 +237,7 @@ type ProductWithAdminDetailRelations =
         };
     }>;
 
+
 @Injectable()
 export class ProductMapper extends BaseMapper<
     ProductWithDetailRelations,
@@ -266,255 +250,16 @@ export class ProductMapper extends BaseMapper<
         super();
     }
 
-    private toNumber(value: Prisma.Decimal): number {
-        return Number(value);
-    }
 
+    // =========================================================
+    // HELPERS
+    // =========================================================
 
-    /*
-     * ============================================================
-     * PRICE
-     * ============================================================
-     */
-
-    /**
-     * Calculates the final price including VAT.
-     */
-    private calculateGrossAmount(
-        netAmount: number,
-        taxRate: number,
+    private toNumber(
+        value: Prisma.Decimal,
     ): number {
-
-        const taxAmount =
-            Number(
-                (
-                    netAmount *
-                    taxRate /
-                    100
-                ).toFixed(2),
-            );
-
-        return Number(
-            (
-                netAmount +
-                taxAmount
-            ).toFixed(2),
-        );
+        return value.toNumber();
     }
-
-
-    private getProductNetPrice(
-        product: {
-            basePrice: Prisma.Decimal | null;
-            variants?: Array<{
-                price: Prisma.Decimal;
-            }>;
-        },
-    ): number {
-        const variantPrice = product.variants?.[0]?.price;
-
-        if (variantPrice) {
-            return variantPrice.toNumber();
-        }
-
-        return product.basePrice?.toNumber() ?? 0;
-    }
-
-    toAdminListResponse(
-        product: {
-            id: number;
-            name: string;
-            slug: string;
-            basePrice: Prisma.Decimal;
-            active: boolean;
-            type: ProductType;
-            featured: boolean;
-            category: {
-                id: number;
-                name: string;
-            };
-            taxCode: {
-                rate: Prisma.Decimal;
-            };
-            images: {
-                id: number;
-                altText: string | null;
-                file: {
-                    id: number;
-                };
-            }[];
-        },
-    ): ProductAdminListResponseDto {
-        const taxRate = product.taxCode.rate.toNumber();
-        const netPrice = product.basePrice.toNumber();
-        const grossPrice = this.calculateGrossAmount(netPrice, taxRate);
-
-        const image = product.images[0]
-            ? {
-                url: `/api/files/${product.images[0].file.id}`,
-            }
-            : null;
-
-        return {
-            id: product.id,
-            name: product.name,
-            slug: product.slug,
-            price: grossPrice,
-            active: product.active,
-            type: product.type,
-            featured: product.featured,
-
-            image,
-
-            category: {
-                id: product.category.id,
-                name: product.category.name,
-            },
-        };
-    }
-
-    toAdminDetailResponse(product: ProductWithAdminDetailRelations): ProductAdminDetailResponseDto {
-        const taxRate = product.taxCode.rate.toNumber();
-        const netPrice = product.basePrice.toNumber();
-        const grossPrice = this.calculateGrossAmount(netPrice, taxRate);
-
-        return {
-            // Product
-            id: product.id,
-            name: product.name,
-            slug: product.slug,
-            description: product.description,
-            active: product.active,
-            type: product.type,
-            featured: product.featured,
-            rentalDeposit: product.rentalDeposit
-                ? this.toNumber(product.rentalDeposit)
-                : null,
-
-            basePrice: this.toNumber(product.basePrice),
-
-            baseFloristCompensation: this.toNumber(product.baseFloristCompensation),
-            price: grossPrice,
-            sortOrder: product.sortOrder,
-            createdAt: product.createdAt,
-            updatedAt: product.updatedAt,
-
-            // Tax code
-            taxCode: {
-                id: product.taxCode.id,
-                code: product.taxCode.code,
-                name: product.taxCode.name,
-                rate: this.toNumber(
-                    product.taxCode.rate,
-                ),
-                active: product.taxCode.active,
-            },
-
-            // Category
-            category: {
-                id: product.category.id,
-                name: product.category.name,
-                slug: product.category.slug,
-                description:
-                    product.category.description,
-                active: product.category.active,
-            },
-
-            // Product images
-            images: product.images.map((image) => ({
-                id: image.id,
-                fileId: image.fileId,
-                url: `/api/files/${image.file.id}`,
-                altText: image.altText,
-                sortOrder: image.sortOrder,
-                isPrimary: image.isPrimary,
-                variantId: image.variantId,
-                createdAt: image.createdAt,
-                updatedAt: image.updatedAt,
-            })),
-
-            // Components
-            components: product.components.map(
-                (component) => ({
-                    id: component.id,
-                    name: component.name,
-                    minQuantity:
-                        component.minQuantity,
-                    recommendedQuantity:
-                        component.recommendedQuantity,
-                    maxQuantity:
-                        component.maxQuantity,
-
-                    customerPricePerAdditionalUnit:
-                        this.toNumber(
-                            component.customerPricePerAdditionalUnit,
-                        ),
-
-                    floristCompensationPerAdditionalUnit:
-                        this.toNumber(
-                            component.floristCompensationPerAdditionalUnit,
-                        ),
-
-                    sortOrder: component.sortOrder,
-                    active: component.active,
-                    createdAt: component.createdAt,
-                    updatedAt: component.updatedAt,
-                }),
-            ),
-
-            // Variants
-            variants: product.variants.map(
-                (variant) => ({
-                    id: variant.id,
-                    type: variant.type,
-                    name: variant.name,
-                    code: variant.code,
-
-                    // Persisted value — NO VAT calculation
-                    price: this.toNumber(
-                        variant.price,
-                    ),
-
-                    // Persisted value — NO calculation
-                    floristCompensation:
-                        this.toNumber(
-                            variant.floristCompensation,
-                        ),
-
-                    sortOrder: variant.sortOrder,
-                    active: variant.active,
-
-                    image: variant.image
-                        ? {
-                            id: variant.image.id,
-                            fileId:
-                                variant.image.fileId,
-                            url:
-                                `/api/files/${variant.image.file.id}`,
-                            altText:
-                                variant.image.altText,
-                            sortOrder:
-                                variant.image.sortOrder,
-                            isPrimary:
-                                variant.image.isPrimary,
-                            variantId:
-                                variant.image.variantId,
-                            createdAt:
-                                variant.image.createdAt,
-                            updatedAt:
-                                variant.image.updatedAt,
-
-                        }
-                        : null,
-
-                    createdAt: variant.createdAt,
-                    updatedAt: variant.updatedAt,
-
-                }),
-            ),
-        };
-    }
-
 
 
     private mapListImage(
@@ -526,242 +271,256 @@ export class ProductMapper extends BaseMapper<
     }
 
 
-    /**
-     * Maps a detail image.
-     */
     private mapDetailImage(
         image: ProductWithDetailRelations['images'][number],
     ) {
-
         return {
             url: `/api/files/${image.file.id}`,
         };
     }
 
 
-    /*
-     * ============================================================
-     * COMPONENTS
-     * ============================================================
-     */
+    // =========================================================
+    // COMPONENTS
+    // =========================================================
 
     private mapComponents(
         components: ProductWithDetailRelations['components'],
     ) {
 
-        return components
+        return components.map(
+            (component) => ({
+                id:
+                    component.id,
+
+                name:
+                    component.name,
+
+                minQuantity:
+                    component.minQuantity,
+
+                recommendedQuantity:
+                    component.recommendedQuantity,
+
+                maxQuantity:
+                    component.maxQuantity,
+
+                customerPricePerAdditionalUnit:
+                    this.toNumber(
+                        component.customerPricePerAdditionalUnit,
+                    ),
+            }),
+        );
+    }
+
+
+    // =========================================================
+    // VARIANTS
+    // =========================================================
+
+    private mapPublicVariants(
+        variants: ProductWithDetailRelations['variants'],
+    ) {
+
+        return variants
+            .filter(
+                (variant) =>
+                    variant.active,
+            )
             .map(
-                component => ({
+                (variant) => ({
                     id:
-                        component.id,
+                        variant.id,
+
+                    type:
+                        variant.type,
 
                     name:
-                        component.name,
+                        variant.name,
 
-                    minQuantity:
-                        component.minQuantity,
+                    code:
+                        variant.code,
 
-                    recommendedQuantity:
-                        component.recommendedQuantity,
+                    price:
+                        this.toNumber(
+                            variant.customerPrice,
+                        ),
 
-                    maxQuantity:
-                        component.maxQuantity,
-
-                    customerPricePerAdditionalUnit:
-                        component
-                            .customerPricePerAdditionalUnit
-                            .toNumber(),
+                    image:
+                        variant.image
+                            ? {
+                                url: `/api/files/${variant.image.file.id}`,
+                            }
+                            : null,
                 }),
             );
     }
 
 
-    /*
-     * ============================================================
-     * VARIANTS
-     * ============================================================
-     */
-
-    private mapVariants(
-        product: ProductWithDetailRelations,
-        taxRate: number,
+    private mapAdminVariants(
+        variants: ProductWithAdminDetailRelations['variants'],
     ) {
 
-        return product.variants
-            .filter(
-                variant =>
+        return variants.map(
+            (variant) => ({
+                id:
+                    variant.id,
+
+                type:
+                    variant.type,
+
+                name:
+                    variant.name,
+
+                code:
+                    variant.code,
+
+                customerPrice:
+                    this.toNumber(
+                        variant.customerPrice,
+                    ),
+
+                floristPrice:
+                    this.toNumber(
+                        variant.floristPrice,
+                    ),
+
+                sortOrder:
+                    variant.sortOrder,
+
+                active:
                     variant.active,
-            )
-            .map(
-                variant => {
 
-                    const variantNetPrice =
-                        variant.price.toNumber();
+                image:
+                    variant.image
+                        ? {
+                            id:
+                                variant.image.id,
 
-                    const variantGrossPrice =
-                        this.calculateGrossAmount(
-                            variantNetPrice,
-                            taxRate,
-                        );
+                            fileId:
+                                variant.image.fileId,
 
-                    return {
+                            url:
+                                `/api/files/${variant.image.file.id}`,
 
-                        id:
-                            variant.id,
+                            altText:
+                                variant.image.altText,
 
-                        type:
-                            variant.type,
+                            sortOrder:
+                                variant.image.sortOrder,
 
-                        name:
-                            variant.name,
+                            isPrimary:
+                                variant.image.isPrimary,
 
-                        code:
-                            variant.code,
+                            variantId:
+                                variant.image.variantId,
 
-                        price:
-                            variantGrossPrice,
+                            createdAt:
+                                variant.image.createdAt,
 
-                        image: variant.image
-                            ? {
-                                url: `/api/files/${variant.image.file.id}`,
-                            }
-                            : null,
-                    };
-                },
-            );
+                            updatedAt:
+                                variant.image.updatedAt,
+                        }
+                        : null,
+
+                createdAt:
+                    variant.createdAt,
+
+                updatedAt:
+                    variant.updatedAt,
+            }),
+        );
     }
 
 
-    /*
-     * ============================================================
-     * LIST RESPONSE
-     * ============================================================
-     */
+    // =========================================================
+    // ADMIN LIST
+    // =========================================================
 
-    toListResponse(
-        product: ProductWithListRelations,
-    ): ProductListResponseDto {
-        const taxRate =
-            product.taxCode.rate.toNumber();
+    toAdminListResponse(
+        product: {
+            id: number;
+            name: string;
+            slug: string;
+            customerPrice: Prisma.Decimal;
+            active: boolean;
+            type: ProductWithListRelations['type'];
+            featured: boolean;
 
-        const netPrice = product.basePrice?.toNumber() ?? 0;
+            category: {
+                id: number;
+                name: string;
+            };
 
-        const grossPrice =
-            this.calculateGrossAmount(
-                netPrice,
-                taxRate,
-            );
+            taxCode: {
+                rate: Prisma.Decimal;
+            };
+
+            images: {
+                id: number;
+                altText: string | null;
+
+                file: {
+                    id: number;
+                };
+            }[];
+        },
+    ): ProductAdminListResponseDto {
 
         const image =
-            product.images[0] ?? null;
+            product.images[0]
+                ? {
+                    url:
+                        `/api/files/${product.images[0].file.id}`,
+                }
+                : null;
 
         return {
-            id: product.id,
+            id:
+                product.id,
 
-            name: product.name,
+            name:
+                product.name,
 
-            type: product.type,
+            slug:
+                product.slug,
 
-            featured: product.featured,
+            customerPrice:
+                this.toNumber(
+                    product.customerPrice,
+                ),
 
-            price: grossPrice,
+            active:
+                product.active,
 
-            image: image
-                ? this.mapListImage(image)
-                : null,
+            type:
+                product.type,
+
+            featured:
+                product.featured,
+
+            image,
+
+            category: {
+                id:
+                    product.category.id,
+
+                name:
+                    product.category.name,
+            },
         };
     }
 
 
-    /*
-     * ============================================================
-     * DETAIL RESPONSE
-     * ============================================================
-     */
+    // =========================================================
+    // ADMIN DETAIL
+    // =========================================================
 
-    toResponse(
-        product: ProductWithDetailRelations,
-    ): ProductDetailResponseDto {
-
-        const taxRate =
-            product.taxCode.rate.toNumber();
-
-
-        /*
-         * --------------------------------------------------------
-         * PRODUCT PRICE
-         * --------------------------------------------------------
-         *
-         * No variants:
-         *   basePrice
-         *
-         * With variants:
-         *   lowest active variant price
-         *
-         * Always returned including VAT.
-         */
-
-        const netPrice =
-            this.getProductNetPrice(
-                product,
-            );
-
-        const grossPrice =
-            this.calculateGrossAmount(
-                netPrice,
-                taxRate,
-            );
-
-
-        /*
-         * --------------------------------------------------------
-         * PRODUCT IMAGES
-         * --------------------------------------------------------
-         */
-
-        const productImages =
-            product.images
-                .map(
-                    image =>
-                        this.mapDetailImage(
-                            image,
-                        ),
-                );
-
-
-        /*
-         * --------------------------------------------------------
-         * COMPONENTS
-         * --------------------------------------------------------
-         */
-
-        const components =
-            this.mapComponents(
-                product.components,
-            );
-
-
-        /*
-         * --------------------------------------------------------
-         * VARIANTS
-         * --------------------------------------------------------
-         */
-
-        const variants =
-            this.mapVariants(
-                product,
-                taxRate,
-            );
-
-
-        /*
-         * --------------------------------------------------------
-         * RESPONSE
-         * --------------------------------------------------------
-         */
+    toAdminDetailResponse(
+        product: ProductWithAdminDetailRelations,
+    ): ProductAdminDetailResponseDto {
 
         return {
-
             id:
                 product.id,
 
@@ -774,12 +533,223 @@ export class ProductMapper extends BaseMapper<
             description:
                 product.description,
 
+            active:
+                product.active,
 
-            price:
-                grossPrice,
+            type:
+                product.type,
+
+            featured:
+                product.featured,
+
+            rentalDeposit:
+                product.rentalDeposit !== null
+                    ? this.toNumber(
+                        product.rentalDeposit,
+                    )
+                    : null,
+
+            customerPrice:
+                this.toNumber(
+                    product.customerPrice,
+                ),
+
+            floristPrice:
+                this.toNumber(
+                    product.floristPrice,
+                ),
+
+            sortOrder:
+                product.sortOrder,
+
+            createdAt:
+                product.createdAt,
+
+            updatedAt:
+                product.updatedAt,
+
+            taxCode: {
+                id:
+                    product.taxCode.id,
+
+                code:
+                    product.taxCode.code,
+
+                name:
+                    product.taxCode.name,
+
+                rate:
+                    this.toNumber(
+                        product.taxCode.rate,
+                    ),
+
+                active:
+                    product.taxCode.active,
+            },
 
             category: {
+                id:
+                    product.category.id,
 
+                name:
+                    product.category.name,
+
+                slug:
+                    product.category.slug,
+
+                description:
+                    product.category.description,
+
+                active:
+                    product.category.active,
+            },
+
+            images:
+                product.images.map(
+                    (image) => ({
+                        id:
+                            image.id,
+
+                        fileId:
+                            image.fileId,
+
+                        url:
+                            `/api/files/${image.file.id}`,
+
+                        altText:
+                            image.altText,
+
+                        sortOrder:
+                            image.sortOrder,
+
+                        isPrimary:
+                            image.isPrimary,
+
+                        variantId:
+                            image.variantId,
+
+                        createdAt:
+                            image.createdAt,
+
+                        updatedAt:
+                            image.updatedAt,
+                    }),
+                ),
+
+            components:
+                product.components.map(
+                    (component) => ({
+                        id:
+                            component.id,
+
+                        name:
+                            component.name,
+
+                        minQuantity:
+                            component.minQuantity,
+
+                        recommendedQuantity:
+                            component.recommendedQuantity,
+
+                        maxQuantity:
+                            component.maxQuantity,
+
+                        customerPricePerAdditionalUnit:
+                            this.toNumber(
+                                component.customerPricePerAdditionalUnit,
+                            ),
+
+                        floristPricePerAdditionalUnit:
+                            this.toNumber(
+                                component.floristPricePerAdditionalUnit,
+                            ),
+
+                        sortOrder:
+                            component.sortOrder,
+
+                        active:
+                            component.active,
+
+                        createdAt:
+                            component.createdAt,
+
+                        updatedAt:
+                            component.updatedAt,
+                    }),
+                ),
+
+            variants:
+                this.mapAdminVariants(
+                    product.variants,
+                ),
+        };
+    }
+
+
+    // =========================================================
+    // PUBLIC LIST
+    // =========================================================
+
+    toListResponse(
+        product: ProductWithListRelations,
+    ): ProductListResponseDto {
+
+        const image =
+            product.images[0] ?? null;
+
+        return {
+            id:
+                product.id,
+
+            name:
+                product.name,
+
+            type:
+                product.type,
+
+            featured:
+                product.featured,
+
+            price:
+                this.toNumber(
+                    product.customerPrice,
+                ),
+
+            image:
+                image
+                    ? this.mapListImage(image)
+                    : null,
+        };
+    }
+
+
+    // =========================================================
+    // PUBLIC DETAIL
+    // =========================================================
+
+    toResponse(
+        product: ProductWithDetailRelations,
+    ): ProductDetailResponseDto {
+
+        return {
+            id:
+                product.id,
+
+            name:
+                product.name,
+
+            slug:
+                product.slug,
+
+            description:
+                product.description,
+
+            price:
+                this.toNumber(
+                    product.customerPrice,
+                ),
+
+            category: {
                 id:
                     product.category.id,
 
@@ -788,24 +758,37 @@ export class ProductMapper extends BaseMapper<
             },
 
             images:
-                productImages,
+                product.images.map(
+                    (image) =>
+                        this.mapDetailImage(
+                            image,
+                        ),
+                ),
 
             components:
-                components,
+                this.mapComponents(
+                    product.components,
+                ),
 
             variants:
-                variants,
+                this.mapPublicVariants(
+                    product.variants,
+                ),
 
-            active: product.active,
+            active:
+                product.active,
 
-            type: product.type,
+            type:
+                product.type,
 
             featured:
                 product.featured,
 
             rentalDeposit:
-                product.rentalDeposit
-                    ? this.toNumber(product.rentalDeposit)
+                product.rentalDeposit !== null
+                    ? this.toNumber(
+                        product.rentalDeposit,
+                    )
                     : null,
         };
     }

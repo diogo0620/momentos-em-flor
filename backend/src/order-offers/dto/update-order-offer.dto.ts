@@ -1,4 +1,4 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
     IsInt,
     IsNumber,
@@ -7,21 +7,12 @@ import {
 } from 'class-validator';
 
 export class UpdateOrderOfferDto {
-    @ApiPropertyOptional({
-        example: 2,
-    })
-    @IsOptional()
-    @IsInt()
-    @IsPositive()
-    floristId?: number;
-
-    @ApiPropertyOptional({
+    @ApiProperty({
         example: 35,
         description:
-            'Total compensation offered to the florist',
+            'Price offered to the florist',
     })
-    @IsOptional()
     @IsNumber()
     @IsPositive()
-    compensationAmount?: number;
+    price: number;
 }

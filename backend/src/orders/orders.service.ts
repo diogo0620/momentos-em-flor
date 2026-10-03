@@ -28,14 +28,19 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrderCreatedEvent } from '@/events/order/order-created.event';
 
 import { GeocodingService } from '@/geocoding/geocoding.service';
+import { log } from 'console';
+import { StoreSettingsService } from '@/store-settings/store-settings.service';
 
 
 @Injectable()
 export class OrdersService {
+
     constructor(
         private readonly prisma: PrismaService,
 
         private readonly mapper: OrderMapper,
+
+        private readonly storeSettingsService: StoreSettingsService,
 
         private readonly eventEmitter:
             EventEmitter2,
@@ -45,32 +50,17 @@ export class OrdersService {
     ) { }
 
 
+    // =========================================================
+    // LIST
+    // =========================================================
+
     async findAll(
         user: AuthenticatedUser,
         query: OrderQueryDto,
     ) {
-        if (
-            user.role !== UserRole.SYSTEM_ADMIN &&
-            user.role !== UserRole.CUSTOMER &&
-            user.role !== UserRole.FLORIST
-        ) {
-            Exceptions.forbidden(
-                ORDER_MESSAGES.FORBIDDEN,
-            );
-        }
-
-        if (
-            user.role === UserRole.FLORIST &&
-            !user.floristId
-        ) {
-            Exceptions.forbidden(
-                ORDER_MESSAGES.FORBIDDEN,
-            );
-        }
+        this.validateOrderAccess(user);
 
         const where = {
-
-
             ...(user.role === UserRole.CUSTOMER && {
                 customerId: user.id,
             }),
@@ -90,33 +80,42 @@ export class OrdersService {
 
             ...(query.customerId &&
                 user.role === UserRole.SYSTEM_ADMIN && {
-                customerId: query.customerId,
+                customerId:
+                    query.customerId,
             }),
 
             ...(query.search && {
                 OR: [
                     {
                         orderNumber: {
-                            contains: query.search,
-                            mode: 'insensitive' as const,
+                            contains:
+                                query.search,
+                            mode:
+                                'insensitive' as const,
                         },
                     },
                     {
                         customerEmail: {
-                            contains: query.search,
-                            mode: 'insensitive' as const,
+                            contains:
+                                query.search,
+                            mode:
+                                'insensitive' as const,
                         },
                     },
                     {
                         customerFirstName: {
-                            contains: query.search,
-                            mode: 'insensitive' as const,
+                            contains:
+                                query.search,
+                            mode:
+                                'insensitive' as const,
                         },
                     },
                     {
                         customerLastName: {
-                            contains: query.search,
-                            mode: 'insensitive' as const,
+                            contains:
+                                query.search,
+                            mode:
+                                'insensitive' as const,
                         },
                     },
                 ],
@@ -125,10 +124,12 @@ export class OrdersService {
 
         const orderBy = query.sort
             ? {
-                [query.sort]: query.order,
+                [query.sort]:
+                    query.order,
             }
             : {
-                createdAt: 'desc' as const,
+                createdAt:
+                    'desc' as const,
             };
 
         const orders =
@@ -171,7 +172,10 @@ export class OrdersService {
             });
 
         return ApiResponse.paginated(
-            this.mapper.toListResponses(orders),
+            this.mapper.toListResponses(
+                orders,
+            ),
+
             getPaginationResponse(
                 query.page,
                 query.pageSize,
@@ -181,36 +185,22 @@ export class OrdersService {
     }
 
 
-
+    // =========================================================
+    // DETAIL
+    // =========================================================
 
     async findOne(
         user: AuthenticatedUser,
         id: number,
     ) {
-        if (
-            user.role !== UserRole.SYSTEM_ADMIN &&
-            user.role !== UserRole.CUSTOMER &&
-            user.role !== UserRole.FLORIST
-        ) {
-            Exceptions.forbidden(
-                ORDER_MESSAGES.FORBIDDEN,
-            );
-        }
-
-        if (
-            user.role === UserRole.FLORIST &&
-            !user.floristId
-        ) {
-            Exceptions.forbidden(
-                ORDER_MESSAGES.FORBIDDEN,
-            );
-        }
+        this.validateOrderAccess(user);
 
         const where = {
             id,
 
             ...(user.role === UserRole.CUSTOMER && {
-                customerId: user.id,
+                customerId:
+                    user.id,
             }),
 
             ...(user.role === UserRole.FLORIST && {
@@ -232,11 +222,7 @@ export class OrdersService {
 
                     offers: {
                         include: {
-                            orderOfferItems:
-                                true,
-
-                            florist:
-                                true,
+                            florist: true,
                         },
                     },
                 },
@@ -256,352 +242,76 @@ export class OrdersService {
     }
 
 
+    // =========================================================
+    // CREATE
+    // =========================================================
+
     async create(
-        user: AuthenticatedUser | null,
+        user: AuthenticatedUser,
         dto: CreateOrderDto,
     ) {
-        let customerId:
-            number | null = null;
-
-        let customerFirstName:
-            string;
-
-        let customerLastName:
-            string | null;
-
-        let customerEmail:
-            string | null;
-
-        let customerPhone:
-            string | null;
-
-
         /*
-         * Authenticated CUSTOMER
+         * For now, only authenticated
+         * customers can create orders.
          */
-        if (
-            user &&
-            user.role === UserRole.CUSTOMER
-        ) {
-            const customer =
-                await this.prisma.user.findFirst({
-                    where: {
-                        id: user.id,
-
-                        role:
-                            UserRole.CUSTOMER,
-
-                        active: true,
-                    },
-                });
-
-            if (!customer) {
-                Exceptions.notFound(
-                    ORDER_MESSAGES
-                        .CUSTOMER_NOT_FOUND,
-                );
-            }
-
-            customerId =
-                customer.id;
-
-            customerFirstName =
-                customer.firstName;
-
-            customerLastName =
-                customer.lastName;
-
-            customerEmail =
-                customer.email;
-
-            customerPhone =
-                customer.phone;
-        }
-
-
-        /*
-         * Guest / Admin
-         */
-        else {
-            if (
-                !dto.customerEmail?.trim() &&
-                !dto.customerPhone?.trim()
-            ) {
-                Exceptions.badRequest(
-                    ORDER_MESSAGES
-                        .CUSTOMER_CONTACT_REQUIRED,
-                );
-            }
-
-            if (
-                !dto.customerFirstName?.trim()
-            ) {
-                Exceptions.badRequest(
-                    ORDER_MESSAGES
-                        .CUSTOMER_FIRST_NAME_REQUIRED,
-                );
-            }
-
-            customerFirstName =
-                dto.customerFirstName.trim();
-
-            customerLastName =
-                dto.customerLastName?.trim() ||
-                null;
-
-            customerEmail =
-                dto.customerEmail?.trim() ||
-                null;
-
-            customerPhone =
-                dto.customerPhone?.trim() ||
-                null;
-        }
-
-
-        /*
-         * Validate items
-         */
-        if (
-            dto.items.length === 0
-        ) {
-            Exceptions.badRequest(
-                ORDER_MESSAGES.EMPTY_ORDER,
-            );
-        }
-
-        const productIds =
-            dto.items.map(
-                (item) =>
-                    item.productId,
+        const customer =
+            await this.validateOrderCreationUser(
+                user,
             );
 
-        if (
-            new Set(productIds).size !==
-            productIds.length
-        ) {
-            Exceptions.badRequest(
-                ORDER_MESSAGES
-                    .DUPLICATE_PRODUCTS,
-            );
-        }
-
+        /*
+         * Validate order items.
+         */
+        this.validateItems(
+            dto,
+        );
 
         /*
-         * Validate products
-         *
-         * We load the TaxCode because
-         * the product price is BEFORE VAT
-         * and the tax rate must be
-         * snapshotted into the OrderItem.
+         * Load all products used by
+         * the order.
          */
         const products =
-            await this.prisma.product.findMany({
-                where: {
-                    id: {
-                        in: productIds,
-                    },
-
-                    active: true,
-                },
-
-                include: {
-                    taxCode: true,
-                },
-            });
-
-        if (
-            products.length !==
-            productIds.length
-        ) {
-            Exceptions.badRequest(
-                ORDER_MESSAGES
-                    .PRODUCT_NOT_AVAILABLE,
+            await this.loadOrderProducts(
+                dto,
             );
-        }
-
-        const productsById =
-            new Map(
-                products.map(
-                    (product) => [
-                        product.id,
-                        product,
-                    ],
-                ),
-            );
-
 
         /*
-         * Build order items
+         * Build OrderItem snapshots.
          *
-         * unitPrice:
-         *   Price BEFORE VAT
-         *
-         * taxRate:
-         *   VAT percentage at purchase time
-         *
-         * taxAmount:
-         *   VAT amount for this line
-         *
-         * lineTotal:
-         *   Total INCLUDING VAT
+         * Prices always come from the
+         * product stored in the database.
          */
         const items =
-            dto.items.map((item) => {
-                const product =
-                    productsById.get(
-                        item.productId,
-                    )!;
-
-                const unitPrice =
-                    Number(
-                        product.basePrice,
-                    );
-
-                const taxRate =
-                    Number(
-                        product.taxCode.rate,
-                    );
-
-                const netLineTotal =
-                    unitPrice *
-                    item.quantity;
-
-                const taxAmount =
-                    Number(
-                        (
-                            netLineTotal *
-                            (taxRate / 100)
-                        ).toFixed(2),
-                    );
-
-                const lineTotal =
-                    Number(
-                        (
-                            netLineTotal +
-                            taxAmount
-                        ).toFixed(2),
-                    );
-
-                return {
-                    productId:
-                        product.id,
-
-                    productName:
-                        product.name,
-
-                    productDescription:
-                        product.description,
-
-                    quantity:
-                        item.quantity,
-
-                    unitPrice,
-
-                    taxRate,
-
-                    taxAmount,
-
-                    lineTotal,
-                };
-            });
-
+            this.buildOrderItems(
+                dto,
+                products,
+            );
 
         /*
-         * Calculate totals
-         *
-         * subtotal = BEFORE VAT
-         * taxAmount = VAT
-         * total = INCLUDING VAT
+         * Calculate order totals.
          */
-        const subtotal =
-            Number(
-                items
-                    .reduce(
-                        (
-                            total,
-                            item,
-                        ) =>
-                            total +
-                            (
-                                item.unitPrice *
-                                item.quantity
-                            ),
-                        0,
-                    )
-                    .toFixed(2),
+        const totals =
+            await this.calculateOrderTotals(
+                items,
             );
-
-        const taxAmount =
-            Number(
-                items
-                    .reduce(
-                        (
-                            total,
-                            item,
-                        ) =>
-                            total +
-                            item.taxAmount,
-                        0,
-                    )
-                    .toFixed(2),
-            );
-
-        const deliveryFee =
-            0;
-
-        const discount =
-            0;
-
-        const total =
-            Number(
-                (
-                    subtotal +
-                    taxAmount +
-                    deliveryFee -
-                    discount
-                ).toFixed(2),
-            );
-
 
         /*
          * Geocode delivery address.
-         *
-         * Latitude and longitude are
-         * generated by the backend.
          */
         const coordinates =
-            await this.geocodingService
-                .geocodeAddress({
-                    street:
-                        dto.deliveryStreet,
-
-                    street2:
-                        dto.deliveryStreet2,
-
-                    postalCode:
-                        dto.deliveryPostalCode,
-
-                    city:
-                        dto.deliveryCity,
-
-                    district:
-                        dto.deliveryDistrict,
-
-                    countryCode:
-                        dto.deliveryCountryCode,
-                });
-
+            await this.geocodeDeliveryAddress(
+                dto,
+            );
 
         /*
-         * Generate order number
+         * Generate unique order number.
          */
         const orderNumber =
             await this.generateOrderNumber();
 
-
         /*
-         * Create order
+         * Create order and items
+         * atomically.
          */
         const order =
             await this.prisma.$transaction(
@@ -610,12 +320,25 @@ export class OrdersService {
                         data: {
                             orderNumber,
 
-                            customerId,
+                            /*
+                             * Customer information always
+                             * comes from the authenticated
+                             * customer.
+                             */
+                            customerId:
+                                customer.id,
 
-                            customerFirstName,
-                            customerLastName,
-                            customerEmail,
-                            customerPhone,
+                            customerFirstName:
+                                customer.firstName,
+
+                            customerLastName:
+                                customer.lastName,
+
+                            customerEmail:
+                                customer.email,
+
+                            customerPhone:
+                                customer.phone,
 
                             recipientFirstName:
                                 dto.recipientFirstName,
@@ -668,15 +391,26 @@ export class OrdersService {
                             cardMessage:
                                 dto.cardMessage,
 
-                            subtotal,
+                            subtotal:
+                                totals.subtotal,
 
-                            taxAmount,
+                            taxAmount:
+                                totals.taxAmount,
 
-                            deliveryFee,
+                            /*
+                             * Delivery fee is currently
+                             * zero until the delivery
+                             * pricing configuration is
+                             * connected here.
+                             */
+                            deliveryFee:
+                                totals.deliveryFee,
 
-                            discount,
+                            discount:
+                                0,
 
-                            total,
+                            total:
+                                totals.total,
 
                             status:
                                 OrderStatus.CREATED,
@@ -690,13 +424,11 @@ export class OrdersService {
                 },
             );
 
-
         /*
          * Notify listeners.
          *
-         * Distribution is handled
-         * asynchronously by
-         * OrderCreatedListener.
+         * Order distribution is handled
+         * asynchronously.
          */
         this.eventEmitter.emit(
             'order.created',
@@ -706,11 +438,6 @@ export class OrdersService {
             ),
         );
 
-
-        /*
-         * Return only creation
-         * information.
-         */
         return ApiResponse.success(
             this.mapper.toCreateResponse(
                 order,
@@ -718,6 +445,388 @@ export class OrdersService {
         );
     }
 
+
+    // =========================================================
+    // CREATE - VALIDATION
+    // =========================================================
+
+    private async validateOrderCreationUser(
+        user: AuthenticatedUser,
+    ) {
+        if (!user) {
+            Exceptions.forbidden(
+                ORDER_MESSAGES.FORBIDDEN,
+            );
+        }
+
+        if (
+            user.role !==
+            UserRole.CUSTOMER
+        ) {
+            Exceptions.forbidden(
+                ORDER_MESSAGES.FORBIDDEN,
+            );
+        }
+
+        const customer =
+            await this.prisma.user.findFirst({
+                where: {
+                    id: user.id,
+
+                    role:
+                        UserRole.CUSTOMER,
+
+                    active: true,
+                },
+            });
+
+        if (!customer) {
+            Exceptions.notFound(
+                ORDER_MESSAGES
+                    .CUSTOMER_NOT_FOUND,
+            );
+        }
+
+        return customer;
+    }
+
+
+    private validateOrderAccess(
+        user: AuthenticatedUser,
+    ): void {
+        if (
+            user.role !==
+            UserRole.SYSTEM_ADMIN &&
+            user.role !==
+            UserRole.CUSTOMER &&
+            user.role !==
+            UserRole.FLORIST
+        ) {
+            Exceptions.forbidden(
+                ORDER_MESSAGES.FORBIDDEN,
+            );
+        }
+
+        if (
+            user.role ===
+            UserRole.FLORIST &&
+            !user.floristId
+        ) {
+            Exceptions.forbidden(
+                ORDER_MESSAGES.FORBIDDEN,
+            );
+        }
+    }
+
+
+    private validateItems(
+        dto: CreateOrderDto,
+    ): void {
+        if (
+            !dto.items ||
+            dto.items.length === 0
+        ) {
+            Exceptions.badRequest(
+                ORDER_MESSAGES.EMPTY_ORDER,
+            );
+        }
+
+        const productIds =
+            dto.items.map(
+                (item) =>
+                    item.productId,
+            );
+
+        /*
+         * The same product should not
+         * appear multiple times.
+         *
+         * Quantity should be used instead.
+         */
+        if (
+            new Set(productIds).size !==
+            productIds.length
+        ) {
+            Exceptions.badRequest(
+                ORDER_MESSAGES
+                    .DUPLICATE_PRODUCTS,
+            );
+        }
+
+        /*
+         * Quantity is already validated
+         * by the DTO, but keep the service
+         * validation here as a business rule.
+         */
+        for (
+            const item of dto.items
+        ) {
+            if (
+                !Number.isInteger(
+                    item.quantity,
+                ) ||
+                item.quantity <= 0
+            ) {
+                Exceptions.badRequest(
+                    'A quantidade do produto deve ser superior a zero.',
+                );
+            }
+        }
+    }
+
+
+    // =========================================================
+    // CREATE - PRODUCTS
+    // =========================================================
+
+    private async loadOrderProducts(
+        dto: CreateOrderDto,
+    ) {
+        const productIds =
+            dto.items.map(
+                (item) =>
+                    item.productId,
+            );
+
+        const products =
+            await this.prisma.product.findMany({
+                where: {
+                    id: {
+                        in: productIds,
+                    },
+
+                    active: true,
+                },
+
+                include: {
+                    taxCode: true,
+                },
+            });
+
+        if (
+            products.length !==
+            productIds.length
+        ) {
+            Exceptions.badRequest(
+                ORDER_MESSAGES
+                    .PRODUCT_NOT_AVAILABLE,
+            );
+        }
+
+        return new Map(
+            products.map(
+                (product) => [
+                    product.id,
+                    product,
+                ],
+            ),
+        );
+    }
+
+
+    // =========================================================
+    // CREATE - ORDER ITEMS
+    // =========================================================
+
+    private buildOrderItems(
+        dto: CreateOrderDto,
+        products: Map<number, any>,
+    ) {
+        return dto.items.map(
+            (item) => {
+                const product =
+                    products.get(
+                        item.productId,
+                    );
+
+                if (!product) {
+                    Exceptions.badRequest(
+                        ORDER_MESSAGES
+                            .PRODUCT_NOT_AVAILABLE,
+                    );
+                }
+
+                return this.buildOrderItem(
+                    product,
+                    item.quantity,
+                );
+            },
+        );
+    }
+
+
+    private buildOrderItem(
+        product: any,
+        quantity: number,
+    ) {
+        /*
+         * customerPrice is the final
+         * customer price INCLUDING VAT.
+         */
+        const unitPrice =
+            Number(
+                product.customerPrice,
+            );
+
+
+
+        const taxRate =
+            Number(
+                product.taxCode.rate,
+            );
+
+        /*
+         * Calculate the gross line amount
+         * directly from the customer price.
+         */
+        const grossAmount =
+            this.roundMoney(
+                unitPrice *
+                quantity,
+            );
+
+        /*
+         * Extract VAT from the gross
+         * amount.
+         *
+         * Example:
+         *
+         * Gross = 123
+         * VAT = 23%
+         *
+         * Net = 123 / 1.23 = 100
+         * VAT = 23
+         */
+        const netAmount =
+            this.roundMoney(
+                grossAmount /
+                (1 + taxRate / 100),
+            );
+
+        const taxAmount =
+            this.roundMoney(
+                grossAmount -
+                netAmount,
+            );
+
+        return {
+            productId:
+                product.id,
+
+            name:
+                product.name,
+
+            description:
+                product.description,
+
+            quantity,
+
+            /*
+             * unitPrice is the customer
+             * price INCLUDING VAT.
+             */
+            customerPrice: unitPrice,
+
+            floristPrice: product.floristPrice,
+
+            netAmount,
+
+            taxRate,
+
+            taxAmount,
+
+            grossAmount,
+
+            taxCodeId:
+                product.taxCodeId,
+        };
+    }
+
+
+
+    // =========================================================
+    // CREATE - TOTALS
+    // =========================================================
+
+    private async calculateOrderTotals(
+        items: Array<{
+            netAmount: number;
+            taxAmount: number;
+            grossAmount: number;
+        }>,
+    ) {
+        const subtotal = this.roundMoney(
+            items.reduce(
+                (total, item) => total + item.netAmount,
+                0,
+            ),
+        );
+
+        const taxAmount = this.roundMoney(
+            items.reduce(
+                (total, item) => total + item.taxAmount,
+                0,
+            ),
+        );
+
+        const settings = await this.storeSettingsService.get();
+
+        const deliveryFee = this.roundMoney(
+            Number(settings.data.deliveryFee ?? 0),
+        );
+
+        const discount = 0;
+
+        const total = this.roundMoney(
+            subtotal +
+            taxAmount +
+            deliveryFee -
+            discount,
+        );
+
+        return {
+            subtotal,
+            taxAmount,
+            deliveryFee,
+            discount,
+            total,
+        };
+    }
+
+
+    // =========================================================
+    // CREATE - DELIVERY
+    // =========================================================
+
+    private async geocodeDeliveryAddress(
+        dto: CreateOrderDto,
+    ) {
+        return this.geocodingService
+            .geocodeAddress({
+                street:
+                    dto.deliveryStreet,
+
+                street2:
+                    dto.deliveryStreet2,
+
+                postalCode:
+                    dto.deliveryPostalCode,
+
+                city:
+                    dto.deliveryCity,
+
+                district:
+                    dto.deliveryDistrict,
+
+                countryCode:
+                    dto.deliveryCountryCode,
+            });
+    }
+
+
+    // =========================================================
+    // UPDATE
+    // =========================================================
 
     async update(
         id: number,
@@ -736,32 +845,26 @@ export class OrdersService {
             );
         }
 
-
-        /*
-         * Check whether the delivery
-         * address is being changed.
-         */
         const addressChanged =
-            dto.deliveryStreet !== undefined ||
-            dto.deliveryStreet2 !== undefined ||
-            dto.deliveryPostalCode !== undefined ||
-            dto.deliveryCity !== undefined ||
-            dto.deliveryDistrict !== undefined ||
-            dto.deliveryCountryCode !== undefined;
+            dto.deliveryStreet !==
+            undefined ||
+            dto.deliveryStreet2 !==
+            undefined ||
+            dto.deliveryPostalCode !==
+            undefined ||
+            dto.deliveryCity !==
+            undefined ||
+            dto.deliveryDistrict !==
+            undefined ||
+            dto.deliveryCountryCode !==
+            undefined;
 
-
-        /*
-         * Geocode the final address only
-         * when one of the address fields
-         * changes.
-         */
         let coordinates:
             | {
                 latitude: number;
                 longitude: number;
             }
             | undefined;
-
 
         if (addressChanged) {
             coordinates =
@@ -800,7 +903,6 @@ export class OrdersService {
                             ).toUpperCase(),
                     });
         }
-
 
         const order =
             await this.prisma.order.update({
@@ -890,11 +992,6 @@ export class OrdersService {
                                 .toUpperCase(),
                     }),
 
-                    /*
-                     * Update coordinates only
-                     * when the delivery address
-                     * changed.
-                     */
                     ...(coordinates && {
                         deliveryLatitude:
                             coordinates.latitude,
@@ -923,6 +1020,10 @@ export class OrdersService {
     }
 
 
+    // =========================================================
+    // DELETE
+    // =========================================================
+
     async remove(
         id: number,
     ) {
@@ -942,7 +1043,7 @@ export class OrdersService {
         await this.prisma.order.delete({
             where: {
                 id,
-            }
+            },
         });
 
         return ApiResponse.success({
@@ -952,19 +1053,33 @@ export class OrdersService {
     }
 
 
+    // =========================================================
+    // FLORIST DISTRIBUTION
+    // =========================================================
+
     async findEligibleFloristsForOrder(
         orderId: number,
     ) {
         /*
-         * Kept as a thin wrapper so
-         * the controller does not need
-         * to know about the distribution
-         * service.
+         * Distribution is triggered through
+         * the order.created event.
          *
-         * Distribution is triggered
-         * through the order.created event.
+         * Kept as a thin wrapper for now.
          */
         return [];
+    }
+
+
+    // =========================================================
+    // HELPERS
+    // =========================================================
+
+    private roundMoney(
+        value: number,
+    ): number {
+        return Number(
+            value.toFixed(2),
+        );
     }
 
 
@@ -972,8 +1087,7 @@ export class OrdersService {
         const year =
             new Date().getFullYear();
 
-        let orderNumber:
-            string;
+        let orderNumber: string;
 
         do {
             const random =
@@ -996,6 +1110,7 @@ export class OrdersService {
             if (!existing) {
                 return orderNumber;
             }
+
         } while (true);
     }
 }

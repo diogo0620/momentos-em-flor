@@ -11,8 +11,6 @@ async function cleanDatabase() {
 
   await prisma.orderReviewRating.deleteMany();
   await prisma.orderReview.deleteMany();
-  await prisma.orderOfferItemComponent.deleteMany();
-  await prisma.orderOfferItem.deleteMany();
   await prisma.orderOffer.deleteMany();
   await prisma.orderStatusHistory.deleteMany();
   await prisma.orderItemComponent.deleteMany();
@@ -20,8 +18,6 @@ async function cleanDatabase() {
   await prisma.order.deleteMany();
   await prisma.productImage.deleteMany();
   await prisma.file.deleteMany();
-  await prisma.floristComponentCompensationRule.deleteMany();
-  await prisma.floristCompensationRule.deleteMany();
   await prisma.productComponent.deleteMany();
   await prisma.productVariant.deleteMany();
   await prisma.product.deleteMany();
@@ -40,28 +36,13 @@ async function createTaxCodes() {
   const vat23 = await prisma.taxCode.create({
     data: {
       code: 'PT_VAT_23',
-      name: 'IVA Normal (23%)',
+      name: 'IVA Normal',
       rate: 23.00,
     },
   });
 
-  const vat13 = await prisma.taxCode.create({
-    data: {
-      code: 'PT_VAT_13',
-      name: 'IVA Intermédio (13%)',
-      rate: 13.00,
-    },
-  });
 
-  const vat6 = await prisma.taxCode.create({
-    data: {
-      code: 'PT_VAT_6',
-      name: 'IVA Reduzido (6%)',
-      rate: 6.00,
-    },
-  });
-
-  return { vat23, vat13, vat6 };
+  return { vat23};
 }
 
 async function createCategories() {
@@ -135,7 +116,7 @@ async function createProductImage(productId: number, fileId: number, options?: {
   });
 }
 
-async function createProductComponent(productId: number, data: { name: string; minQuantity: number; recommendedQuantity: number; maxQuantity: number; customerPricePerAdditionalUnit: number; floristCompensationPerAdditionalUnit: number; sortOrder?: number }) {
+async function createProductComponent(productId: number, data: { name: string; minQuantity: number; recommendedQuantity: number; maxQuantity: number; customerPricePerAdditionalUnit: number; floristPricePerAdditionalUnit: number; sortOrder?: number }) {
   return prisma.productComponent.create({
     data: {
       productId,
@@ -144,21 +125,21 @@ async function createProductComponent(productId: number, data: { name: string; m
       recommendedQuantity: data.recommendedQuantity,
       maxQuantity: data.maxQuantity,
       customerPricePerAdditionalUnit: data.customerPricePerAdditionalUnit,
-      floristCompensationPerAdditionalUnit: data.floristCompensationPerAdditionalUnit,
+      floristPricePerAdditionalUnit: data.floristPricePerAdditionalUnit,
       sortOrder: data.sortOrder ?? 0,
     },
   });
 }
 
-async function createProductVariant(productId: number, data: { type: ProductVariantType; name: string; code?: string; price: number; floristCompensation: number; sortOrder?: number }) {
+async function createProductVariant(productId: number, data: { type: ProductVariantType; name: string; code?: string; customerPrice: number; floristPrice: number; sortOrder?: number }) {
   return prisma.productVariant.create({
     data: {
       productId,
       type: data.type,
       name: data.name,
       code: data.code,
-      price: data.price,
-      floristCompensation: data.floristCompensation,
+      customerPrice: data.customerPrice,
+      floristPrice: data.floristPrice,
       sortOrder: data.sortOrder ?? 0,
     },
   });
@@ -172,8 +153,8 @@ async function createProducts(taxCodes: Awaited<ReturnType<typeof createTaxCodes
       name: 'Orquídea Branca',
       slug: 'orquidea-branca',
       description: 'Orquídea branca em vaso decorativo.',
-      basePrice: 34.90,
-      baseFloristCompensation: 25.00,
+      customerPrice: 39.99,
+      floristPrice: 29.99,
       taxCodeId: taxCodes.vat23.id,
       categoryId: categories.plants.id,
       sortOrder: 0,
@@ -185,8 +166,8 @@ async function createProducts(taxCodes: Awaited<ReturnType<typeof createTaxCodes
       name: 'Ramo Primavera',
       slug: 'ramo-primavera',
       description: 'Ramo colorido de flores da estação, personalizável em quantidade.',
-      basePrice: 39.90,
-      baseFloristCompensation: 30.00,
+      customerPrice: 39.99,
+      floristPrice: 29.99,
       taxCodeId: taxCodes.vat23.id,
       categoryId: categories.bouquets.id,
       sortOrder: 1,
@@ -199,7 +180,7 @@ async function createProducts(taxCodes: Awaited<ReturnType<typeof createTaxCodes
     recommendedQuantity: 12,
     maxQuantity: 24,
     customerPricePerAdditionalUnit: 2.50,
-    floristCompensationPerAdditionalUnit: 1.50,
+    floristPricePerAdditionalUnit: 1.50,
     sortOrder: 0,
   });
 
@@ -209,7 +190,7 @@ async function createProducts(taxCodes: Awaited<ReturnType<typeof createTaxCodes
     recommendedQuantity: 6,
     maxQuantity: 12,
     customerPricePerAdditionalUnit: 3.50,
-    floristCompensationPerAdditionalUnit: 2.00,
+    floristPricePerAdditionalUnit: 2.00,
     sortOrder: 1,
   });
 
@@ -218,8 +199,8 @@ async function createProducts(taxCodes: Awaited<ReturnType<typeof createTaxCodes
       name: 'Rosas Vermelhas',
       slug: 'rosas-vermelhas',
       description: 'Bouquet de rosas vermelhas frescas, personalizável em quantidade.',
-      basePrice: 39.90,
-      baseFloristCompensation: 30.00,
+      customerPrice: 39.99,
+      floristPrice: 29.99,
       taxCodeId: taxCodes.vat23.id,
       categoryId: categories.bouquets.id,
       sortOrder: 2,
@@ -232,7 +213,7 @@ async function createProducts(taxCodes: Awaited<ReturnType<typeof createTaxCodes
     recommendedQuantity: 12,
     maxQuantity: 24,
     customerPricePerAdditionalUnit: 2.50,
-    floristCompensationPerAdditionalUnit: 1.50,
+    floristPricePerAdditionalUnit: 1.50,
     sortOrder: 0,
   });
 
@@ -241,8 +222,8 @@ async function createProducts(taxCodes: Awaited<ReturnType<typeof createTaxCodes
       name: 'Coroa Floral',
       slug: 'coroa-floral',
       description: 'Coroa floral disponível em diferentes tamanhos.',
-      basePrice: 59.90,
-      baseFloristCompensation: 45.00,
+      customerPrice: 39.99,
+      floristPrice: 29.99,
       taxCodeId: taxCodes.vat23.id,
       categoryId: categories.funeral.id,
       sortOrder: 3,
@@ -253,8 +234,8 @@ async function createProducts(taxCodes: Awaited<ReturnType<typeof createTaxCodes
     type: ProductVariantType.SIZE,
     name: 'Pequena',
     code: 'COROA-S',
-    price: 59.90,
-    floristCompensation: 45.00,
+    customerPrice: 39.99,
+      floristPrice: 29.99,
     sortOrder: 0,
   });
 
@@ -262,8 +243,8 @@ async function createProducts(taxCodes: Awaited<ReturnType<typeof createTaxCodes
     type: ProductVariantType.SIZE,
     name: 'Média',
     code: 'COROA-M',
-    price: 79.90,
-    floristCompensation: 60.00,
+    customerPrice: 39.99,
+      floristPrice: 29.99,
     sortOrder: 1,
   });
 
@@ -271,8 +252,8 @@ async function createProducts(taxCodes: Awaited<ReturnType<typeof createTaxCodes
     type: ProductVariantType.SIZE,
     name: 'Grande',
     code: 'COROA-L',
-    price: 109.90,
-    floristCompensation: 82.00,
+    customerPrice: 39.99,
+      floristPrice: 29.99,
     sortOrder: 2,
   });
 
@@ -381,55 +362,6 @@ async function createFlorist(addressId: number) {
   });
 }
 
-async function createCompensationRules(floristId: number, products: Awaited<ReturnType<typeof createProducts>>) {
-  console.log('💰 Creating florist compensation rules...');
-
-  /*
-   * Product-level exception.
-   *
-   * Orquídea:
-   * Default compensation = 25.00 €
-   * Florist exception = 28.00 €
-   */
-  await prisma.floristCompensationRule.create({
-    data: {
-      floristId,
-      productId: products.orchid.id,
-      compensationAmount: 28.00,
-    },
-  });
-
-  /*
-   * Variant-level exception.
-   *
-   * Coroa Média:
-   * Default compensation = 60.00 €
-   * Florist exception = 65.00 €
-   */
-  await prisma.floristCompensationRule.create({
-    data: {
-      floristId,
-      productId: products.crown.id,
-      variantId: products.crownMedium.id,
-      compensationAmount: 65.00,
-    },
-  });
-
-  /*
-   * Component-level exception.
-   *
-   * Ramo Primavera / Rosas:
-   * Default = 1.50 € per additional unit
-   * Florist exception = 2.00 € per additional unit
-   */
-  await prisma.floristComponentCompensationRule.create({
-    data: {
-      floristId,
-      componentId: products.primaveraRoses.id,
-      compensationPerAdditionalUnit: 2.00,
-    },
-  });
-}
 
 async function createUsers(floristId: number) {
   console.log('👤 Creating users...');
@@ -497,8 +429,6 @@ async function main() {
   const address = await createAddress();
   const florist = await createFlorist(address.id);
 
-  await createCompensationRules(florist.id, products);
-
   const users = await createUsers(florist.id);
 
   console.log('');
@@ -512,12 +442,6 @@ async function main() {
   console.log(`  - ${products.primavera.name} (components)`);
   console.log(`  - ${products.redRoses.name} (component)`);
   console.log(`  - ${products.crown.name} (variants)`);
-
-  console.log('');
-  console.log('Compensation rules:');
-  console.log('  - Orquídea Branca: 28.00 € for florist');
-  console.log('  - Coroa Floral Média: 65.00 € for florist');
-  console.log('  - Ramo Primavera / Rosas: 2.00 € per additional unit');
 
   console.log('');
   console.log('Users:');

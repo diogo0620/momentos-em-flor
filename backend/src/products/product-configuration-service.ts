@@ -164,8 +164,8 @@ export class ProductConfigurationService {
         if (dto.variants) {
             for (const variant of dto.variants) {
                 if (
-                    variant.floristCompensation >=
-                    variant.price
+                    variant.floristPrice >=
+                    variant.customerPrice
                 ) {
                     throw new BadRequestException(
                         `Variant "${variant.name}": florist compensation must be lower than price.`,
@@ -216,7 +216,7 @@ export class ProductConfigurationService {
                 customerPricePerAdditionalUnit:
                     component.customerPricePerAdditionalUnit,
                 floristCompensationPerAdditionalUnit:
-                    component.floristCompensationPerAdditionalUnit,
+                    component.floristPricePerAdditionalUnit,
                 active: component.active ?? true,
                 sortOrder: component.sortOrder,
             };
@@ -306,9 +306,9 @@ private async syncVariants(
             type: variant.type,
             name: variant.name,
             code: variant.code ?? null,
-            price: variant.price,
-            floristCompensation:
-                variant.floristCompensation,
+            customerPrice: variant.customerPrice,
+            floristPrice:
+                variant.floristPrice,
             active: variant.active ?? true,
             sortOrder: variant.sortOrder,
         };

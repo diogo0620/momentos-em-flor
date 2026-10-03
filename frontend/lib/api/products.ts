@@ -1,36 +1,24 @@
-import { apiFetch, apiUpload } from "@/lib/api/client";
-
+import { apiFetch, apiUpload } from "@/lib/api/common/client";
 import type {
     Pagination,
-    Product,
-    ProductListItem,
-    ProductDetail,
+    CustomerProductDetail,
+    CustomerProductList,
+    AdminProductDetail,
+    AdminProductList,
+    ProductComponent,
+    ProductVariant,
 } from "@/types/product";
 
-export type ProductListResponse = {
+type ApiResponse<T> = {
     success: boolean;
-    data: ProductListItem[];
+    data: T;
+};
+
+export type ProductListResponse = ApiResponse<CustomerProductList[]> & {
     pagination: Pagination;
 };
 
-export type ProductAdminListItem = {
-    id: number;
-    name: string;
-    slug: string;
-    price: number;
-    active: boolean;
-    image: {
-        url: string;
-    } | null;
-    category: {
-        id: number;
-        name: string;
-    };
-};
-
-export type ProductAdminListResponse = {
-    success: boolean;
-    data: ProductAdminListItem[];
+export type ProductAdminListResponse = ApiResponse<AdminProductList[]> & {
     pagination: Pagination;
 };
 
@@ -42,239 +30,21 @@ export type GetProductsParams = {
     order?: "asc" | "desc";
 };
 
-function buildProductQuery(
-    params: GetProductsParams,
-) {
-    const searchParams = new URLSearchParams();
-
-    if (params.page !== undefined) {
-        searchParams.set(
-            "page",
-            String(params.page),
-        );
-    }
-
-    if (params.pageSize !== undefined) {
-        searchParams.set(
-            "pageSize",
-            String(params.pageSize),
-        );
-    }
-
-    if (params.search) {
-        searchParams.set(
-            "search",
-            params.search,
-        );
-    }
-
-    if (params.sort) {
-        searchParams.set(
-            "sort",
-            params.sort,
-        );
-    }
-
-    if (params.order) {
-        searchParams.set(
-            "order",
-            params.order,
-        );
-    }
-
-    return searchParams.toString();
-}
-
-// =========================================================
-// PUBLIC
-// =========================================================
-
-
-export async function getProducts(
-    params: GetProductsParams = {},
-) {
-    const query = buildProductQuery(params);
-
-    const response =
-        await apiFetch<ProductListResponse>(
-            `/products${query ? `?${query}` : ""}`,
-        );
-
-    return {
-        ...response,
-        data: response.data.map(
-            (product) => ({
-                ...product,
-                image: product.image
-                    ? {
-                        ...product.image,
-                        url: resolveFileUrl(
-                            product.image.url,
-                        ),
-                    }
-                    : null,
-            }),
-        ),
-    };
-}
-
-
-
-export async function getProduct(
-    id: number,
-) {
-    const response = await apiFetch<{
-        success: boolean;
-        data: ProductDetail;
-    }>(`/products/${id}`);
-
-    return {
-        ...response,
-        data: {
-            ...response.data,
-
-            images: response.data.images.map(
-                (image) => ({
-                    ...image,
-                    url: resolveFileUrl(
-                        image.url,
-                    ),
-                }),
-            ),
-
-            variants:
-                response.data.variants.map(
-                    (variant) => ({
-                        ...variant,
-                        image: variant.image
-                            ? {
-                                ...variant.image,
-                                url: resolveFileUrl(
-                                    variant.image.url,
-                                ),
-                            }
-                            : null,
-                    }),
-                ),
-        },
-    };
-}
-
-
-
-// =========================================================
-// ADMIN
-// =========================================================
-
-export async function getAdminProducts(
-    params: GetProductsParams = {},
-) {
-    const query = buildProductQuery(params);
-
-    const response =
-        await apiFetch<ProductAdminListResponse>(
-            `/admin/products${query ? `?${query}` : ""}`,
-        );
-
-    return {
-        ...response,
-        data: response.data.map((product) => ({
-            ...product,
-            image: product.image
-                ? {
-                    ...product.image,
-                    url: resolveFileUrl(
-                        product.image.url,
-                    ),
-                }
-                : null,
-        })),
-    };
-}
-
-export type ProductAdminImage = {
-    id: number;
-    fileId: number;
-    url: string;
-    altText: string | null;
-    isPrimary: boolean;
-    sortOrder: number;
-    variantId: number | null;
-};
-
-export type ProductAdminComponent = {
-    id: number;
-    name: string;
-    minQuantity: number;
-    recommendedQuantity: number;
-    maxQuantity: number;
-    customerPricePerAdditionalUnit: number;
-    floristCompensationPerAdditionalUnit: number;
-    sortOrder: number;
-    active: boolean;
-};
-
-export type ProductAdminVariant = {
-    id: number;
-    type: string;
-    name: string;
-    code: string | null;
-    price: number;
-    floristCompensation: number;
-    image: ProductAdminImage | null;
-    sortOrder: number;
-    active: boolean;
-};
-
-export type ProductAdminTaxCode = {
-    id: number;
-    code: string;
-    name: string;
-    rate: number;
-};
-
-export type ProductAdminDetail = {
-    id: number;
-    name: string;
-    slug: string;
-    description: string | null;
-    basePrice: number;
-    baseFloristCompensation: number;
-    price: number;
-    taxCode: ProductAdminTaxCode;
-    category: {
-        id: number;
-        name: string;
-    };
-    images: ProductAdminImage[];
-    components: ProductAdminComponent[];
-    variants: ProductAdminVariant[];
-    sortOrder: number;
-    active: boolean;
-    createdAt: string;
-    updatedAt: string;
-};
-
-export type ProductConfigurationComponent = {
+export type ProductConfigurationComponent = Omit<
+    ProductComponent,
+    "id"
+> & {
     id?: number;
-    name: string;
-    minQuantity: number;
-    recommendedQuantity: number;
-    maxQuantity: number;
-    customerPricePerAdditionalUnit: number;
-    floristCompensationPerAdditionalUnit: number;
     active?: boolean;
     sortOrder: number;
 };
 
-export type ProductConfigurationVariant = {
+export type ProductConfigurationVariant = Omit<
+    ProductVariant,
+    "id" | "image"
+> & {
     id?: number;
     clientId?: string;
-    type: string;
-    name: string;
-    code?: string | null;
-    price: number;
-    floristCompensation: number;
     active?: boolean;
     sortOrder: number;
     imageId?: number | null;
@@ -287,7 +57,7 @@ export type ProductConfigurationImage = {
     sortOrder: number;
     isPrimary: boolean;
     variantId?: number | null;
-    variantClientId?: string | null;
+    variantClientId?: string;
 };
 
 export type UpdateProductConfigurationData = {
@@ -307,30 +77,134 @@ export type UploadedFile = {
     url: string;
 };
 
-export async function getAdminProduct(
-    id: number,
-): Promise<ProductAdminDetail> {
-    const product = await apiFetch<ProductAdminDetail>(
-        `/admin/products/${id}`,
+export type CreateProductData = {
+    name: string;
+    description?: string;
+    customerPrice: number;
+    floristPrice: number;
+    categoryId: number;
+    taxCodeId: number;
+    active?: boolean;
+};
+
+function buildProductQuery(params: GetProductsParams): string {
+    const searchParams = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== "") {
+            searchParams.set(key, String(value));
+        }
+    });
+
+    const query = searchParams.toString();
+
+    return query ? `?${query}` : "";
+}
+
+function resolveFileUrl(url: string): string {
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+        return url;
+    }
+
+    const normalizedUrl = url
+        .replace(/\\/g, "/")
+        .replace(/^\/+/, "");
+
+    return `${FILES_URL}/${normalizedUrl}`;
+}
+
+function mapImage<T extends { url: string }>(image: T): T {
+    return {
+        ...image,
+        url: resolveFileUrl(image.url),
+    };
+}
+
+function mapImages<T extends { url: string }>(images: T[]): T[] {
+    return images.map(mapImage);
+}
+
+function mapVariant<T extends { image: { url: string } | null }>(
+    variant: T,
+): T {
+    return {
+        ...variant,
+        image: variant.image
+            ? mapImage(variant.image)
+            : null,
+    };
+}
+
+// =========================================================
+// PUBLIC
+// =========================================================
+
+export async function getProducts(
+    params: GetProductsParams = {},
+) {
+    const response = await apiFetch<ProductListResponse>(
+        `/products${buildProductQuery(params)}`,
     );
 
     return {
-        ...product,
-
-        images: product.images.map((image) => ({
-            ...image,
-            url: resolveFileUrl(image.url),
-        })),
-
-        variants: product.variants.map((variant) => ({
-            ...variant,
-            image: variant.image
-                ? {
-                    ...variant.image,
-                    url: resolveFileUrl(variant.image.url),
-                }
+        ...response,
+        data: response.data.map((product) => ({
+            ...product,
+            image: product.image
+                ? mapImage(product.image)
                 : null,
         })),
+    };
+}
+
+export async function getProduct(id: number) {
+    const response = await apiFetch<
+        ApiResponse<CustomerProductDetail>
+    >(`/products/${id}`);
+
+    return {
+        ...response,
+        data: {
+            ...response.data,
+            images: mapImages(response.data.images),
+            variants: response.data.variants.map(mapVariant),
+        },
+    };
+}
+
+// =========================================================
+// ADMIN
+// =========================================================
+
+export async function getAdminProducts(
+    params: GetProductsParams = {},
+) {
+    const response = await apiFetch<ProductAdminListResponse>(
+        `/admin/products${buildProductQuery(params)}`,
+    );
+
+    return {
+        ...response,
+        data: response.data.map((product) => ({
+            ...product,
+            image: product.image
+                ? mapImage(product.image)
+                : null,
+        })),
+    };
+}
+
+export async function getAdminProduct(
+    id: number,
+): Promise<AdminProductDetail> {
+    const response = await apiFetch<
+        ApiResponse<AdminProductDetail>
+    >(`/admin/products/${id}`);
+
+    return {
+        ...response,
+        images: mapImages(response.images),
+        variants: response.variants.map(mapVariant),
     };
 }
 
@@ -338,57 +212,41 @@ export async function getAdminProduct(
 // CREATE / UPDATE / DELETE
 // =========================================================
 
-export type CreateProductData = {
-    name: string;
-    description?: string;
-    basePrice: number;
-    baseFloristCompensation: number;
-    categoryId: number;
-    taxCodeId: number;
-    active?: boolean;
-};
-
-export async function createProduct(
-    data: CreateProductData,
-) {
-    return apiFetch<{
-        success: boolean;
-        data: ProductDetail;
-    }>("/products", {
-        method: "POST",
-        body: JSON.stringify(data),
-    });
+export async function createProduct(data: CreateProductData) {
+    return apiFetch<ApiResponse<CustomerProductDetail>>(
+        "/products",
+        {
+            method: "POST",
+            body: JSON.stringify(data),
+        },
+    );
 }
 
 export async function updateProduct(
     id: number,
     data: Partial<CreateProductData>,
 ) {
-    return apiFetch<{
-        success: boolean;
-        data: ProductDetail;
-    }>(`/products/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-    });
+    return apiFetch<ApiResponse<CustomerProductDetail>>(
+        `/products/${id}`,
+        {
+            method: "PATCH",
+            body: JSON.stringify(data),
+        },
+    );
 }
 
-export async function deleteProduct(
-    id: number,
-) {
-    return apiFetch<{
-        success: boolean;
-        data: unknown;
-    }>(`/products/${id}`, {
-        method: "DELETE",
-    });
+export async function deleteProduct(id: number) {
+    return apiFetch<ApiResponse<unknown>>(
+        `/products/${id}`,
+        {
+            method: "DELETE",
+        },
+    );
 }
 
-
-
-
-
-
+// =========================================================
+// CONFIGURATION
+// =========================================================
 
 export async function updateProductConfiguration(
     id: number,
@@ -397,7 +255,7 @@ export async function updateProductConfiguration(
     return apiFetch(
         `/admin/products/${id}/configuration`,
         {
-            method: 'PATCH',
+            method: "PATCH",
             body: JSON.stringify(data),
         },
     );
@@ -417,20 +275,6 @@ export async function uploadProductImage(
     };
 }
 
-
-
 const FILES_URL =
     process.env.NEXT_PUBLIC_FILES_URL ??
     "http://localhost:3001";
-
-function resolveFileUrl(url: string): string {
-    if (url.startsWith("http://") || url.startsWith("https://")) {
-        return url;
-    }
-
-    const normalisedUrl = url
-        .replace(/\\/g, "/")
-        .replace(/^\/+/, "");
-
-    return `${FILES_URL}/${normalisedUrl}`;
-}

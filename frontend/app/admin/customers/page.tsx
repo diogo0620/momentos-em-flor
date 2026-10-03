@@ -26,7 +26,7 @@ import {
 
 import PageHeader from "@/components/admin/common/PageHeader";
 
-import { apiFetch } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/common/client";
 
 import type { User } from "@/types/user";
 

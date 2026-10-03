@@ -12,7 +12,7 @@ import {
 import {
     apiFetch,
     setAccessToken,
-} from "@/lib/api/client";
+} from "@/lib/api/common/client";
 
 import type {
     AuthenticatedUser,

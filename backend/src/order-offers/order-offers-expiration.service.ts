@@ -34,12 +34,10 @@ export class OrderOfferExpirationService {
 
     @Cron(CronExpression.EVERY_MINUTE)
     async expireOffers() {
+        /*
         const now = new Date();
 
-        /*
-         * 1. Expire offers whose expiration
-         *    date has been reached.
-         */
+
         const expiredOffers =
             await this.prisma.orderOffer.updateMany({
                 where: {
@@ -67,10 +65,7 @@ export class OrderOfferExpirationService {
             );
         }
 
-        /*
-         * 2. Find orders that are still waiting
-         *    for a florist and have no active offers.
-         */
+
         const orders =
             await this.prisma.order.findMany({
                 where: {
@@ -97,28 +92,7 @@ export class OrderOfferExpirationService {
                 },
             });
 
-            
-        /*
-         * 3. Cancel orders where all offers
-         *    have expired/cancelled.
-         */
+            */
 
-        /*
-        for (const order of orders) {
-            const cancelled =
-                await this.orderStatusService
-                    .cancelAutomatically(
-                        order.id,
-                        OrderCancellationReason
-                            .NO_FLORIST_AVAILABLE,
-                    );
-
-            if (cancelled) {
-                this.logger.log(
-                    `Order ${order.orderNumber} (${order.id}) cancelled: no florist available.`,
-                );
-            }
-        }
-        */
     }
 }

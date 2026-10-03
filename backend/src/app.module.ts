@@ -11,7 +11,6 @@ import { AuthModule } from './auth/auth.module';
 import { ProductsModule } from './products/products.module';
 import { FloristsModule } from './florists/florists.module';
 import appConfig from '@/config/app.config';
-import { FloristCompensationRulesModule } from './florist-compensation-rules/florist-compensation-rules.module';
 import { OrdersModule } from './orders/orders.module';
 import { OrderOffersModule } from './order-offers/order-offers.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -37,7 +36,6 @@ import { StoreSettingsModule } from './store-settings/store-settings.module';
     AuthModule,
     ProductsModule,
     FloristsModule,
-    FloristCompensationRulesModule,
     OrdersModule,
     OrderOffersModule,
     ReviewsModule,
