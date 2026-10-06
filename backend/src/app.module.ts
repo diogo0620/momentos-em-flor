@@ -19,6 +19,7 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { TaxCodesModule } from './tax-codes/tax-codes.module';
 import { StoreSettingsModule } from './store-settings/store-settings.module';
 import { GeocodingModule } from './geocoding/geocoding.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -42,7 +43,8 @@ import { GeocodingModule } from './geocoding/geocoding.module';
     ReviewsModule,
     TaxCodesModule,
     StoreSettingsModule,
-    GeocodingModule
+    GeocodingModule,
+    PaymentsModule
   ],
 })
 export class AppModule { }

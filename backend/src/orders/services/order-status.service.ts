@@ -519,7 +519,11 @@ export class OrderStatusService {
              * by OrderCreatedListener.
              */
             [OrderStatus.CREATED]: [
-                OrderStatus.WAITING_FOR_FLORISTS,
+                OrderStatus.PENDING_PAYMENT,
+            ],
+
+            [OrderStatus.PENDING_PAYMENT]:[
+                OrderStatus.WAITING_FOR_FLORISTS
             ],
 
             /*

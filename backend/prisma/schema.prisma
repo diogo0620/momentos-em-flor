@@ -35,6 +35,14 @@ enum PricingMarginType {
   FIXED_PRICE
 }
 
+enum PaymentStatus {
+    PENDING
+    PAID
+    FAILED
+    CANCELLED
+    REFUNDED
+}
+
 //
 // PRODUCT VARIANT TYPE
 //
@@ -53,6 +61,7 @@ enum ProductVariantType {
 
 enum OrderStatus {
   CREATED
+  PENDING_PAYMENT
   WAITING_FOR_FLORISTS
   ASSIGNED
   IN_PRODUCTION
@@ -612,6 +621,8 @@ model Order {
   discount    Decimal @db.Decimal(10, 2)
   total       Decimal @db.Decimal(10, 2)
 
+  payment Payment?
+
   //
   // Workflow
   //
@@ -879,4 +890,26 @@ model StoreSettings {
   deliveryFee Decimal  @db.Decimal(10, 2)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Payment {
+    id                    Int           @id @default(autoincrement())
+
+    orderId               Int           @unique
+    order                 Order         @relation(fields: [orderId], references: [id])
+
+    status                PaymentStatus @default(PENDING)
+
+    amount                Decimal       @db.Decimal(10, 2)
+    currency              String        @default("EUR")
+
+    stripeSessionId       String?       @unique
+    stripePaymentIntentId String?       @unique
+
+    paidAt                DateTime?
+
+    createdAt             DateTime      @default(now())
+    updatedAt             DateTime      @updatedAt
+
+    @@index([status])
 }

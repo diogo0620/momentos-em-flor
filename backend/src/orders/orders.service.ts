@@ -413,7 +413,7 @@ export class OrdersService {
                                 totals.total,
 
                             status:
-                                OrderStatus.CREATED,
+                                OrderStatus.PENDING_PAYMENT,
 
                             items: {
                                 create:
@@ -430,6 +430,7 @@ export class OrdersService {
          * Order distribution is handled
          * asynchronously.
          */
+        /*
         this.eventEmitter.emit(
             'order.created',
 
@@ -437,6 +438,7 @@ export class OrdersService {
                 order.id,
             ),
         );
+        */
 
         return ApiResponse.success(
             this.mapper.toCreateResponse(
