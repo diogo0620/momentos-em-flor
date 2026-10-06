@@ -218,13 +218,19 @@ export class OrdersService {
                 where,
 
                 include: {
-                    items: true,
+                    items: {
+                        include: {
+                            components: true
+                        }
+                    },
 
                     offers: {
                         include: {
                             florist: true,
                         },
                     },
+
+                    statusHistory: true
                 },
             });
 
@@ -397,12 +403,6 @@ export class OrdersService {
                             taxAmount:
                                 totals.taxAmount,
 
-                            /*
-                             * Delivery fee is currently
-                             * zero until the delivery
-                             * pricing configuration is
-                             * connected here.
-                             */
                             deliveryFee:
                                 totals.deliveryFee,
 
@@ -584,8 +584,7 @@ export class OrdersService {
     ) {
         const productIds =
             dto.items.map(
-                (item) =>
-                    item.productId,
+                (item) => item.productId,
             );
 
         const products =
@@ -594,12 +593,20 @@ export class OrdersService {
                     id: {
                         in: productIds,
                     },
-
                     active: true,
                 },
-
                 include: {
                     taxCode: true,
+                    variants: {
+                        where: {
+                            active: true,
+                        },
+                    },
+                    components: {
+                        where: {
+                            active: true,
+                        },
+                    },
                 },
             });
 
@@ -608,8 +615,7 @@ export class OrdersService {
             productIds.length
         ) {
             Exceptions.badRequest(
-                ORDER_MESSAGES
-                    .PRODUCT_NOT_AVAILABLE,
+                ORDER_MESSAGES.PRODUCT_NOT_AVAILABLE,
             );
         }
 
@@ -632,113 +638,246 @@ export class OrdersService {
         dto: CreateOrderDto,
         products: Map<number, any>,
     ) {
-        return dto.items.map(
-            (item) => {
-                const product =
-                    products.get(
-                        item.productId,
-                    );
+        return dto.items.map((item) => {
+            const product = products.get(item.productId);
 
-                if (!product) {
-                    Exceptions.badRequest(
-                        ORDER_MESSAGES
-                            .PRODUCT_NOT_AVAILABLE,
-                    );
-                }
-
-                return this.buildOrderItem(
-                    product,
-                    item.quantity,
+            if (!product) {
+                Exceptions.badRequest(
+                    ORDER_MESSAGES.PRODUCT_NOT_AVAILABLE,
                 );
-            },
-        );
+            }
+
+            return this.buildOrderItem(
+                product,
+                item,
+            );
+        });
     }
 
 
     private buildOrderItem(
         product: any,
-        quantity: number,
+        item: CreateOrderDto['items'][number],
     ) {
+        const quantity = item.quantity;
+
+        const hasVariants = product.variants.length > 0;
+        const hasComponents = product.components.length > 0;
+
+        let selectedVariant: any = null;
+        let selectedComponents: any[] = [];
+
         /*
-         * customerPrice is the final
-         * customer price INCLUDING VAT.
+         * A product with variants requires
+         * exactly one selected variant.
          */
-        const unitPrice =
-            Number(
-                product.customerPrice,
+        if (hasVariants) {
+            if (
+                item.variantId == null ||
+                item.components?.length
+            ) {
+                Exceptions.badRequest(
+                    'Select a variant for this product.',
+                );
+            }
+
+            selectedVariant =
+                product.variants.find(
+                    (variant) =>
+                        variant.id === item.variantId,
+                );
+
+            if (!selectedVariant) {
+                Exceptions.badRequest(
+                    'The selected variant is not available for this product.',
+                );
+            }
+        } else if (item.variantId != null) {
+            Exceptions.badRequest(
+                'This product does not have variants.',
+            );
+        }
+
+        /*
+         * Products with components require
+         * a valid selection for each component.
+         */
+        if (hasComponents) {
+            if (
+                !item.components ||
+                item.components.length !==
+                product.components.length
+            ) {
+                Exceptions.badRequest(
+                    'Select all components for this product.',
+                );
+            }
+
+            const selectedIds =
+                item.components.map(
+                    (component) => component.componentId,
+                );
+
+            if (
+                new Set(selectedIds).size !==
+                selectedIds.length
+            ) {
+                Exceptions.badRequest(
+                    'A component cannot be selected more than once.',
+                );
+            }
+
+            selectedComponents =
+                item.components.map((selection) => {
+                    const component =
+                        product.components.find(
+                            (entry) =>
+                                entry.id === selection.componentId,
+                        );
+
+                    if (!component) {
+                        Exceptions.badRequest(
+                            'A selected component is not available for this product.',
+                        );
+                    }
+
+                    if (
+                        !Number.isInteger(selection.quantity) ||
+                        selection.quantity < component.minQuantity ||
+                        selection.quantity > component.maxQuantity
+                    ) {
+                        Exceptions.badRequest(
+                            `The quantity for component "${component.name}" must be between ${component.minQuantity} and ${component.maxQuantity}.`,
+                        );
+                    }
+
+                    return {
+                        component,
+                        quantity: selection.quantity,
+                    };
+                });
+        } else if (item.components?.length) {
+            Exceptions.badRequest(
+                'This product does not have components.',
+            );
+        }
+
+        /*
+         * Variant prices are final unit prices.
+         * For components, the product price includes
+         * the minimum quantity of each component.
+         * Additional quantities are charged separately.
+         */
+        let unitCustomerPrice =
+            selectedVariant
+                ? Number(selectedVariant.customerPrice)
+                : Number(product.customerPrice);
+
+        let unitFloristPrice =
+            selectedVariant
+                ? Number(selectedVariant.floristPrice)
+                : Number(product.floristPrice);
+
+        const componentSnapshots =
+            selectedComponents.map(
+                ({ component, quantity: selectedQuantity }) => {
+                    const additionalUnits =
+                        Math.max(
+                            0,
+                            selectedQuantity - component.minQuantity,
+                        );
+
+                    const customerPricePerAdditionalUnit =
+                        Number(
+                            component.customerPricePerAdditionalUnit,
+                        );
+
+                    const floristPricePerAdditionalUnit =
+                        Number(
+                            component.floristPricePerAdditionalUnit,
+                        );
+
+                    const customerAdditionalPrice =
+                        this.roundMoney(
+                            additionalUnits *
+                            customerPricePerAdditionalUnit,
+                        );
+
+                    unitCustomerPrice +=
+                        customerAdditionalPrice;
+
+                    unitFloristPrice +=
+                        additionalUnits *
+                        floristPricePerAdditionalUnit;
+
+                    return {
+                        componentId: component.id,
+                        componentName: component.name,
+                        quantity: selectedQuantity,
+                        additionalUnits,
+                        customerPricePerAdditionalUnit,
+                        customerTotalPrice:
+                            this.roundMoney(
+                                customerAdditionalPrice * quantity,
+                            ),
+                    };
+                },
             );
 
+        unitCustomerPrice =
+            this.roundMoney(unitCustomerPrice);
 
+        unitFloristPrice =
+            this.roundMoney(unitFloristPrice);
 
+        /*
+         * customerPrice includes VAT.
+         */
         const taxRate =
-            Number(
-                product.taxCode.rate,
-            );
+            Number(product.taxCode.rate);
 
-        /*
-         * Calculate the gross line amount
-         * directly from the customer price.
-         */
         const grossAmount =
             this.roundMoney(
-                unitPrice *
-                quantity,
+                unitCustomerPrice * quantity,
             );
 
-        /*
-         * Extract VAT from the gross
-         * amount.
-         *
-         * Example:
-         *
-         * Gross = 123
-         * VAT = 23%
-         *
-         * Net = 123 / 1.23 = 100
-         * VAT = 23
-         */
         const netAmount =
             this.roundMoney(
-                grossAmount /
-                (1 + taxRate / 100),
+                grossAmount / (1 + taxRate / 100),
             );
 
         const taxAmount =
             this.roundMoney(
-                grossAmount -
-                netAmount,
+                grossAmount - netAmount,
             );
 
         return {
-            productId:
-                product.id,
-
-            name:
-                product.name,
-
-            description:
-                product.description,
-
+            productId: product.id,
+            name: product.name,
+            description: product.description,
             quantity,
 
-            /*
-             * unitPrice is the customer
-             * price INCLUDING VAT.
-             */
-            customerPrice: unitPrice,
-
-            floristPrice: product.floristPrice,
+            customerPrice: unitCustomerPrice,
+            floristPrice: unitFloristPrice,
 
             netAmount,
-
             taxRate,
-
             taxAmount,
-
             grossAmount,
 
-            taxCodeId:
-                product.taxCodeId,
+            taxCodeId: product.taxCodeId,
+
+            ...(selectedVariant && {
+                variantId: selectedVariant.id,
+                variantType: selectedVariant.type,
+                variantName: selectedVariant.name,
+            }),
+
+            ...(componentSnapshots.length > 0 && {
+                components: {
+                    create: componentSnapshots,
+                },
+            }),
         };
     }
 
@@ -1008,7 +1147,7 @@ export class OrdersService {
                 },
 
                 include: {
-                    items: true,
+                    items: true
                 },
             });
 

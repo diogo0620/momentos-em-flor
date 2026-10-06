@@ -13,6 +13,27 @@ import {
 
 import { OrderStatusHistoryResponseDto } from './order-status-history-response.dto';
 
+
+class OrderItemComponentResponseDto {
+    @ApiProperty()
+    componentId: number;
+
+    @ApiProperty()
+    componentName: string;
+
+    @ApiProperty()
+    quantity: number;
+
+    @ApiProperty()
+    additionalUnits: number;
+
+    @ApiProperty()
+    customerPricePerAdditionalUnit: number;
+
+    @ApiProperty()
+    customerTotalPrice: number;
+}
+
 class OrderItemResponseDto {
     @ApiProperty()
     id: number;
@@ -34,6 +55,11 @@ class OrderItemResponseDto {
 
     @ApiPropertyOptional()
     variantName: string | null;
+
+    @ApiProperty({
+        type: [OrderItemComponentResponseDto],
+    })
+    components: OrderItemComponentResponseDto[];
 
     @ApiProperty()
     quantity: number;
@@ -58,6 +84,7 @@ class OrderItemResponseDto {
 }
 
 
+
 class OrderOfferFloristResponseDto {
     @ApiProperty()
     id: number;
@@ -70,16 +97,13 @@ class OrderOfferResponseDto {
     @ApiProperty()
     id: number;
 
-    @ApiProperty()
-    floristId: number;
-
     @ApiProperty({
         type: OrderOfferFloristResponseDto,
     })
     florist: OrderOfferFloristResponseDto;
 
     @ApiProperty()
-    compensationAmount: number;
+    price: number;
 
     @ApiProperty({
         enum: OrderOfferStatus,

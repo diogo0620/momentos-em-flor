@@ -1,7 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+    useCallback,
+    useEffect,
+    useState,
+} from "react";
+
 import Link from "next/link";
+
 import {
     Eye,
     Package,
@@ -13,14 +19,13 @@ import SearchInput from "@/components/admin/common/SearchInput";
 import FilterBar from "@/components/admin/common/FilterBar";
 import DataTable from "@/components/admin/DataTable";
 
-import {
-    getOrders,
-} from "@/lib/api/orders";
-
 import type {
     Order,
     Pagination,
 } from "@/types/order";
+
+import { ordersApi } from "@/lib/api/orders";
+
 
 function getStatusLabel(
     status: Order["status"],
@@ -52,6 +57,7 @@ function getStatusLabel(
     }
 }
 
+
 function getStatusClass(
     status: Order["status"],
 ) {
@@ -76,6 +82,7 @@ function getStatusClass(
     }
 }
 
+
 export default function AdminOrdersPage() {
     const [orders, setOrders] =
         useState<Order[]>([]);
@@ -97,46 +104,86 @@ export default function AdminOrdersPage() {
     const [error, setError] =
         useState<string | null>(null);
 
-    async function loadOrders(
-        page = pagination.page,
-        currentSearch = search,
-    ) {
-        try {
-            setLoading(true);
-            setError(null);
 
-            const response =
-                await getOrders({
-                    page,
-                    pageSize: 20,
-                    search:
-                        currentSearch ||
-                        undefined,
-                    sort: "createdAt",
-                    order: "desc",
-                });
+    const loadOrders = useCallback(
+        async (
+            page: number = 1,
+            currentSearch: string = search,
+        ) => {
+            try {
+                setLoading(true);
+                setError(null);
 
-            setOrders(response.data);
+                const response =
+                    await ordersApi.getAll({
+                        page,
+                        pageSize: 20,
+                        search:
+                            currentSearch.trim() ||
+                            undefined,
+                        sort: "id",
+                        order: "desc",
+                    });
 
-            setPagination(
-                response.pagination,
-            );
-        } catch (err) {
-            console.error(err);
+                setOrders(response.data);
 
-            setError(
-                err instanceof Error
-                    ? err.message
-                    : "Não foi possível carregar as encomendas.",
-            );
-        } finally {
-            setLoading(false);
-        }
-    }
+                setPagination(
+                    response.pagination,
+                );
+            } catch (err) {
+                console.error(err);
+
+                setError(
+                    err instanceof Error
+                        ? err.message
+                        : "Não foi possível carregar as encomendas.",
+                );
+            } finally {
+                setLoading(false);
+            }
+        },
+        [search],
+    );
+
 
     useEffect(() => {
         loadOrders(1, search);
-    }, [search]);
+    }, [
+        search,
+        loadOrders,
+    ]);
+
+
+    function handlePreviousPage() {
+        if (
+            pagination.page <= 1 ||
+            loading
+        ) {
+            return;
+        }
+
+        loadOrders(
+            pagination.page - 1,
+            search,
+        );
+    }
+
+
+    function handleNextPage() {
+        if (
+            pagination.page >=
+                pagination.pages ||
+            loading
+        ) {
+            return;
+        }
+
+        loadOrders(
+            pagination.page + 1,
+            search,
+        );
+    }
+
 
     return (
         <div>
@@ -146,10 +193,12 @@ export default function AdminOrdersPage() {
             <div className="flex items-start justify-between gap-6">
 
                 <div className="flex-1">
+
                     <PageHeader
                         title="Encomendas"
                         subtitle="Gerir as encomendas da Momentos em Flor."
                     />
+
                 </div>
 
                 <Link
@@ -178,6 +227,7 @@ export default function AdminOrdersPage() {
 
             </div>
 
+
             {/* FILTERS */}
 
             <div className="mt-8">
@@ -194,6 +244,7 @@ export default function AdminOrdersPage() {
 
             </div>
 
+
             {/* ERROR */}
 
             {error && (
@@ -201,6 +252,7 @@ export default function AdminOrdersPage() {
                     {error}
                 </div>
             )}
+
 
             {/* TABLE */}
 
@@ -213,6 +265,7 @@ export default function AdminOrdersPage() {
                         <table className="w-full">
 
                             <thead>
+
                                 <tr className="border-b border-gray-100 text-left text-sm text-gray-500">
 
                                     <th className="px-6 py-4 font-medium">
@@ -240,25 +293,34 @@ export default function AdminOrdersPage() {
                                     </th>
 
                                 </tr>
+
                             </thead>
+
 
                             <tbody>
 
                                 {loading ? (
+
                                     <tr>
+
                                         <td
                                             colSpan={6}
                                             className="px-6 py-16 text-center text-gray-500"
                                         >
                                             A carregar encomendas...
                                         </td>
+
                                     </tr>
+
                                 ) : orders.length === 0 ? (
+
                                     <tr>
+
                                         <td
                                             colSpan={6}
                                             className="px-6 py-16 text-center"
                                         >
+
                                             <Package
                                                 size={36}
                                                 className="mx-auto text-gray-300"
@@ -271,11 +333,16 @@ export default function AdminOrdersPage() {
                                             <p className="mt-1 text-sm text-gray-400">
                                                 Tente alterar os critérios de pesquisa.
                                             </p>
+
                                         </td>
+
                                     </tr>
+
                                 ) : (
+
                                     orders.map(
                                         (order) => (
+
                                             <tr
                                                 key={order.id}
                                                 className="border-b border-gray-50 transition hover:bg-[#F9FAF7]"
@@ -296,6 +363,7 @@ export default function AdminOrdersPage() {
 
                                                 </td>
 
+
                                                 <td className="px-6 py-5">
 
                                                     <p className="font-medium text-gray-800">
@@ -308,6 +376,7 @@ export default function AdminOrdersPage() {
                                                     </p>
 
                                                 </td>
+
 
                                                 <td className="px-6 py-5">
 
@@ -322,6 +391,7 @@ export default function AdminOrdersPage() {
 
                                                 </td>
 
+
                                                 <td className="px-6 py-5">
 
                                                     <span className="font-semibold text-[#2F3B2A]">
@@ -332,6 +402,7 @@ export default function AdminOrdersPage() {
                                                     </span>
 
                                                 </td>
+
 
                                                 <td className="px-6 py-5">
 
@@ -354,6 +425,7 @@ export default function AdminOrdersPage() {
                                                     </span>
 
                                                 </td>
+
 
                                                 <td className="px-6 py-5 text-right">
 
@@ -381,8 +453,10 @@ export default function AdminOrdersPage() {
                                                 </td>
 
                                             </tr>
+
                                         ),
                                     )
+
                                 )}
 
                             </tbody>
@@ -391,16 +465,21 @@ export default function AdminOrdersPage() {
 
                     </div>
 
+
                     {/* PAGINATION */}
 
                     {!loading &&
-                        pagination.pages > 1 && (
+                        pagination.total > 0 && (
+
                             <div className="flex items-center justify-between border-t border-gray-100 px-6 py-4">
 
                                 <p className="text-sm text-gray-500">
                                     {pagination.total}{" "}
-                                    encomendas
+                                    {pagination.total === 1
+                                        ? "encomenda"
+                                        : "encomendas"}
                                 </p>
+
 
                                 <div className="flex items-center gap-2">
 
@@ -408,13 +487,11 @@ export default function AdminOrdersPage() {
                                         type="button"
                                         disabled={
                                             pagination.page <=
-                                            1
+                                                1 ||
+                                            loading
                                         }
-                                        onClick={() =>
-                                            loadOrders(
-                                                pagination.page -
-                                                    1,
-                                            )
+                                        onClick={
+                                            handlePreviousPage
                                         }
                                         className="
                                             rounded-xl
@@ -432,6 +509,7 @@ export default function AdminOrdersPage() {
                                         Anterior
                                     </button>
 
+
                                     <span className="px-3 text-sm text-gray-500">
                                         Página{" "}
                                         {pagination.page}{" "}
@@ -439,17 +517,16 @@ export default function AdminOrdersPage() {
                                         {pagination.pages}
                                     </span>
 
+
                                     <button
                                         type="button"
                                         disabled={
                                             pagination.page >=
-                                            pagination.pages
+                                                pagination.pages ||
+                                            loading
                                         }
-                                        onClick={() =>
-                                            loadOrders(
-                                                pagination.page +
-                                                    1,
-                                            )
+                                        onClick={
+                                            handleNextPage
                                         }
                                         className="
                                             rounded-xl
@@ -470,6 +547,7 @@ export default function AdminOrdersPage() {
                                 </div>
 
                             </div>
+
                         )}
 
                 </DataTable>

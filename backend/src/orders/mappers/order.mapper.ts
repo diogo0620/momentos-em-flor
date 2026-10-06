@@ -130,8 +130,44 @@ export class OrderMapper {
                             item.name ??
                             item.productName,
 
-                        productDescription:
+                        description:
                             item.description,
+
+                        variantId:
+                            item.variantId ?? null,
+
+                        variantType:
+                            item.variantType ?? null,
+
+                        variantName:
+                            item.variantName ?? null,
+
+                        components:
+                            (item.components ?? []).map(
+                                (component: any) => ({
+                                    componentId:
+                                        component.componentId,
+
+                                    componentName:
+                                        component.componentName,
+
+                                    quantity:
+                                        component.quantity,
+
+                                    additionalUnits:
+                                        component.additionalUnits,
+
+                                    customerPricePerAdditionalUnit:
+                                        Number(
+                                            component.customerPricePerAdditionalUnit,
+                                        ),
+
+                                    customerTotalPrice:
+                                        Number(
+                                            component.customerTotalPrice,
+                                        ),
+                                }),
+                            ),
 
                         quantity:
                             item.quantity,
@@ -193,9 +229,6 @@ export class OrderMapper {
                         id:
                             offer.id,
 
-                        floristId:
-                            offer.floristId,
-
                         florist:
                             offer.florist
                                 ? {
@@ -211,9 +244,8 @@ export class OrderMapper {
                          * Actual amount offered to
                          * the florist.
                          */
-                        compensationAmount:
+                        price:
                             Number(
-                                offer.compensationAmount ??
                                 offer.price,
                             ),
 

@@ -6,7 +6,7 @@ import {
 
 import { ConfigService } from '@nestjs/config';
 
-interface GeocodeAddressInput {
+export interface GeocodeAddressInput {
     street: string;
     street2?: string | null;
     postalCode: string;
@@ -15,7 +15,7 @@ interface GeocodeAddressInput {
     countryCode: string;
 }
 
-interface GeocodeResult {
+export interface GeocodeResult {
     latitude: number;
     longitude: number;
 }
@@ -28,87 +28,120 @@ export class GeocodingService {
     ) { }
 
     async geocodeAddress(
-        address: GeocodeAddressInput,
-    ): Promise<GeocodeResult> {
-        const apiKey =
-            this.configService.get<string>(
-                'GOOGLE_MAPS_API_KEY',
-            );
+    address: GeocodeAddressInput,
+): Promise<GeocodeResult> {
+    const apiKey =
+        this.configService.get<string>(
+            'GOOGLE_MAPS_API_KEY',
+        );
 
-        if (!apiKey) {
-            throw new InternalServerErrorException(
-                'Google Maps API key is not configured.',
-            );
-        }
+    if (!apiKey) {
+        throw new InternalServerErrorException(
+            'Google Maps API key is not configured.',
+        );
+    }
 
-        const addressQuery = [
-            address.street,
-            address.street2,
-            address.postalCode,
-            address.city,
-            address.district,
-            address.countryCode,
-        ]
-            .filter(Boolean)
-            .join(', ');
+    const addressQuery = [
+        address.street,
+        address.street2,
+        address.postalCode,
+        address.city,
+        address.district,
+        'Portugal',
+    ]
+        .filter(Boolean)
+        .join(', ');
 
-        const encodedAddress =
-            encodeURIComponent(addressQuery);
+    const encodedAddress =
+        encodeURIComponent(addressQuery);
 
-        const url =
-            `https://geocode.googleapis.com/v4/geocode/address/${encodedAddress}`;
+    const url =
+        `https://geocode.googleapis.com/v4/geocode/address/${encodedAddress}`;
 
-        console.debug("geocoding url", url)
+    console.debug(
+        'Geocoding address:',
+        addressQuery,
+    );
 
-        const response =
-            await fetch(
-                url,
-                {
-                    method: 'GET',
+    const response = await fetch(
+        url,
+        {
+            method: 'GET',
+            headers: {
+                'X-Goog-Api-Key': apiKey,
+                'X-Goog-FieldMask':
+                    'results.location,results.formattedAddress,results.granularity,results.placeId',
+            },
+        },
+    );
 
-                    headers: {
-                        'X-Goog-Api-Key':
-                            apiKey,
+    if (!response.ok) {
+        const errorBody =
+            await response.text();
 
-                        'X-Goog-FieldMask':
-                            'results.location',
-                    },
-                },
-            );
+        console.error(
+            'Google Geocoding API error:',
+            response.status,
+            errorBody,
+        );
 
-        if (!response.ok) {
-            const errorBody =
-                await response.text();
+        throw new InternalServerErrorException(
+            'Unable to geocode address.',
+        );
+    }
 
-            console.error(
-                'Google Geocoding API error:',
-                response.status,
-                errorBody,
-            );
+    const data = await response.json();
 
-            throw new InternalServerErrorException(
-                'Unable to geocode address.',
-            );
-        }
+    console.debug(
+        'Google Geocoding response:',
+        JSON.stringify(data, null, 2),
+    );
 
-        const data =
-            await response.json();
+    const results = data.results;
 
-        const result =
-            data.results?.[0];
+    if (
+        !Array.isArray(results) ||
+        results.length === 0
+    ) {
+        throw new BadRequestException(
+            'Unable to determine coordinates for the provided address.',
+        );
+    }
 
-        if (!result?.location) {
-            throw new BadRequestException(
-                'Unable to determine coordinates for the provided address.',
-            );
-        }
+    const result = results[0];
 
-        return {
+    if (!result?.location) {
+        throw new BadRequestException(
+            'Unable to determine coordinates for the provided address.',
+        );
+    }
+
+    console.debug(
+        'Selected geocoding result:',
+        {
+            formattedAddress:
+                result.formattedAddress,
+
+            granularity:
+                result.granularity,
+
+            placeId:
+                result.placeId,
+
             latitude:
                 result.location.latitude,
 
             longitude:
                 result.location.longitude,
-        };
-    }
+        },
+    );
+
+    return {
+        latitude:
+            result.location.latitude,
+
+        longitude:
+            result.location.longitude,
+    };
+}
 }

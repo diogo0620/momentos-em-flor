@@ -13,7 +13,6 @@ import {
 
 import { useAuth } from "@/lib/auth/AuthProvider";
 
-import { getOrder } from "@/lib/api/orders";
 
 
 
@@ -26,6 +25,7 @@ import type { OrderOffer } from "@/types/order-offer";
 
 import OrderOfferForm from "@/components/admin/orders/OrderOfferForm";
 import { orderOffersApi } from "@/lib/api/order-offers";
+import { ordersApi } from "@/lib/api/orders";
 
 type Props = {
     params: Promise<{
@@ -329,9 +329,11 @@ export default function AdminOrderDetailPage({
             setError(null);
 
             const response =
-                await getOrder(id);
+                await ordersApi.getById(id);
 
-            setOrder(response.data);
+            console.log("Order", response)
+
+            setOrder(response);
         } catch (err) {
             setError(
                 err instanceof Error
@@ -414,7 +416,7 @@ export default function AdminOrderDetailPage({
 
             setError(null);
 
-            await orderOffersApi.decline(offer.id,reason);
+            await orderOffersApi.decline(offer.id, reason);
 
             setDecliningOfferId(null);
             setDeclineReason("");
@@ -554,8 +556,8 @@ export default function AdminOrderDetailPage({
                                 text-sm
                                 font-medium
                                 ${getOrderStatusClass(
-                                    order.status,
-                                )}
+                                order.status,
+                            )}
                             `}
                         >
                             {getOrderStatusLabel(
@@ -1167,7 +1169,7 @@ export default function AdminOrderDetailPage({
 
                                                             <h3 className="text-base font-bold text-[#2F3B2A]">
                                                                 {offer.florist?.name ??
-                                                                    `Florista #${offer.floristId}`}
+                                                                    `Florista #${offer.florist.id}`}
                                                             </h3>
 
                                                             <span
@@ -1196,12 +1198,28 @@ export default function AdminOrderDetailPage({
                                                                 )}
                                                             </span>
 
-                                                            <span>
-                                                                Expira{" "}
-                                                                {formatDateTime(
-                                                                    offer.expiresAt,
-                                                                )}
-                                                            </span>
+                                                            {offer.status === "ACCEPTED" ? (
+                                                                <span>
+                                                                    Aceite{" "}
+                                                                    {formatDateTime(
+                                                                        offer.acceptedAt,
+                                                                    )}
+                                                                </span>
+                                                            ) : offer.status === "DECLINED" ? (
+                                                                <span>
+                                                                    Recusada{" "}
+                                                                    {formatDateTime(
+                                                                        offer.declinedAt,
+                                                                    )}
+                                                                </span>
+                                                            ) : (
+                                                                <span>
+                                                                    Expira{" "}
+                                                                    {formatDateTime(
+                                                                        offer.expiresAt,
+                                                                    )}
+                                                                </span>
+                                                            )}
 
                                                         </div>
 
@@ -1216,12 +1234,12 @@ export default function AdminOrderDetailPage({
                                                     <div className="text-left lg:text-right">
 
                                                         <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                                                            Compensação
+                                                            Preço
                                                         </p>
 
                                                         <p className="mt-1 text-2xl font-bold text-[#55624A]">
                                                             {formatCurrency(
-                                                                offer.compensationAmount,
+                                                                offer.price,
                                                             )}
                                                         </p>
 
@@ -1519,15 +1537,15 @@ export default function AdminOrderDetailPage({
                                                 <p className="text-xs text-gray-400">
 
                                                     {offer.status ===
-                                                    "ACCEPTED"
+                                                        "ACCEPTED"
                                                         ? "Esta proposta foi aceite e já não pode ser alterada."
                                                         : offer.status ===
                                                             "DECLINED"
-                                                          ? "Esta proposta foi recusada e já não pode ser alterada."
-                                                          : offer.status ===
-                                                              "EXPIRED"
-                                                            ? "Esta proposta expirou e já não pode ser alterada."
-                                                            : "Esta proposta já não pode ser alterada."}
+                                                            ? "Esta proposta foi recusada e já não pode ser alterada."
+                                                            : offer.status ===
+                                                                "EXPIRED"
+                                                                ? "Esta proposta expirou e já não pode ser alterada."
+                                                                : "Esta proposta já não pode ser alterada."}
 
                                                 </p>
 
@@ -1563,7 +1581,7 @@ export default function AdminOrderDetailPage({
                 </div>
 
                 {order.statusHistory.length ===
-                0 ? (
+                    0 ? (
                     <div className="mt-6 rounded-2xl border border-dashed border-gray-200 p-8 text-center">
 
                         <p className="font-medium text-gray-600">
@@ -1671,14 +1689,14 @@ export default function AdminOrderDetailPage({
                                                     {history
                                                         .changedByUser
                                                         .role ===
-                                                    "SYSTEM_ADMIN"
+                                                        "SYSTEM_ADMIN"
                                                         ? "Administrador"
                                                         : history
-                                                              .changedByUser
-                                                              .role ===
-                                                          "FLORIST"
-                                                        ? "Florista"
-                                                        : "Cliente"}
+                                                            .changedByUser
+                                                            .role ===
+                                                            "FLORIST"
+                                                            ? "Florista"
+                                                            : "Cliente"}
                                                 </p>
                                             )}
 

@@ -55,14 +55,13 @@ export type OrderItem = {
 
 export type OrderOffer = {
     id: number;
-    floristId: number;
 
     florist: {
         id: number;
         name: string;
     };
 
-    compensationAmount: number;
+    price: number;
     status: string;
 
     viewedAt: string | null;
@@ -137,4 +136,62 @@ export type Pagination = {
     pageSize: number;
     total: number;
     pages: number;
+};
+
+export type CreateOrderItem = {
+    productId: number;
+    quantity: number;
+    variantId?: number;
+    components?: {
+        componentId: number;
+        quantity: number;
+    }[];
+};
+
+export type CreateOrder = {
+    items: CreateOrderItem[];
+
+    // Customer / Guest checkout
+    customerFirstName?: string;
+    customerLastName?: string;
+    customerEmail?: string;
+    customerPhone?: string;
+
+    // Recipient
+    recipientFirstName: string;
+    recipientLastName?: string;
+    recipientPhone?: string;
+
+    occasion?:
+        | "BIRTHDAY"
+        | "ANNIVERSARY"
+        | "LOVE"
+        | "WEDDING"
+        | "FUNERAL"
+        | "NEW_BABY"
+        | "MOTHERS_DAY"
+        | "FATHERS_DAY"
+        | "CHRISTMAS"
+        | "OTHER";
+
+    // Delivery
+    deliveryDate: string;
+
+    deliveryTimeSlot:
+        | "MORNING"
+        | "AFTERNOON"
+        | "EVENING";
+
+    deliveryInstructions?: string;
+
+    // Delivery address
+    deliveryStreet: string;
+    deliveryStreet2?: string;
+    deliveryPostalCode: string;
+    deliveryCity: string;
+    deliveryDistrict: string;
+    deliveryCountryCode: string;
+
+    // Card
+    cardMessage?: string;
 };

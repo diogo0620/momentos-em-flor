@@ -10,11 +10,6 @@ import {
 
 import { useRouter } from "next/navigation";
 
-import {
-    createOrder,
-    type CreateOrderData,
-} from "@/lib/api/orders";
-
 import { getProducts } from "@/lib/api/products";
 
 import type { Product } from "@/types/product";

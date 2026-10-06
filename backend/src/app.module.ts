@@ -18,6 +18,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ReviewsModule } from './reviews/reviews.module';
 import { TaxCodesModule } from './tax-codes/tax-codes.module';
 import { StoreSettingsModule } from './store-settings/store-settings.module';
+import { GeocodingModule } from './geocoding/geocoding.module';
 
 @Module({
   imports: [
@@ -40,7 +41,8 @@ import { StoreSettingsModule } from './store-settings/store-settings.module';
     OrderOffersModule,
     ReviewsModule,
     TaxCodesModule,
-    StoreSettingsModule
+    StoreSettingsModule,
+    GeocodingModule
   ],
 })
 export class AppModule { }

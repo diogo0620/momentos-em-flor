@@ -6,12 +6,10 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
-import {
-    createOrder,
-    type CreateOrderData,
-} from "@/lib/api/orders";
-
 import { getStoreSettings } from "@/lib/api/store-settings";
+import { ordersApi } from "@/lib/api/orders";
+
+import type { CreateOrderData } from "@/types/order";
 
 const PORTUGAL_DISTRICTS = [
     "Aveiro",
@@ -172,10 +170,27 @@ export default function CheckoutPage() {
             const data: CreateOrderData = {
                 items: items.map(
                     (item) => ({
-                        productId:
-                            Number(item.id),
-                        quantity:
-                            item.quantity,
+                        productId: Number(item.id),
+                        quantity: item.quantity,
+
+                        ...(item.variantId !== undefined
+                            ? {
+                                variantId: item.variantId,
+                            }
+                            : {}),
+
+                        ...(item.components?.length
+                            ? {
+                                components: item.components.map(
+                                    (component) => ({
+                                        componentId:
+                                            component.componentId,
+                                        quantity:
+                                            component.quantity,
+                                    }),
+                                ),
+                            }
+                            : {}),
                     }),
                 ),
 
@@ -242,13 +257,13 @@ export default function CheckoutPage() {
             };
 
             const response =
-                await createOrder(data);
+                await ordersApi.create(data);
 
             clearCart();
 
             router.push(
                 `/success?order=${encodeURIComponent(
-                    response.data.orderNumber,
+                    response.id,
                 )}`,
             );
         } catch (err) {
@@ -280,7 +295,6 @@ export default function CheckoutPage() {
     if (!isAuthenticated || !user) {
         return (
             <div className="mx-auto max-w-7xl px-4 py-20 text-center">
-
                 <h1 className="text-3xl font-bold text-[#2F3B2A]">
                     Inicie sessão para continuar
                 </h1>
@@ -309,7 +323,6 @@ export default function CheckoutPage() {
                 >
                     Iniciar sessão
                 </button>
-
             </div>
         );
     }
@@ -317,7 +330,6 @@ export default function CheckoutPage() {
     if (items.length === 0) {
         return (
             <div className="mx-auto max-w-7xl px-4 py-20 text-center">
-
                 <h1 className="text-3xl font-bold text-[#2F3B2A]">
                     O seu carrinho está vazio
                 </h1>
@@ -346,14 +358,12 @@ export default function CheckoutPage() {
                 >
                     Ver catálogo
                 </button>
-
             </div>
         );
     }
 
     return (
         <div className="mx-auto max-w-7xl px-4 py-12">
-
             <h1 className="text-4xl font-bold text-[#2F3B2A]">
                 Finalizar encomenda
             </h1>
@@ -372,21 +382,17 @@ export default function CheckoutPage() {
                     lg:grid-cols-[2fr_1fr]
                 "
             >
-
                 {/* LEFT */}
 
                 <div className="space-y-8">
-
                     {/* COMPRADOR */}
 
                     <section className="rounded-3xl bg-white p-6 shadow-sm">
-
                         <h2 className="text-2xl font-semibold text-[#2F3B2A]">
                             Comprador
                         </h2>
 
                         <div className="mt-6 rounded-2xl bg-[#F5F7F2] p-5">
-
                             <p className="font-semibold text-[#2F3B2A]">
                                 {user.firstName}{" "}
                                 {user.lastName}
@@ -401,21 +407,17 @@ export default function CheckoutPage() {
                                     {user.phone}
                                 </p>
                             )}
-
                         </div>
-
                     </section>
 
                     {/* DESTINATÁRIO */}
 
                     <section className="rounded-3xl bg-white p-6 shadow-sm">
-
                         <h2 className="text-2xl font-semibold text-[#2F3B2A]">
                             Destinatário
                         </h2>
 
                         <div className="mt-6 grid gap-4 md:grid-cols-2">
-
                             <input
                                 required
                                 value={
@@ -514,21 +516,17 @@ export default function CheckoutPage() {
                                     Outra
                                 </option>
                             </select>
-
                         </div>
-
                     </section>
 
                     {/* ENTREGA */}
 
                     <section className="rounded-3xl bg-white p-6 shadow-sm">
-
                         <h2 className="text-2xl font-semibold text-[#2F3B2A]">
                             Entrega
                         </h2>
 
                         <div className="mt-6 space-y-4">
-
                             <input
                                 required
                                 type="date"
@@ -596,7 +594,6 @@ export default function CheckoutPage() {
                             />
 
                             <div className="grid gap-4 md:grid-cols-2">
-
                                 <input
                                     required
                                     value={
@@ -624,7 +621,6 @@ export default function CheckoutPage() {
                                     placeholder="Cidade *"
                                     className="w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-[#55624A]"
                                 />
-
                             </div>
 
                             <select
@@ -672,15 +668,12 @@ export default function CheckoutPage() {
                                 placeholder="Instruções para entrega..."
                                 className="w-full resize-none rounded-xl border border-gray-200 p-3 outline-none focus:border-[#55624A]"
                             />
-
                         </div>
-
                     </section>
 
                     {/* CARTÃO */}
 
                     <section className="rounded-3xl bg-white p-6 shadow-sm">
-
                         <h2 className="text-2xl font-semibold text-[#2F3B2A]">
                             Cartão
                         </h2>
@@ -698,14 +691,12 @@ export default function CheckoutPage() {
                             placeholder="Escreva uma mensagem personalizada..."
                             className="mt-6 w-full resize-none rounded-xl border border-gray-200 p-3 outline-none focus:border-[#55624A]"
                         />
-
                     </section>
 
                     {/* ERROR */}
 
                     {error && (
                         <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
-
                             <p className="font-semibold">
                                 Não foi possível criar
                                 a encomenda
@@ -714,33 +705,26 @@ export default function CheckoutPage() {
                             <p className="mt-1">
                                 {error}
                             </p>
-
                         </div>
                     )}
-
                 </div>
 
                 {/* SUMMARY */}
 
                 <div>
-
                     <div className="sticky top-28 rounded-3xl bg-white p-6 shadow-sm">
-
                         <h2 className="text-2xl font-bold text-[#2F3B2A]">
                             Resumo
                         </h2>
 
                         <div className="mt-6 space-y-5">
-
                             {items.map(
                                 (item) => (
                                     <div
                                         key={`${item.id}-${item.recipient}-${item.message}`}
                                         className="flex justify-between gap-4"
                                     >
-
                                         <div>
-
                                             <p className="font-medium text-[#2F3B2A]">
                                                 {item.name}
                                             </p>
@@ -749,7 +733,6 @@ export default function CheckoutPage() {
                                                 Quantidade:{" "}
                                                 {item.quantity}
                                             </p>
-
                                         </div>
 
                                         <p className="whitespace-nowrap font-medium">
@@ -761,17 +744,13 @@ export default function CheckoutPage() {
                                             )}{" "}
                                             €
                                         </p>
-
                                     </div>
                                 ),
                             )}
-
                         </div>
 
                         <div className="mt-8 space-y-3 border-t pt-6">
-
                             <div className="flex justify-between text-sm text-gray-500">
-
                                 <span>
                                     Subtotal
                                 </span>
@@ -782,11 +761,9 @@ export default function CheckoutPage() {
                                     )}{" "}
                                     €
                                 </span>
-
                             </div>
 
                             <div className="flex justify-between text-sm text-gray-500">
-
                                 <span>
                                     Entrega
                                 </span>
@@ -795,30 +772,26 @@ export default function CheckoutPage() {
                                     {!hasCompleteDeliveryAddress
                                         ? "A calcular..."
                                         : isLoadingDeliveryFee
-                                          ? "A calcular..."
-                                          : deliveryFee !==
-                                              null
-                                            ? `${deliveryFee.toFixed(2)} €`
-                                            : "Indisponível"}
+                                            ? "A calcular..."
+                                            : deliveryFee !==
+                                                null
+                                                ? `${deliveryFee.toFixed(2)} €`
+                                                : "Indisponível"}
                                 </span>
-
                             </div>
 
                             <div className="flex justify-between pt-3 text-xl font-bold text-[#2F3B2A]">
-
                                 <span>
                                     Total
                                 </span>
 
                                 <span>
                                     {grandTotal !==
-                                    null
+                                        null
                                         ? `${grandTotal.toFixed(2)} €`
                                         : `${total.toFixed(2)} € + entrega`}
                                 </span>
-
                             </div>
-
                         </div>
 
                         <button
@@ -844,13 +817,9 @@ export default function CheckoutPage() {
                                 ? "A criar encomenda..."
                                 : "Confirmar encomenda"}
                         </button>
-
                     </div>
-
                 </div>
-
             </form>
-
         </div>
     );
 }
