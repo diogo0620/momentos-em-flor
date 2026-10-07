@@ -16,6 +16,11 @@ enum ProductType {
   RENTAL
 }
 
+enum OrderItemType {
+  PRODUCT
+  DELIVERY_FEE
+}
+
 enum UserRole {
   SYSTEM_ADMIN
   FLORIST
@@ -144,6 +149,7 @@ model Address {
   id Int @id @default(autoincrement())
 
   street  String
+  streetNumber String
   street2 String?
 
   postalCode  String
@@ -151,10 +157,8 @@ model Address {
   district    String
   countryCode String @db.Char(2)
 
-  latitude  Decimal @db.Decimal(9, 6)
-  longitude Decimal @db.Decimal(9, 6)
-
-  notes String?
+  latitude  Decimal? @db.Decimal(9, 6)
+  longitude Decimal? @db.Decimal(9, 6)
 
   florist Florist?
 
@@ -217,7 +221,8 @@ model User {
   email        String @unique
   passwordHash String
 
-  phone String?
+  phone String
+  taxNumber String?
 
   avatarUrl String?
 
@@ -316,6 +321,7 @@ model TaxCode {
   active Boolean @default(true)
 
   products Product[]
+  orderTaxTotals OrderTaxTotal[]
 
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
@@ -557,9 +563,10 @@ model Order {
   assignedFlorist   Florist? @relation("OrderAssignedFlorist", fields: [assignedFloristId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   customerFirstName String
-  customerLastName  String?
-  customerEmail     String?
-  customerPhone     String?
+  customerLastName  String
+  customerEmail     String
+  customerPhone     String
+  customerTaxNumber String?
 
   //
   // Recipient
@@ -584,6 +591,7 @@ model Order {
   //
 
   deliveryStreet  String
+  deliveryStreetNumber String
   deliveryStreet2 String?
 
   deliveryPostalCode  String
@@ -591,8 +599,8 @@ model Order {
   deliveryDistrict    String
   deliveryCountryCode String @db.Char(2)
 
-  deliveryLatitude  Decimal @db.Decimal(9, 6)
-  deliveryLongitude Decimal @db.Decimal(9, 6)
+  deliveryLatitude  Decimal? @db.Decimal(9, 6)
+  deliveryLongitude Decimal? @db.Decimal(9, 6)
 
   //
   // Card
@@ -623,6 +631,8 @@ model Order {
 
   payment Payment?
 
+  
+
   //
   // Workflow
   //
@@ -636,6 +646,7 @@ model Order {
   items         OrderItem[]
   offers        OrderOffer[]
   statusHistory OrderStatusHistory[]
+  taxTotals OrderTaxTotal[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -678,6 +689,8 @@ model OrderItem {
 
   productId Int?
   product   Product? @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  type OrderItemType @default(PRODUCT)
 
   //
   // Product snapshot
@@ -722,7 +735,7 @@ model OrderItem {
 
   taxCodeId Int?
   taxCode   TaxCode? @relation(fields: [taxCodeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  taxRate    Decimal @db.Decimal(5, 2)
+  taxRate    Decimal? @db.Decimal(5, 2)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -912,4 +925,25 @@ model Payment {
     updatedAt             DateTime      @updatedAt
 
     @@index([status])
+}
+
+model OrderTaxTotal {
+  id Int @id @default(autoincrement())
+
+  orderId Int
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  taxCodeId Int
+  taxCode   TaxCode @relation(fields: [taxCodeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  netAmount   Decimal @db.Decimal(10, 2)
+  taxAmount   Decimal @db.Decimal(10, 2)
+  grossAmount Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orderId, taxCodeId])
+  @@index([orderId])
+  @@index([taxCodeId])
 }

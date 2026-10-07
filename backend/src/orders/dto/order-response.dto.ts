@@ -81,6 +81,9 @@ class OrderItemResponseDto {
 
     @ApiPropertyOptional()
     taxCodeId: number | null;
+
+    @ApiPropertyOptional()
+    type;
 }
 
 
@@ -155,6 +158,9 @@ export class OrderResponseDto {
     @ApiPropertyOptional()
     customerPhone: string | null;
 
+    @ApiPropertyOptional()
+    customerTaxNumber: string | null;
+
     @ApiProperty()
     recipientFirstName: string;
 
@@ -182,6 +188,9 @@ export class OrderResponseDto {
 
     @ApiProperty()
     deliveryStreet: string;
+
+    @ApiProperty()
+    deliveryStreetNumber: string;
 
     @ApiPropertyOptional()
     deliveryStreet2: string | null;

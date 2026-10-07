@@ -36,8 +36,9 @@ export class UserMapper
                 user.email,
 
             phone:
-                user.phone ??
-                undefined,
+                user.phone,
+
+                taxNumber: user.taxNumber ?? undefined,
 
             avatarUrl:
                 user.avatarUrl ??

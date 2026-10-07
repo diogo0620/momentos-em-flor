@@ -16,13 +16,13 @@ export class AddressMapper
       id: address.id,
       street: address.street,
       street2: address.street2 ?? undefined,
+      streetNumber: address.streetNumber,
       postalCode: address.postalCode,
       city: address.city,
       district: address.district,
       countryCode: address.countryCode,
-      latitude: address.latitude.toNumber(),
-      longitude: address.longitude.toNumber(),
-      notes: address.notes ?? undefined,
+      latitude: address.latitude ? address.latitude.toNumber() : undefined,
+      longitude: address.longitude ? address.longitude.toNumber() : undefined,
     };
   }
 }

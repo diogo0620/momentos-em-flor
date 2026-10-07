@@ -12,8 +12,10 @@ export class OrderListResponseDto extends PickType(
         'customerFirstName',
         'customerEmail',
         'customerPhone',
+        'customerTaxNumber',
 
         'deliveryStreet',
+        'deliveryStreetNumber',
         'deliveryStreet2',
         'deliveryPostalCode',
         'deliveryCity',

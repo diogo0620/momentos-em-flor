@@ -13,9 +13,6 @@ import {
 
 import { useAuth } from "@/lib/auth/AuthProvider";
 
-
-
-
 import type {
     Order,
     OrderStatusHistory,
@@ -80,6 +77,22 @@ function formatTimeSlot(value: string) {
     return labels[value] ?? value;
 }
 
+function formatVariantType(value: string | null | undefined) {
+    if (!value) {
+        return "Variante";
+    }
+
+    const labels: Record<string, string> = {
+        SIZE: "Tamanho",
+        COLOR: "Cor",
+        COLOUR: "Cor",
+        STYLE: "Estilo",
+        TYPE: "Tipo",
+    };
+
+    return labels[value] ?? value;
+}
+
 function formatOccasion(value: string | null) {
     if (!value) {
         return "—";
@@ -108,6 +121,7 @@ function formatOccasion(value: string | null) {
 function getOrderStatusLabel(status: string) {
     const labels: Record<string, string> = {
         CREATED: "Criada",
+        PENDING_PAYMENT: 'Pagamento Pendente',
         WAITING_FOR_FLORISTS:
             "À espera de floristas",
         ASSIGNED: "Atribuída",
@@ -331,7 +345,7 @@ export default function AdminOrderDetailPage({
             const response =
                 await ordersApi.getById(id);
 
-            console.log("Order", response)
+            console.log("Order", response);
 
             setOrder(response);
         } catch (err) {
@@ -511,6 +525,12 @@ export default function AdminOrderDetailPage({
         order.status !== "CANCELLED" &&
         order.status !== "DELIVERED";
 
+    const customerTaxNumber = (
+        order as Order & {
+            customerTaxNumber?: string | null;
+        }
+    ).customerTaxNumber;
+
     /* ---------------------------------------------------------------------- */
     /* PAGE                                                                   */
     /* ---------------------------------------------------------------------- */
@@ -556,8 +576,8 @@ export default function AdminOrderDetailPage({
                                 text-sm
                                 font-medium
                                 ${getOrderStatusClass(
-                                order.status,
-                            )}
+                                    order.status,
+                                )}
                             `}
                         >
                             {getOrderStatusLabel(
@@ -634,6 +654,19 @@ export default function AdminOrderDetailPage({
                                     "—"}
                             </p>
                         </div>
+
+                        {customerTaxNumber && (
+                            <div>
+                            <p className="text-xs uppercase tracking-wide text-gray-400">
+                                NIF
+                            </p>
+
+                            <p className="mt-1 text-gray-700">
+                                {order.customerTaxNumber ??
+                                    "—"}
+                            </p>
+                        </div>
+                        )}
 
                     </div>
 
@@ -747,7 +780,7 @@ export default function AdminOrderDetailPage({
                     </p>
 
                     <p className="mt-1 font-medium text-gray-700">
-                        {order.deliveryStreet}
+                        {order.deliveryStreet} {order.deliveryStreetNumber}
 
                         {order.deliveryStreet2 &&
                             `, ${order.deliveryStreet2}`}
@@ -817,58 +850,155 @@ export default function AdminOrderDetailPage({
                 <div className="mt-6 space-y-3">
 
                     {order.items.map(
-                        (item) => (
-                            <div
-                                key={item.id}
-                                className="
-                                    flex
-                                    flex-col
-                                    gap-3
-                                    rounded-2xl
-                                    bg-[#F8F9F5]
-                                    p-4
-                                    sm:flex-row
-                                    sm:items-center
-                                    sm:justify-between
-                                "
-                            >
+                        (item) => {
+                            const orderItem = item as {
+                                type?: string;
+                                variantName?: string | null;
+                                variantType?: string | null;
+                                components?: Array<{
+                                    id?: number;
+                                    componentId?: number;
+                                    name?: string | null;
+                                    quantity?: number;
+                                }> | null;
+                            };
 
-                                <div>
+                            const isDeliveryFee =
+                                orderItem.type === "DELIVERY_FEE";
 
-                                    <p className="font-semibold text-gray-700">
-                                        {
-                                            item.productName
-                                        }
-                                    </p>
+                            const hasConfiguration =
+                                !isDeliveryFee &&
+                                Boolean(
+                                    orderItem.variantName ||
+                                        orderItem.components?.some(
+                                            (component) =>
+                                                Number(component.quantity ?? 0) > 0,
+                                        ),
+                                );
 
-                                    {item.productDescription && (
-                                        <p className="mt-1 text-sm text-gray-500">
-                                            {
-                                                item.productDescription
+                            return (
+                                <div
+                                    key={item.id}
+                                    className={
+                                        isDeliveryFee
+                                            ? `
+                                                flex
+                                                flex-col
+                                                gap-3
+                                                rounded-2xl
+                                                border
+                                                border-dashed
+                                                border-[#C8CFBC]
+                                                bg-[#F3F5EE]
+                                                p-4
+                                                sm:flex-row
+                                                sm:items-center
+                                                sm:justify-between
+                                            `
+                                            : `
+                                                flex
+                                                flex-col
+                                                gap-3
+                                                rounded-2xl
+                                                bg-[#F8F9F5]
+                                                p-4
+                                                sm:flex-row
+                                                sm:items-center
+                                                sm:justify-between
+                                            `
+                                    }
+                                >
+
+                                    <div>
+
+                                        <p
+                                            className={
+                                                isDeliveryFee
+                                                    ? "font-semibold text-[#55624A]"
+                                                    : "font-semibold text-gray-700"
                                             }
+                                        >
+                                            {isDeliveryFee
+                                                ? "Entrega"
+                                                : item.productName}
                                         </p>
-                                    )}
 
-                                    <p className="mt-2 text-sm text-gray-400">
-                                        {
-                                            item.quantity
-                                        }{" "}
-                                        ×{" "}
+                                        {!isDeliveryFee &&
+                                            item.productDescription && (
+                                                <p className="mt-1 text-sm text-gray-500">
+                                                    {
+                                                        item.productDescription
+                                                    }
+                                                </p>
+                                            )}
+
+                                        {!isDeliveryFee && hasConfiguration && (
+                                            <p className="mt-2 text-sm text-gray-500">
+                                                {orderItem.variantName && (
+                                                    <>
+                                                        <span className="font-medium text-gray-600">
+                                                            {formatVariantType(orderItem.variantType)}:
+                                                        </span>{" "}
+                                                        <span>{orderItem.variantName}</span>
+                                                    </>
+                                                )}
+
+                                                {orderItem.variantName &&
+                                                    orderItem.components?.some(
+                                                        (component) =>
+                                                            Number(component.quantity ?? 0) > 0,
+                                                    ) && <span className="mx-2 text-gray-300">·</span>}
+
+                                                {orderItem.components
+                                                    ?.filter(
+                                                        (component) =>
+                                                            Number(component.quantity ?? 0) > 0,
+                                                    )
+                                                    .map((component, index, components) => (
+                                                        <span key={component.id ?? component.componentId}>
+                                                            <span className="font-medium text-gray-600">
+                                                                {component.componentName ??
+                                                                    `Componente #${component.componentId ?? component.id}`}
+                                                                :
+                                                            </span>{" "}
+                                                            <span>{component.quantity}</span>
+                                                            {index < components.length - 1 && (
+                                                                <span className="mx-2 text-gray-300">·</span>
+                                                            )}
+                                                        </span>
+                                                    ))}
+                                            </p>
+                                        )}
+
+                                        {!isDeliveryFee && (
+                                            <p className="mt-2 text-sm text-gray-400">
+                                                {item.quantity} × {formatCurrency(item.unitPrice)}
+                                            </p>
+                                        )}
+
+                                        {isDeliveryFee && (
+                                            <p className="mt-1 text-sm text-gray-500">
+                                                Taxa de entrega
+                                            </p>
+                                        )}
+
+                                    </div>
+
+                                    <p
+                                        className={
+                                            isDeliveryFee
+                                                ? "text-lg font-bold text-[#55624A]"
+                                                : "text-lg font-bold text-[#55624A]"
+                                        }
+                                    >
                                         {formatCurrency(
-                                            item.unitPrice,
+                                            item.grossAmount,
                                         )}
                                     </p>
 
                                 </div>
-
-                                <p className="text-lg font-bold text-[#55624A]">
-                                    {formatCurrency(
-                                        item.grossAmount,
-                                    )}
-                                </p>
-
-                            </div>
-                        ),
+                            );
+                        },
                     )}
 
                 </div>
@@ -891,24 +1021,12 @@ export default function AdminOrderDetailPage({
 
                         <div className="flex justify-between text-sm">
                             <span className="text-gray-500">
-                                Taxa de entrega
+                                IVA
                             </span>
 
                             <span className="text-gray-700">
                                 {formatCurrency(
-                                    order.deliveryFee,
-                                )}
-                            </span>
-                        </div>
-
-                        <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">
-                                Desconto
-                            </span>
-
-                            <span className="text-gray-700">
-                                {formatCurrency(
-                                    order.discount,
+                                    order.taxAmount,
                                 )}
                             </span>
                         </div>

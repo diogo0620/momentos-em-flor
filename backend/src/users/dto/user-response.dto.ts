@@ -33,7 +33,14 @@ export class UserResponseDto {
   @ApiPropertyOptional({
     example: '+351912345678',
   })
-  phone?: string;
+  phone: string;
+
+  @ApiPropertyOptional({
+    example: '232131970',
+  })
+  taxNumber?: string;
+
+
 
   @ApiPropertyOptional({
     example: 'https://example.com/avatar.jpg',

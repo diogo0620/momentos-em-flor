@@ -5,6 +5,7 @@ import {
 import {
     OrderStatus,
     UserRole,
+    OrderItemType
 } from '@prisma/client';
 
 import { PrismaService } from '@/prisma/prisma.service';
@@ -147,6 +148,7 @@ export class OrdersService {
                     customerPhone: true,
 
                     deliveryStreet: true,
+                    deliveryStreetNumber: true,
                     deliveryStreet2: true,
                     deliveryPostalCode: true,
                     deliveryCity: true,
@@ -301,6 +303,10 @@ export class OrdersService {
                 items,
             );
 
+        if (totals.deliveryItem) {
+            items.push(totals.deliveryItem);
+        }
+
         /*
          * Geocode delivery address.
          */
@@ -346,6 +352,9 @@ export class OrdersService {
                             customerPhone:
                                 customer.phone,
 
+                            customerTaxNumber:
+                                dto.customerTaxNumber,
+
                             recipientFirstName:
                                 dto.recipientFirstName,
 
@@ -371,6 +380,9 @@ export class OrdersService {
 
                             deliveryStreet:
                                 dto.deliveryStreet,
+
+                            deliveryStreetNumber:
+                                dto.deliveryStreetNumber,
 
                             deliveryStreet2:
                                 dto.deliveryStreet2,
@@ -891,25 +903,13 @@ export class OrdersService {
 
     private async calculateOrderTotals(
         items: Array<{
+            taxCodeId: number;
+            taxRate: number;
             netAmount: number;
             taxAmount: number;
             grossAmount: number;
         }>,
     ) {
-        const subtotal = this.roundMoney(
-            items.reduce(
-                (total, item) => total + item.netAmount,
-                0,
-            ),
-        );
-
-        const taxAmount = this.roundMoney(
-            items.reduce(
-                (total, item) => total + item.taxAmount,
-                0,
-            ),
-        );
-
         const settings = await this.storeSettingsService.get();
 
         const deliveryFee = this.roundMoney(
@@ -918,12 +918,160 @@ export class OrdersService {
 
         const discount = 0;
 
+        //
+        // Product totals
+        //
+
+        const subtotal = this.roundMoney(
+            items.reduce(
+                (total, item) => total + item.netAmount,
+                0,
+            ),
+        );
+
+        const productsTaxAmount = this.roundMoney(
+            items.reduce(
+                (total, item) => total + item.taxAmount,
+                0,
+            ),
+        );
+
+        //
+        // Allocate delivery fee across tax codes
+        //
+
+        const deliveryTaxAllocation =
+            this.calculateDeliveryTaxAllocation(
+                items,
+                deliveryFee,
+            );
+
+        const deliveryNetAmount = this.roundMoney(
+            deliveryTaxAllocation.reduce(
+                (total, item) => total + item.netAmount,
+                0,
+            ),
+        );
+
+        const deliveryTaxAmount = this.roundMoney(
+            deliveryTaxAllocation.reduce(
+                (total, item) => total + item.taxAmount,
+                0,
+            ),
+        );
+
+        //
+        // Final totals
+        //
+
+        const finalSubtotal = this.roundMoney(
+            subtotal + deliveryNetAmount,
+        );
+
+        const taxAmount = this.roundMoney(
+            productsTaxAmount + deliveryTaxAmount,
+        );
+
         const total = this.roundMoney(
-            subtotal +
-            taxAmount +
-            deliveryFee -
+            finalSubtotal +
+            taxAmount -
             discount,
         );
+
+        //
+        // Tax totals by tax code
+        //
+
+        const taxTotalsMap = new Map<
+            number,
+            {
+                taxCodeId: number;
+                taxRate: number;
+                netAmount: number;
+                taxAmount: number;
+                grossAmount: number;
+            }
+        >();
+
+        for (const item of items) {
+            const existing = taxTotalsMap.get(
+                item.taxCodeId,
+            );
+
+            if (existing) {
+                existing.netAmount = this.roundMoney(
+                    existing.netAmount + item.netAmount,
+                );
+
+                existing.taxAmount = this.roundMoney(
+                    existing.taxAmount + item.taxAmount,
+                );
+
+                existing.grossAmount = this.roundMoney(
+                    existing.grossAmount + item.grossAmount,
+                );
+            } else {
+                taxTotalsMap.set(item.taxCodeId, {
+                    taxCodeId: item.taxCodeId,
+                    taxRate: item.taxRate,
+                    netAmount: item.netAmount,
+                    taxAmount: item.taxAmount,
+                    grossAmount: item.grossAmount,
+                });
+            }
+        }
+
+        //
+        // Add delivery amounts to the corresponding tax codes
+        //
+
+        for (const delivery of deliveryTaxAllocation) {
+            const existing = taxTotalsMap.get(
+                delivery.taxCodeId,
+            );
+
+            if (!existing) {
+                continue;
+            }
+
+            existing.netAmount = this.roundMoney(
+                existing.netAmount +
+                delivery.netAmount,
+            );
+
+            existing.taxAmount = this.roundMoney(
+                existing.taxAmount +
+                delivery.taxAmount,
+            );
+
+            existing.grossAmount = this.roundMoney(
+                existing.grossAmount +
+                delivery.grossAmount,
+            );
+        }
+
+        const deliveryItem =
+            deliveryFee > 0
+                ? {
+                    type: OrderItemType.DELIVERY_FEE,
+                    productId: null,
+
+                    name: 'Taxa de Entrega',
+                    description: 'Taxa de Entrega',
+
+                    quantity: 1,
+
+                    customerPrice: deliveryFee,
+                    floristPrice: 0,
+
+                    netAmount: deliveryNetAmount,
+                    taxAmount: deliveryTaxAmount,
+                    grossAmount: deliveryFee,
+
+                    taxCodeId: null,
+                    taxRate: null,
+                }
+                : null;
 
         return {
             subtotal,
@@ -931,6 +1079,12 @@ export class OrdersService {
             deliveryFee,
             discount,
             total,
+
+            taxTotals: Array.from(
+                taxTotalsMap.values(),
+            ),
+
+            deliveryItem,
         };
     }
 
@@ -1214,6 +1368,92 @@ export class OrdersService {
     // =========================================================
     // HELPERS
     // =========================================================
+
+
+    private calculateDeliveryTaxAllocation(
+        items: Array<{
+            taxCodeId: number;
+            taxRate: number;
+            grossAmount: number;
+        }>,
+        deliveryFee: number,
+    ) {
+        const grossTotal = this.roundMoney(
+            items.reduce(
+                (total, item) => total + item.grossAmount,
+                0,
+            ),
+        );
+
+        if (deliveryFee <= 0 || grossTotal <= 0) {
+            return [];
+        }
+
+        const taxGroups = new Map<
+            number,
+            {
+                taxCodeId: number;
+                taxRate: number;
+                grossAmount: number;
+            }
+        >();
+
+        for (const item of items) {
+            const existing = taxGroups.get(item.taxCodeId);
+
+            if (existing) {
+                existing.grossAmount = this.roundMoney(
+                    existing.grossAmount + item.grossAmount,
+                );
+            } else {
+                taxGroups.set(item.taxCodeId, {
+                    taxCodeId: item.taxCodeId,
+                    taxRate: item.taxRate,
+                    grossAmount: item.grossAmount,
+                });
+            }
+        }
+
+        const groups = Array.from(taxGroups.values());
+
+        let allocatedDeliveryFee = 0;
+
+        return groups.map((group, index) => {
+            const isLast = index === groups.length - 1;
+
+            const deliveryGrossAmount = isLast
+                ? this.roundMoney(
+                    deliveryFee - allocatedDeliveryFee,
+                )
+                : this.roundMoney(
+                    deliveryFee *
+                    (group.grossAmount / grossTotal),
+                );
+
+            allocatedDeliveryFee = this.roundMoney(
+                allocatedDeliveryFee +
+                deliveryGrossAmount,
+            );
+
+            const deliveryNetAmount = this.roundMoney(
+                deliveryGrossAmount /
+                (1 + group.taxRate / 100),
+            );
+
+            const deliveryTaxAmount = this.roundMoney(
+                deliveryGrossAmount -
+                deliveryNetAmount,
+            );
+
+            return {
+                taxCodeId: group.taxCodeId,
+                taxRate: group.taxRate,
+                grossAmount: deliveryGrossAmount,
+                netAmount: deliveryNetAmount,
+                taxAmount: deliveryTaxAmount,
+            };
+        });
+    }
 
     private roundMoney(
         value: number,

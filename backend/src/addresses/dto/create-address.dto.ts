@@ -13,11 +13,18 @@ export class CreateAddressDto {
     @MaxLength(100)
     street: string;
 
+    @ApiProperty()
+    @IsString()
+    @MaxLength(100)
+    streetNumber: string;
+
     @ApiPropertyOptional()
     @IsOptional()
     @IsString()
     @MaxLength(100)
     street2?: string;
+
+
 
     @ApiProperty()
     @IsString()
@@ -40,10 +47,4 @@ export class CreateAddressDto {
     @IsString()
     @Length(2, 2)
     countryCode: string;
-
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    notes?: string;
 }

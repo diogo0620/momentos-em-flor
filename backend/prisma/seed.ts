@@ -332,14 +332,12 @@ async function createAddress() {
 
   return prisma.address.create({
     data: {
-      street: 'Rua das Flores 123',
+      street: 'Rua das Flores',
+      streetNumber: '123',
       postalCode: '4700-000',
       city: 'Braga',
       district: 'Braga',
-      countryCode: 'PT',
-      latitude: 41.545400,
-      longitude: -8.426500,
-      notes: 'Morada de teste da florista.',
+      countryCode: 'PT'
     },
   });
 }
@@ -373,6 +371,7 @@ async function createUsers(floristId: number) {
       firstName: 'Diogo',
       lastName: 'Silva',
       email: 'admin@momentosemflor.pt',
+      phone: '919112123',
       passwordHash: adminPasswordHash,
       role: 'SYSTEM_ADMIN',
       active: true,
@@ -387,6 +386,7 @@ async function createUsers(floristId: number) {
       firstName: 'Florista',
       lastName: 'Braga',
       email: 'florist@momentosemflor.pt',
+      phone: '919112123',
       passwordHash: floristPasswordHash,
       role: 'FLORIST',
       floristId,

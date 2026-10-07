@@ -51,6 +51,8 @@ export type OrderItem = {
     grossAmount: number;
 
     taxCodeId: number | null;
+
+    type: string;
 };
 
 export type OrderOffer = {
@@ -93,6 +95,7 @@ export type Order = {
     customerLastName: string;
     customerEmail: string;
     customerPhone: string;
+    customerTaxNumber: string;
 
     recipientFirstName: string;
     recipientLastName: string | null;
@@ -156,6 +159,7 @@ export type CreateOrder = {
     customerLastName?: string;
     customerEmail?: string;
     customerPhone?: string;
+    customerTaxNumber?: string;
 
     // Recipient
     recipientFirstName: string;
@@ -187,6 +191,7 @@ export type CreateOrder = {
     // Delivery address
     deliveryStreet: string;
     deliveryStreet2?: string;
+    deliveryStreetNumber: string;
     deliveryPostalCode: string;
     deliveryCity: string;
     deliveryDistrict: string;

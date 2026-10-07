@@ -82,6 +82,18 @@ export class CreateOrderDto {
     @MaxLength(30)
     customerPhone?: string;
 
+    @ApiPropertyOptional({
+        example: '+351912345678',
+        description:
+            'Customer tax number.',
+    })
+    @IsOptional()
+    @IsString()
+    @MaxLength(30)
+    customerTaxNumber?: string;
+
+
+
     // Recipient
 
     @ApiProperty({
@@ -144,11 +156,18 @@ export class CreateOrderDto {
     // Delivery address
 
     @ApiProperty({
-        example: 'Rua de Santa Catarina, 100',
+        example: 'Rua de Santa Catarina',
     })
     @IsString()
     @MaxLength(255)
     deliveryStreet: string;
+
+    @ApiProperty({
+        example: '100',
+    })
+    @IsString()
+    @MaxLength(255)
+    deliveryStreetNumber: string;
 
     @ApiPropertyOptional({
         example: '2º Esq.',

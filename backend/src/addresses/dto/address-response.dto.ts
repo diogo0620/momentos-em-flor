@@ -7,6 +7,9 @@ export class AddressResponseDto {
   @ApiProperty()
   street: string;
 
+  @ApiProperty()
+  streetNumber: string;
+
   @ApiPropertyOptional()
   street2?: string;
 
@@ -23,11 +26,8 @@ export class AddressResponseDto {
   countryCode: string;
 
   @ApiProperty()
-  latitude: number;
+  latitude?: number;
 
   @ApiProperty()
-  longitude: number;
-
-  @ApiPropertyOptional()
-  notes?: string;
+  longitude?: number;
 }

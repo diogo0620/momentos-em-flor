@@ -42,7 +42,7 @@ export class CreateUserDto {
   })
   @IsOptional()
   @IsString()
-  phone?: string;
+  phone: string;
 
   @ApiPropertyOptional({
     example: 'https://example.com/avatar.jpg',

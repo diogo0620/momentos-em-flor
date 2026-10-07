@@ -33,6 +33,9 @@ export class OrderMapper {
             customerPhone:
                 order.customerPhone,
 
+            customerTaxNumber:
+                order.customerTaxNumber,
+
             recipientFirstName:
                 order.recipientFirstName,
 
@@ -56,6 +59,9 @@ export class OrderMapper {
 
             deliveryStreet:
                 order.deliveryStreet,
+
+            deliveryStreetNumber:
+                order.deliveryStreetNumber,
 
             deliveryStreet2:
                 order.deliveryStreet2,
@@ -216,6 +222,9 @@ export class OrderMapper {
 
                         taxCodeId:
                             item.taxCodeId,
+
+                        type:
+                            item.type
                     }),
                 ),
 
@@ -397,8 +406,14 @@ export class OrderMapper {
             customerPhone:
                 order.customerPhone,
 
+            customerTaxNumber:
+                order.customerTaxNumber,
+
             deliveryStreet:
                 order.deliveryStreet,
+
+            deliveryStreetNumber:
+                order.deliveryStreetNumber,
 
             deliveryStreet2:
                 order.deliveryStreet2,

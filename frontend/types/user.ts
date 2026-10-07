@@ -15,8 +15,9 @@ export type User = {
     lastName: string;
 
     email: string;
-    phone?: string | null;
+    phone: string | null;
     avatarUrl?: string | null;
+    taxNumber?: string | null;
 
     role: UserRole;
 
