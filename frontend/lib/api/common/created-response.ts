@@ -1,3 +1,6 @@
 export interface CreatedResponse {
-  id: number;
+  data: {
+    id: number
+  };
+  success: boolean;
 }

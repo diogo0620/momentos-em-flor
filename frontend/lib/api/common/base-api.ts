@@ -22,6 +22,10 @@ export type PaginatedResponse<T> = {
     pagination: Pagination;
 };
 
+export type ApiResponse<T> = {
+    data: T
+}
+
 export abstract class BaseApi<
     TResponse,
     TCreateDto = never,
@@ -79,15 +83,10 @@ export abstract class BaseApi<
 
     async getById(
         id: number,
-    ): Promise<TResponse> {
-        const response = await apiFetch<{
-            success: boolean;
-            data: TResponse;
-        }>(
+    ): Promise<ApiResponse<TResponse>> {
+        return apiFetch(
             `${this.endpoint}/${id}`,
         );
-
-        return response.data;
     }
 
     async create(

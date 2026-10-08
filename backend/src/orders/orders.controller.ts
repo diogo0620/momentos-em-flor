@@ -18,6 +18,7 @@ import {
 
 import {
     OrderStatus,
+    UserRole,
 } from '@prisma/client';
 
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
@@ -46,7 +47,7 @@ export class OrdersController {
 
         private readonly orderStatusService:
             OrderStatusService,
-    ) {}
+    ) { }
 
     /**
      * Create order.
@@ -60,19 +61,19 @@ export class OrdersController {
      *   customerId = null
      */
     @Post()
-@UseGuards(OptionalJwtAuthGuard)
-create(
-    @CurrentUser()
-    user: AuthenticatedUser,
+    @UseGuards(OptionalJwtAuthGuard)
+    create(
+        @CurrentUser()
+        user: AuthenticatedUser,
 
-    @Body()
-    dto: CreateOrderDto,
-) {
-    return this.ordersService.create(
-        user,
-        dto,
-    );
-}
+        @Body()
+        dto: CreateOrderDto,
+    ) {
+        return this.ordersService.create(
+            user,
+            dto,
+        );
+    }
 
     /**
      * Update order.
@@ -94,11 +95,6 @@ create(
         );
     }
 
-    /**
-     * List orders.
-     *
-     * Authentication required.
-     */
     @Get()
     @UseGuards(JwtAuthGuard)
     findAll(
@@ -108,6 +104,13 @@ create(
         @Query()
         query: OrderQueryDto,
     ) {
+        if (user.role === UserRole.CUSTOMER) {
+            return this.ordersService.findCustomerOrders(
+                user,
+                query,
+            );
+        }
+
         return this.ordersService.findAll(
             user,
             query,
@@ -128,6 +131,13 @@ create(
         @Param('id', ParseIntPipe)
         id: number,
     ) {
+        if (user.role === UserRole.CUSTOMER) {
+            return this.ordersService.findCustomerOrder(
+                user,
+                id,
+            );
+        }
+
         return this.ordersService.findOne(
             user,
             id,

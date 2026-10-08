@@ -31,6 +31,7 @@ import { OrderCreatedEvent } from '@/events/order/order-created.event';
 import { GeocodingService } from '@/geocoding/geocoding.service';
 import { log } from 'console';
 import { StoreSettingsService } from '@/store-settings/store-settings.service';
+import { CustomerOrderMapper } from './mappers/customer-order.mapper';
 
 
 @Injectable()
@@ -40,6 +41,8 @@ export class OrdersService {
         private readonly prisma: PrismaService,
 
         private readonly mapper: OrderMapper,
+
+        private readonly customerOrderMapper: CustomerOrderMapper,
 
         private readonly storeSettingsService: StoreSettingsService,
 
@@ -54,6 +57,73 @@ export class OrdersService {
     // =========================================================
     // LIST
     // =========================================================
+
+    async findCustomerOrders(
+        user: AuthenticatedUser,
+        query: OrderQueryDto,
+    ) {
+        if (user.role !== UserRole.CUSTOMER) {
+            Exceptions.forbidden(ORDER_MESSAGES.FORBIDDEN);
+        }
+
+        const where = {
+            customerId: user.id,
+
+            ...(query.status && {
+                status: query.status,
+            }),
+
+            ...(query.search && {
+                OR: [
+                    {
+                        orderNumber: {
+                            contains: query.search,
+                            mode: 'insensitive' as const,
+                        },
+                    },
+                ],
+            }),
+        };
+
+        const orderBy = query.sort
+            ? {
+                [query.sort]: query.order,
+            }
+            : {
+                createdAt: 'desc' as const,
+            };
+
+        const orders = await this.prisma.order.findMany({
+            where,
+            orderBy,
+            select: {
+                id: true,
+                orderNumber: true,
+                total: true,
+                status: true,
+                createdAt: true,
+                deliveryDate: true,
+            },
+            ...getPagination(
+                query.page,
+                query.pageSize,
+            ),
+        });
+
+        const total = await this.prisma.order.count({
+            where,
+        });
+
+        return ApiResponse.paginated(
+            this.customerOrderMapper.toResponses(orders),
+            getPaginationResponse(
+                query.page,
+                query.pageSize,
+                total,
+            ),
+        );
+    }
+
 
     async findAll(
         user: AuthenticatedUser,
@@ -190,6 +260,61 @@ export class OrdersService {
     // =========================================================
     // DETAIL
     // =========================================================
+
+    async findCustomerOrder(
+        user: AuthenticatedUser,
+        id: number,
+    ) {
+        if (user.role !== UserRole.CUSTOMER) {
+            Exceptions.forbidden(ORDER_MESSAGES.FORBIDDEN);
+        }
+
+        const order = await this.prisma.order.findFirst({
+            where: {
+                id,
+                customerId: user.id,
+            },
+            include: {
+                items: {
+                    include: {
+                        components: true,
+                        product: {
+                            include: {
+                                images: {
+                                    where: {
+                                        variantId: null,
+                                    },
+                                    orderBy: [
+                                        {
+                                            isPrimary: 'desc',
+                                        },
+                                        {
+                                            sortOrder: 'asc',
+                                        },
+                                    ],
+                                    take: 1,
+                                    include: {
+                                        file: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                }
+            },
+        });
+
+        if (!order) {
+            Exceptions.notFound(
+                ORDER_MESSAGES.NOT_FOUND,
+            );
+        }
+
+        return ApiResponse.success(
+            this.customerOrderMapper.toResponse(order),
+        );
+    }
+
 
     async findOne(
         user: AuthenticatedUser,

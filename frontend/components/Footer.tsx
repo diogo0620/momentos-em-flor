@@ -7,191 +7,136 @@ import {
 } from "react-icons/fa";
 
 import {
-    Camera,
     Mail,
     Phone,
-    MapPin,
 } from "lucide-react";
 
 export default function Footer() {
     return (
-        <footer className="mt-24 border-t border-[#E5E7E0] bg-[#F8F9F5]">
+        <footer className="border-t border-[#E5E7E0] bg-white">
 
-            <div className="mx-auto max-w-7xl px-6 py-16">
+            <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8 lg:px-10">
 
-                <div className="grid gap-12 lg:grid-cols-5">
+                <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
 
                     {/* BRAND */}
-
-                    <div className="lg:col-span-2">
+                    <div className="flex items-center gap-5">
 
                         <Image
                             src="/logo.svg"
                             alt="Momentos em Flor"
-                            width={220}
-                            height={80}
-                            className="h-16 w-auto"
+                            width={170}
+                            height={60}
+                            className="h-11 w-auto"
                         />
 
-                        <p className="mt-6 max-w-md text-sm leading-7 text-gray-600">
-                            Criamos momentos especiais através de flores
-                            preparadas com carinho por floristas locais.
-                            Cada bouquet é pensado para surpreender,
-                            emocionar e criar memórias.
+                        <div className="hidden h-8 w-px bg-[#E5E7E0] sm:block" />
+
+                        <p className="hidden max-w-xs text-xs leading-5 text-gray-500 sm:block">
+                            Flores para os momentos que ficam.
                         </p>
 
-                        <div className="mt-8 flex items-center gap-4">
-
-                            <a
-                                href="#"
-                                className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm transition hover:-translate-y-1"
-                            >
-                                <FaInstagram size={18} />
-                            </a>
-
-                            <a
-                                href="#"
-                                className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm transition hover:-translate-y-1"
-                            >
-                                <FaFacebookF size={18} />
-                            </a>
-
-                        </div>
-
                     </div>
 
-                    {/* PRODUTOS */}
+                    {/* LINKS */}
+                    <nav className="flex flex-wrap items-center gap-x-6 gap-y-3 text-xs font-medium text-gray-500">
 
-                    <div>
+                        <Link
+                            href="/products"
+                            className="transition hover:text-[#394633]"
+                        >
+                            Flores
+                        </Link>
 
-                        <h3 className="font-semibold text-[#55624A]">
-                            Produtos
-                        </h3>
+                        <Link
+                            href="/account/orders"
+                            className="transition hover:text-[#394633]"
+                        >
+                            Encomendas
+                        </Link>
 
-                        <div className="mt-5 flex flex-col gap-3 text-sm text-gray-600">
+                        <Link
+                            href="/account"
+                            className="transition hover:text-[#394633]"
+                        >
+                            A minha conta
+                        </Link>
 
-                            <Link href="/products">
-                                Catálogo
-                            </Link>
-
-                            <Link href="/products">
-                                Bouquets
-                            </Link>
-
-                            <Link href="/products">
-                                Rosas
-                            </Link>
-
-                            <Link href="/products">
-                                Ocasiões Especiais
-                            </Link>
-
-                        </div>
-
-                    </div>
-
-                    {/* EMPRESA */}
-
-                    <div>
-
-                        <h3 className="font-semibold text-[#55624A]">
-                            Empresa
-                        </h3>
-
-                        <div className="mt-5 flex flex-col gap-3 text-sm text-gray-600">
-
-                            <Link href="/">
-                                Sobre Nós
-                            </Link>
-
-                            <Link href="/">
-                                As Nossas Floristas
-                            </Link>
-
-                            <Link href="/">
-                                Contactos
-                            </Link>
-
-                            <Link href="/">
-                                Perguntas Frequentes
-                            </Link>
-
-                        </div>
-
-                    </div>
-
-                    {/* CONTACTOS */}
-
-                    <div>
-
-                        <h3 className="font-semibold text-[#55624A]">
+                        <Link
+                            href="/"
+                            className="transition hover:text-[#394633]"
+                        >
                             Contactos
-                        </h3>
+                        </Link>
 
-                        <div className="mt-5 space-y-4 text-sm text-gray-600">
+                    </nav>
 
-                            <div className="flex items-start gap-3">
+                    {/* CONTACT / SOCIAL */}
+                    <div className="flex items-center gap-3">
 
-                                <MapPin
-                                    size={16}
-                                    className="mt-1 shrink-0"
-                                />
+                        <a
+                            href="mailto:hello@momentosemflor.pt"
+                            aria-label="Email"
+                            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7E0] text-[#55624A] transition hover:border-[#55624A] hover:bg-[#F8F9F5]"
+                        >
+                            <Mail size={15} strokeWidth={1.7} />
+                        </a>
 
-                                <span>
-                                    Portugal
-                                </span>
+                        <a
+                            href="tel:+351912345678"
+                            aria-label="Telefone"
+                            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7E0] text-[#55624A] transition hover:border-[#55624A] hover:bg-[#F8F9F5]"
+                        >
+                            <Phone size={15} strokeWidth={1.7} />
+                        </a>
 
-                            </div>
+                        <a
+                            href="#"
+                            aria-label="Instagram"
+                            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7E0] text-[#55624A] transition hover:border-[#55624A] hover:bg-[#F8F9F5]"
+                        >
+                            <FaInstagram size={15} />
+                        </a>
 
-                            <div className="flex items-center gap-3">
-
-                                <Phone
-                                    size={16}
-                                />
-
-                                <span>
-                                    +351 912 345 678
-                                </span>
-
-                            </div>
-
-                            <div className="flex items-center gap-3">
-
-                                <Mail
-                                    size={16}
-                                />
-
-                                <span>
-                                    hello@momentosemflor.pt
-                                </span>
-
-                            </div>
-
-                        </div>
+                        <a
+                            href="#"
+                            aria-label="Facebook"
+                            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7E0] text-[#55624A] transition hover:border-[#55624A] hover:bg-[#F8F9F5]"
+                        >
+                            <FaFacebookF size={14} />
+                        </a>
 
                     </div>
 
                 </div>
 
-                {/* BOTTOM BAR */}
+                {/* BOTTOM */}
+                <div className="mt-8 flex flex-col gap-3 border-t border-[#E5E7E0] pt-5 text-[11px] text-gray-400 sm:flex-row sm:items-center sm:justify-between">
 
-                <div className="mt-16 flex flex-col gap-4 border-t border-[#E5E7E0] pt-8 text-sm text-gray-500 md:flex-row md:items-center md:justify-between">
+                    <span>
+                        © 2026 Momentos em Flor
+                    </span>
 
-                    <div>
-                        © 2026 Momentos em Flor. Todos os direitos reservados.
-                    </div>
+                    <div className="flex flex-wrap gap-x-5 gap-y-2">
 
-                    <div className="flex gap-6">
-
-                        <Link href="/">
-                            Política de Privacidade
+                        <Link
+                            href="/"
+                            className="transition hover:text-gray-600"
+                        >
+                            Privacidade
                         </Link>
 
-                        <Link href="/">
+                        <Link
+                            href="/"
+                            className="transition hover:text-gray-600"
+                        >
                             Termos e Condições
                         </Link>
 
-                        <Link href="/">
+                        <Link
+                            href="/"
+                            className="transition hover:text-gray-600"
+                        >
                             Cookies
                         </Link>
 

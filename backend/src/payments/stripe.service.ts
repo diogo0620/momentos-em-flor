@@ -36,6 +36,20 @@ export class StripeService {
         );
     }
 
+    async createPaymentIntent(
+        amount: number,
+        metadata: Record<string, string>,
+    ): Promise<Stripe.PaymentIntent> {
+        return this.stripe.paymentIntents.create({
+            amount: Math.round(amount * 100),
+            currency: 'eur',
+            metadata,
+            automatic_payment_methods: {
+                enabled: true,
+            },
+        });
+    }
+
     async retrieveCheckoutSession(
         sessionId: string,
     ): Promise<Stripe.Checkout.Session> {

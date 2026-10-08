@@ -19,7 +19,7 @@ type RawBodyRequest = Request & {
 export class PaymentsController {
     constructor(
         private readonly paymentsService: PaymentsService,
-    ) {}
+    ) { }
 
     @Post('checkout')
     async createCheckoutSession(
@@ -41,5 +41,18 @@ export class PaymentsController {
             request.rawBody,
             signature,
         );
+    }
+
+    @Post('intent')
+    async createPaymentIntent(
+        @Body('orderId') orderId: number,
+    ) {
+        return {
+            success: true,
+            data:
+                await this.paymentsService.createPaymentIntent(
+                    Number(orderId),
+                ),
+        };
     }
 }
