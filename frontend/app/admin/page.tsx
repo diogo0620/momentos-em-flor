@@ -1,1164 +1,256 @@
 "use client";
 
 import Link from "next/link";
-
+import { useCallback, useEffect, useState } from "react";
 import {
+    ArrowDownRight,
     ArrowRight,
-    CalendarDays,
-    CheckCircle2,
-    Clock3,
-    Euro,
+    ArrowUpRight,
     Flower2,
+    LayoutGrid,
     Package,
+    Plus,
     RefreshCw,
-    ShoppingCart,
+    ShoppingBag,
+    Sparkles,
+    Store,
     Truck,
+    Users,
 } from "lucide-react";
 
-import {
-    useEffect,
-    useMemo,
-    useState,
-} from "react";
-
-import MetricCard from "@/components/admin/common/MetricCard";
 import PageHeader from "@/components/admin/common/PageHeader";
-import SectionCard from "@/components/admin/common/SectionCard";
+import { adminOrdersApi } from "@/lib/api/orders/admin-orders";
+import { adminProductsApi } from "@/lib/api/products/admin-products";
+import type { AdminOrderList } from "@/types/orders/admin/admin-order-list";
+import type { AdminOrderStatus } from "@/types/orders/admin/admin-order-status";
 
-import { apiFetch } from "@/lib/api/common/client";
-
-/* ========================================================================== */
-/* TYPES                                                                      */
-/* ========================================================================== */
-
-type OrderStatus =
-    | "CREATED"
-    | "WAITING_FOR_FLORISTS"
-    | "ASSIGNED"
-    | "IN_PRODUCTION"
-    | "READY_FOR_DELIVERY"
-    | "DELIVERED"
-    | "CANCELLED";
-
-type Order = {
-    id: number;
-    orderNumber: string;
-
-    customerFirstName: string;
-    customerLastName?: string | null;
-
+type DashboardOrderResponse = {
+    items: AdminOrderList[];
+    page: number;
+    pages: number;
     total: number;
-
-    status: OrderStatus;
-
-    deliveryDate: string;
-
-    deliveryTimeSlot:
-        | "MORNING"
-        | "AFTERNOON"
-        | "EVENING";
-
-    createdAt: string;
-
-    florist?: {
-        id: number;
-        name: string;
-    } | null;
-
-    floristId?: number | null;
 };
 
-type OrdersResponse = {
-    success: boolean;
-    data: Order[];
-
-    pagination?: {
-        page: number;
-        pageSize: number;
-        total: number;
-        pages: number;
-    };
+type DashboardState = {
+    orders: AdminOrderList[];
+    totalOrders: number;
+    totalProducts: number;
 };
 
-type Florist = {
-    id: number;
-    name: string;
-    active: boolean;
-    acceptingOrders: boolean;
+const STATUS_CONFIG: Record<AdminOrderStatus, { label: string; className: string; dot: string }> = {
+    CREATED: { label: "Criada", className: "bg-slate-100 text-slate-700", dot: "bg-slate-400" },
+    PENDING_PAYMENT: { label: "Pagamento pendente", className: "bg-amber-50 text-amber-700", dot: "bg-amber-500" },
+    WAITING_FOR_FLORISTS: { label: "À espera de floristas", className: "bg-yellow-50 text-yellow-700", dot: "bg-yellow-500" },
+    ASSIGNED: { label: "Atribuída", className: "bg-sky-50 text-sky-700", dot: "bg-sky-500" },
+    IN_PRODUCTION: { label: "Em preparação", className: "bg-indigo-50 text-indigo-700", dot: "bg-indigo-500" },
+    READY_FOR_DELIVERY: { label: "Pronta para entrega", className: "bg-violet-50 text-violet-700", dot: "bg-violet-500" },
+    DELIVERED: { label: "Entregue", className: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" },
+    CANCELLED: { label: "Cancelada", className: "bg-rose-50 text-rose-700", dot: "bg-rose-500" },
 };
 
-type FloristsResponse = {
-    success: boolean;
-    data: Florist[];
-
-    pagination?: {
-        page: number;
-        pageSize: number;
-        total: number;
-        pages: number;
-    };
-};
-
-/* ========================================================================== */
-/* STATUS                                                                     */
-/* ========================================================================== */
-
-const statusConfig: Record<
-    OrderStatus,
-    {
-        label: string;
-        className: string;
-        dotClassName: string;
-    }
-> = {
-    CREATED: {
-        label: "Criada",
-        className:
-            "bg-blue-50 text-blue-700",
-        dotClassName:
-            "bg-blue-500",
-    },
-
-    WAITING_FOR_FLORISTS: {
-        label: "À procura de florista",
-        className:
-            "bg-amber-50 text-amber-700",
-        dotClassName:
-            "bg-amber-500",
-    },
-
-    ASSIGNED: {
-        label: "Florista atribuída",
-        className:
-            "bg-purple-50 text-purple-700",
-        dotClassName:
-            "bg-purple-500",
-    },
-
-    IN_PRODUCTION: {
-        label: "Em preparação",
-        className:
-            "bg-orange-50 text-orange-700",
-        dotClassName:
-            "bg-orange-500",
-    },
-
-    READY_FOR_DELIVERY: {
-        label: "Pronta para entrega",
-        className:
-            "bg-indigo-50 text-indigo-700",
-        dotClassName:
-            "bg-indigo-500",
-    },
-
-    DELIVERED: {
-        label: "Entregue",
-        className:
-            "bg-green-50 text-green-700",
-        dotClassName:
-            "bg-green-500",
-    },
-
-    CANCELLED: {
-        label: "Cancelada",
-        className:
-            "bg-red-50 text-red-700",
-        dotClassName:
-            "bg-red-500",
-    },
-};
-
-/* ========================================================================== */
-/* HELPERS                                                                    */
-/* ========================================================================== */
-
-function formatCurrency(
-    value: number,
-) {
-    return new Intl.NumberFormat(
-        "pt-PT",
-        {
-            style: "currency",
-            currency: "EUR",
-        },
-    ).format(value);
+function formatPrice(value: number) {
+    return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(Number(value));
 }
 
-function formatDate(
-    value: string,
-) {
-    return new Intl.DateTimeFormat(
-        "pt-PT",
-        {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-        },
-    ).format(
-        new Date(value),
-    );
+function formatDate(value: string) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "—";
+    return new Intl.DateTimeFormat("pt-PT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
-function getCustomerName(
-    order: Order,
-) {
-    return [
-        order.customerFirstName,
-        order.customerLastName,
-    ]
-        .filter(Boolean)
-        .join(" ");
+function greeting() {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Bom dia";
+    if (hour < 19) return "Boa tarde";
+    return "Boa noite";
 }
 
-function getTimeSlotLabel(
-    slot: Order["deliveryTimeSlot"],
-) {
-    switch (slot) {
-        case "MORNING":
-            return "Manhã";
+export default function AdminDashboardPage() {
+    const [data, setData] = useState<DashboardState>({ orders: [], totalOrders: 0, totalProducts: 0 });
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-        case "AFTERNOON":
-            return "Tarde";
-
-        case "EVENING":
-            return "Final do dia";
-
-        default:
-            return slot;
-    }
-}
-
-/* ========================================================================== */
-/* PAGE                                                                       */
-/* ========================================================================== */
-
-export default function AdminPage() {
-    const [orders, setOrders] =
-        useState<Order[]>([]);
-
-    const [florists, setFlorists] =
-        useState<Florist[]>([]);
-
-    const [isLoading, setIsLoading] =
-        useState(true);
-
-    const [error, setError] =
-        useState<string | null>(null);
-
-    async function loadDashboard() {
+    const loadDashboard = useCallback(async (isRefresh = false) => {
         try {
-            setIsLoading(true);
+            if (isRefresh) setRefreshing(true);
+            else setLoading(true);
             setError(null);
 
-            const [
-                ordersResponse,
-                floristsResponse,
-            ] = await Promise.all([
-                apiFetch<OrdersResponse>(
-                    "/orders",
-                ),
-
-                apiFetch<FloristsResponse>(
-                    "/florists?page=1&pageSize=100",
-                ),
+            const [ordersResponse, productsResponse] = await Promise.all([
+                adminOrdersApi.getAll({ page: 1, pageSize: 8, sort: "createdAt", order: "desc" }),
+                adminProductsApi.getAll({ page: 1, pageSize: 1, sort: "name", order: "asc" }),
             ]);
 
-            setOrders(
-                ordersResponse.data ?? [],
-            );
-
-            setFlorists(
-                floristsResponse.data ?? [],
-            );
+            const orderResult = ordersResponse as DashboardOrderResponse;
+            setData({
+                orders: orderResult.items ?? [],
+                totalOrders: Number(orderResult.total ?? 0),
+                totalProducts: Number(productsResponse.total ?? 0),
+            });
         } catch (err) {
-            setError(
-                err instanceof Error
-                    ? err.message
-                    : "Não foi possível carregar a dashboard.",
-            );
+            setError(err instanceof Error ? err.message : "Não foi possível carregar os dados do dashboard.");
         } finally {
-            setIsLoading(false);
+            setLoading(false);
+            setRefreshing(false);
         }
-    }
-
-    useEffect(() => {
-        loadDashboard();
     }, []);
 
-    /* ====================================================================== */
-    /* METRICS                                                                */
-    /* ====================================================================== */
+    useEffect(() => {
+        void loadDashboard();
+    }, [loadDashboard]);
 
-    const metrics = useMemo(() => {
-        const pending =
-            orders.filter(
-                (order) =>
-                    order.status ===
-                        "CREATED" ||
-                    order.status ===
-                        "WAITING_FOR_FLORISTS",
-            ).length;
-
-        const inProgress =
-            orders.filter(
-                (order) =>
-                    order.status ===
-                        "ASSIGNED" ||
-                    order.status ===
-                        "IN_PRODUCTION" ||
-                    order.status ===
-                        "READY_FOR_DELIVERY",
-            ).length;
-
-        const delivered =
-            orders.filter(
-                (order) =>
-                    order.status ===
-                    "DELIVERED",
-            ).length;
-
-        const revenue =
-            orders
-                .filter(
-                    (order) =>
-                        order.status !==
-                        "CANCELLED",
-                )
-                .reduce(
-                    (
-                        sum,
-                        order,
-                    ) =>
-                        sum +
-                        Number(
-                            order.total,
-                        ),
-                    0,
-                );
-
-        return {
-            pending,
-            inProgress,
-            delivered,
-            revenue,
-        };
-    }, [orders]);
-
-    const activeFlorists =
-        florists.filter(
-            (florist) =>
-                florist.active,
-        ).length;
-
-    const acceptingFlorists =
-        florists.filter(
-            (florist) =>
-                florist.active &&
-                florist.acceptingOrders,
-        ).length;
-
-    const recentOrders =
-        useMemo(
-            () =>
-                [...orders]
-                    .sort(
-                        (a, b) =>
-                            new Date(
-                                b.createdAt,
-                            ).getTime() -
-                            new Date(
-                                a.createdAt,
-                            ).getTime(),
-                    )
-                    .slice(0, 5),
-            [orders],
-        );
-
-    /* ====================================================================== */
-    /* LOADING                                                                */
-    /* ====================================================================== */
-
-    if (isLoading) {
-        return (
-            <div className="space-y-8 pb-10">
-
-                <PageHeader
-                    title="Dashboard"
-                    subtitle="Resumo da atividade da plataforma."
-                />
-
-                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-
-                    {Array.from({
-                        length: 4,
-                    }).map((_, index) => (
-                        <div
-                            key={index}
-                            className="h-32 animate-pulse rounded-3xl bg-gray-100"
-                        />
-                    ))}
-
-                </div>
-
-                <div className="h-[500px] animate-pulse rounded-3xl bg-gray-100" />
-
-            </div>
-        );
-    }
-
-    /* ====================================================================== */
-    /* ERROR                                                                  */
-    /* ====================================================================== */
-
-    if (error) {
-        return (
-            <div className="space-y-8 pb-10">
-
-                <PageHeader
-                    title="Dashboard"
-                    subtitle="Resumo da atividade da plataforma."
-                />
-
-                <div className="rounded-3xl border border-red-100 bg-red-50 p-10 text-center">
-
-                    <Package
-                        size={38}
-                        className="mx-auto text-red-500"
-                    />
-
-                    <h2 className="mt-4 text-xl font-bold text-red-700">
-                        Não foi possível carregar a dashboard
-                    </h2>
-
-                    <p className="mt-2 text-sm text-red-600">
-                        {error}
-                    </p>
-
-                    <button
-                        type="button"
-                        onClick={
-                            loadDashboard
-                        }
-                        className="
-                            mt-6
-                            inline-flex
-                            items-center
-                            gap-2
-                            rounded-2xl
-                            bg-[#55624A]
-                            px-5
-                            py-3
-                            text-sm
-                            font-medium
-                            text-white
-                        "
-                    >
-                        <RefreshCw size={16} />
-                        Tentar novamente
-                    </button>
-
-                </div>
-
-            </div>
-        );
-    }
-
-    /* ====================================================================== */
-    /* PAGE                                                                   */
-    /* ====================================================================== */
+    const awaitingFlorists = data.orders.filter((order) => order.status === "WAITING_FOR_FLORISTS").length;
+    const pendingPayment = data.orders.filter((order) => order.status === "PENDING_PAYMENT").length;
+    const activeOrders = data.orders.filter((order) => order.status !== "DELIVERED" && order.status !== "CANCELLED").length;
+    const recentOrderValue = data.orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
 
     return (
-        <div className="space-y-8 pb-10">
-
-            {/* ================================================================== */}
-            {/* HEADER                                                             */}
-            {/* ================================================================== */}
-
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-
-                <PageHeader
-                    title="Dashboard"
-                    subtitle="Resumo da atividade da plataforma."
-                />
-
+        <div className="space-y-7 pb-10">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <PageHeader title="Dashboard" subtitle="Uma visão geral do que está a acontecer na Momentos em Flor." />
                 <button
                     type="button"
-                    onClick={
-                        loadDashboard
-                    }
-                    className="
-                        inline-flex
-                        items-center
-                        justify-center
-                        gap-2
-                        rounded-2xl
-                        border
-                        border-gray-200
-                        bg-white
-                        px-4
-                        py-2.5
-                        text-sm
-                        font-medium
-                        text-gray-600
-                        shadow-sm
-                        transition
-                        hover:bg-gray-50
-                    "
+                    onClick={() => void loadDashboard(true)}
+                    disabled={loading || refreshing}
+                    className="inline-flex h-11 items-center justify-center gap-2 self-start rounded-xl border border-[#E2E6DD] bg-white px-4 text-sm font-semibold text-[#46523C] transition hover:bg-[#F5F7F2] disabled:opacity-60 sm:self-auto"
                 >
-                    <RefreshCw size={16} />
-                    Atualizar
+                    <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+                    Atualizar dados
                 </button>
-
             </div>
 
-            {/* ================================================================== */}
-            {/* METRICS                                                            */}
-            {/* ================================================================== */}
-
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-
-                <MetricCard
-                    title="Encomendas"
-                    value={
-                        orders.length
-                    }
-                    subtitle="Total registado"
-                    icon={ShoppingCart}
-                />
-
-                <MetricCard
-                    title="Por atribuir"
-                    value={
-                        metrics.pending
-                    }
-                    subtitle="A aguardar florista"
-                    icon={Clock3}
-                    color="#D97706"
-                />
-
-                <MetricCard
-                    title="Em andamento"
-                    value={
-                        metrics.inProgress
-                    }
-                    subtitle="A decorrer"
-                    icon={Truck}
-                    color="#6366F1"
-                />
-
-                <MetricCard
-                    title="Receita"
-                    value={formatCurrency(
-                        metrics.revenue,
-                    )}
-                    subtitle="Não canceladas"
-                    icon={Euro}
-                />
-
-            </div>
-
-            {/* ================================================================== */}
-            {/* RECENT ORDERS                                                      */}
-            {/* ================================================================== */}
-
-            <SectionCard>
-
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
-                    <div>
-
-                        <h2 className="text-2xl font-bold text-[#2F3B2A]">
-                            Encomendas recentes
-                        </h2>
-
-                        <p className="mt-1 text-sm text-gray-500">
-                            Acompanhe rapidamente as últimas encomendas.
-                        </p>
-
+            <section className="relative isolate overflow-hidden rounded-[28px] bg-[#35412F] px-6 py-7 text-white shadow-sm sm:px-9 sm:py-9">
+                <div className="pointer-events-none absolute -right-10 -top-24 -z-10 h-72 w-72 rounded-full border-[1px] border-white/10" />
+                <div className="pointer-events-none absolute -right-1 -top-14 -z-10 h-52 w-52 rounded-full border-[1px] border-white/10" />
+                <div className="pointer-events-none absolute bottom-[-95px] right-[20%] -z-10 h-52 w-52 rounded-full bg-[#AAB99A]/15 blur-2xl" />
+                <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
+                    <div className="max-w-2xl">
+                        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/85">
+                            <Sparkles size={14} /> O teu espaço de gestão
+                        </div>
+                        <h2 className="text-3xl font-medium tracking-tight sm:text-4xl">{greeting()}! <span className="text-[#D6DEC8]">Vamos fazer acontecer.</span></h2>
+                        <p className="mt-3 max-w-xl text-sm leading-6 text-white/70 sm:text-base">Acompanha as encomendas, mantém o catálogo organizado e garante que cada momento chega com flores.</p>
                     </div>
-
-                    <Link
-                        href="/admin/orders"
-                        className="
-                            inline-flex
-                            items-center
-                            gap-2
-                            text-sm
-                            font-semibold
-                            text-[#55624A]
-                            transition
-                            hover:gap-3
-                        "
-                    >
-                        Ver todas
-                        <ArrowRight
-                            size={17}
-                        />
-                    </Link>
-
+                    <div className="flex flex-wrap gap-3">
+                        <Link href="/admin/orders" className="inline-flex items-center gap-2 rounded-xl bg-[#D6DEC8] px-4 py-3 text-sm font-semibold text-[#2F3B2A] transition hover:bg-white">
+                            <ShoppingBag size={17} /> Ver encomendas <ArrowRight size={16} />
+                        </Link>
+                        <Link href="/admin/products/new" className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/15">
+                            <Plus size={17} /> Novo produto
+                        </Link>
+                    </div>
                 </div>
+            </section>
 
-                <div className="mt-7 space-y-4">
+            {error && (
+                <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-800 sm:flex-row sm:items-center sm:justify-between">
+                    <span>{error}</span>
+                    <button type="button" onClick={() => void loadDashboard()} className="font-semibold underline underline-offset-4">Tentar novamente</button>
+                </div>
+            )}
 
-                    {recentOrders.length ===
-                    0 ? (
-                        <div className="rounded-2xl border border-dashed border-gray-200 p-12 text-center">
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <MetricCard title="Total de encomendas" value={loading ? "—" : data.totalOrders.toLocaleString("pt-PT")} detail="Encomendas registadas" icon={<ShoppingBag size={19} />} accent="sage" href="/admin/orders" loading={loading} />
+                <MetricCard title="Produtos no catálogo" value={loading ? "—" : data.totalProducts.toLocaleString("pt-PT")} detail="Produtos disponíveis para gerir" icon={<Package size={19} />} accent="sand" href="/admin/products" loading={loading} />
+                <MetricCard title="Por acompanhar" value={loading ? "—" : activeOrders.toString()} detail="Nas 8 encomendas mais recentes" icon={<Truck size={19} />} accent="blue" href="/admin/orders" loading={loading} />
+                <MetricCard title="À espera de floristas" value={loading ? "—" : awaitingFlorists.toString()} detail="Nas 8 encomendas mais recentes" icon={<Store size={19} />} accent="amber" href="/admin/orders" loading={loading} />
+            </section>
 
-                            <ShoppingCart
-                                size={34}
-                                className="mx-auto text-gray-300"
-                            />
-
-                            <p className="mt-3 font-medium text-gray-600">
-                                Ainda não existem encomendas.
-                            </p>
-
+            <section className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.85fr)]">
+                <div className="overflow-hidden rounded-[24px] border border-[#E7EAE2] bg-white shadow-[0_4px_24px_rgba(47,59,42,0.035)]">
+                    <div className="flex flex-col gap-3 border-b border-[#EEF0EB] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                        <div>
+                            <h3 className="text-base font-semibold text-[#2F3B2A]">Encomendas recentes</h3>
+                            <p className="mt-1 text-sm text-[#858D7F]">As últimas entradas na plataforma</p>
+                        </div>
+                        <Link href="/admin/orders" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#55624A] transition hover:text-[#2F3B2A]">Todas as encomendas <ArrowRight size={15} /></Link>
+                    </div>
+                    {loading ? (
+                        <div className="space-y-4 p-6">{[1, 2, 3, 4].map((item) => <div key={item} className="h-14 animate-pulse rounded-xl bg-[#F5F7F2]" />)}</div>
+                    ) : data.orders.length === 0 ? (
+                        <div className="flex flex-col items-center px-6 py-14 text-center">
+                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F3F5EE] text-[#69775D]"><ShoppingBag size={24} /></div>
+                            <p className="mt-4 font-semibold text-[#2F3B2A]">Ainda não há encomendas</p>
+                            <p className="mt-1 text-sm text-[#858D7F]">Quando chegarem novas encomendas, aparecem aqui.</p>
                         </div>
                     ) : (
-                        recentOrders.map(
-                            (order) => {
-                                const status =
-                                    statusConfig[
-                                        order.status
-                                    ];
-
-                                return (
-                                    <Link
-                                        key={
-                                            order.id
-                                        }
-                                        href={`/admin/orders/${order.id}`}
-                                        className="
-                                            group
-                                            block
-                                            rounded-3xl
-                                            border
-                                            border-gray-100
-                                            bg-white
-                                            p-6
-                                            transition
-                                            hover:border-[#D6DEC8]
-                                            hover:bg-[#FAFBF8]
-                                            hover:shadow-sm
-                                        "
-                                    >
-
-                                        <div className="grid gap-6 lg:grid-cols-[1fr_auto_auto] lg:items-center">
-
-                                            {/* ORDER */}
-
-                                            <div className="min-w-0">
-
-                                                <div className="flex flex-wrap items-center gap-3">
-
-                                                    <span className="text-lg font-bold text-[#2F3B2A]">
-                                                        #
-                                                        {
-                                                            order.orderNumber
-                                                        }
-                                                    </span>
-
-                                                    <span
-                                                        className={`
-                                                            inline-flex
-                                                            items-center
-                                                            gap-2
-                                                            rounded-full
-                                                            px-3
-                                                            py-1.5
-                                                            text-xs
-                                                            font-semibold
-                                                            ${status.className}
-                                                        `}
-                                                    >
-                                                        <span
-                                                            className={`
-                                                                h-1.5
-                                                                w-1.5
-                                                                rounded-full
-                                                                ${status.dotClassName}
-                                                            `}
-                                                        />
-
-                                                        {
-                                                            status.label
-                                                        }
-                                                    </span>
-
-                                                </div>
-
-                                                <p className="mt-2 text-sm font-medium text-gray-700">
-                                                    {
-                                                        getCustomerName(
-                                                            order,
-                                                        )
-                                                    }
-                                                </p>
-
-                                                <p className="mt-1 text-xs text-gray-400">
-                                                    Criada em{" "}
-                                                    {
-                                                        formatDate(
-                                                            order.createdAt,
-                                                        )
-                                                    }
-                                                </p>
-
-                                            </div>
-
-                                            {/* DELIVERY */}
-
-                                            <div className="flex items-center gap-3 rounded-2xl bg-[#F5F7F2] px-5 py-3 lg:min-w-[230px]">
-
-                                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#55624A]">
-                                                    <CalendarDays
-                                                        size={19}
-                                                    />
-                                                </div>
-
-                                                <div>
-
-                                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                                                        Entrega
-                                                    </p>
-
-                                                    <p className="mt-0.5 text-sm font-semibold text-[#2F3B2A]">
-                                                        {
-                                                            formatDate(
-                                                                order.deliveryDate,
-                                                            )
-                                                        }
-                                                    </p>
-
-                                                    <p className="text-xs text-gray-500">
-                                                        {
-                                                            getTimeSlotLabel(
-                                                                order.deliveryTimeSlot,
-                                                            )
-                                                        }
-                                                    </p>
-
-                                                </div>
-
-                                            </div>
-
-                                            {/* TOTAL */}
-
-                                            <div className="flex items-center justify-between gap-6 border-t border-gray-100 pt-4 lg:border-0 lg:pt-0">
-
-                                                <div>
-
-                                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                                                        Total
-                                                    </p>
-
-                                                    <p className="mt-1 text-xl font-bold text-[#2F3B2A]">
-                                                        {formatCurrency(
-                                                            Number(
-                                                                order.total,
-                                                            ),
-                                                        )}
-                                                    </p>
-
-                                                </div>
-
-                                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F5F7F2] text-[#55624A] transition group-hover:bg-[#D6DEC8]">
-
-                                                    <ArrowRight
-                                                        size={18}
-                                                        className="transition group-hover:translate-x-0.5"
-                                                    />
-
-                                                </div>
-
-                                            </div>
-
-                                        </div>
-
-                                    </Link>
-                                );
-                            },
-                        )
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[620px] text-left">
+                                <thead><tr className="bg-[#FAFBF8] text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8B9385]"><th className="px-6 py-3.5">Encomenda</th><th className="px-4 py-3.5">Cliente</th><th className="px-4 py-3.5">Estado</th><th className="px-4 py-3.5">Total</th><th className="px-6 py-3.5 text-right">Data</th></tr></thead>
+                                <tbody>
+                                    {data.orders.map((order) => {
+                                        const status = STATUS_CONFIG[order.status];
+                                        return <tr key={order.id} className="border-t border-[#F0F2ED] transition hover:bg-[#FCFDFB]">
+                                            <td className="px-6 py-4"><Link href={`/admin/orders/${order.id}`} className="font-semibold text-[#35412F] hover:underline">{order.orderNumber}</Link></td>
+                                            <td className="px-4 py-4"><p className="max-w-[180px] truncate text-sm font-medium text-[#3D4637]">{order.customerFirstName} {order.customerLastName}</p><p className="mt-0.5 max-w-[180px] truncate text-xs text-[#969D91]">{order.customerEmail}</p></td>
+                                            <td className="px-4 py-4"><span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1.5 text-[11px] font-semibold ${status.className}`}><span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />{status.label}</span></td>
+                                            <td className="px-4 py-4 text-sm font-semibold tabular-nums text-[#35412F]">{formatPrice(order.total)}</td>
+                                            <td className="px-6 py-4 text-right text-xs text-[#858D7F]">{formatDate(order.createdAt)}</td>
+                                        </tr>;
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
-
+                    {!loading && data.orders.length > 0 && <div className="flex items-center justify-between border-t border-[#EEF0EB] px-6 py-4"><span className="text-xs text-[#92998D]">A mostrar {data.orders.length} encomendas recentes</span><Link href="/admin/orders" className="inline-flex items-center gap-1 text-xs font-semibold text-[#55624A] hover:underline">Abrir gestão <ArrowRight size={14} /></Link></div>}
                 </div>
 
-            </SectionCard>
-
-            {/* ================================================================== */}
-            {/* OPERATIONAL OVERVIEW                                               */}
-            {/* ================================================================== */}
-
-            <div className="grid gap-6 lg:grid-cols-2">
-
-                {/* ORDERS */}
-
-                <SectionCard>
-
-                    <div className="flex items-center gap-3">
-
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F3F5EE] text-[#55624A]">
-                            <ShoppingCart
-                                size={22}
-                            />
+                <div className="space-y-5">
+                    <div className="rounded-[24px] border border-[#E7EAE2] bg-white p-5 shadow-[0_4px_24px_rgba(47,59,42,0.035)] sm:p-6">
+                        <div className="flex items-center justify-between"><div><h3 className="text-base font-semibold text-[#2F3B2A]">Resumo rápido</h3><p className="mt-1 text-sm text-[#858D7F]">Estados nas últimas 8 encomendas</p></div><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#65745A]"><LayoutGrid size={19} /></div></div>
+                        <div className="mt-5 space-y-4">
+                            <StatusSummary label="Pagamento pendente" count={pendingPayment} total={data.orders.length} color="bg-amber-400" loading={loading} />
+                            <StatusSummary label="À espera de floristas" count={awaitingFlorists} total={data.orders.length} color="bg-yellow-400" loading={loading} />
+                            <StatusSummary label="Em curso" count={data.orders.filter((order) => order.status === "ASSIGNED" || order.status === "IN_PRODUCTION" || order.status === "READY_FOR_DELIVERY").length} total={data.orders.length} color="bg-[#849574]" loading={loading} />
+                            <StatusSummary label="Entregues" count={data.orders.filter((order) => order.status === "DELIVERED").length} total={data.orders.length} color="bg-emerald-500" loading={loading} />
                         </div>
-
-                        <div>
-
-                            <h2 className="text-xl font-bold text-[#2F3B2A]">
-                                Operação
-                            </h2>
-
-                            <p className="text-sm text-gray-500">
-                                Estado das encomendas
-                            </p>
-
-                        </div>
-
+                        <div className="mt-5 rounded-2xl bg-[#F7F8F4] p-4"><p className="text-xs font-medium text-[#858D7F]">Valor total das encomendas recentes</p><p className="mt-1 text-2xl font-semibold tracking-tight text-[#35412F]">{loading ? "—" : formatPrice(recentOrderValue)}</p><p className="mt-1 text-xs text-[#92998D]">Soma das encomendas listadas acima; não representa faturação global.</p></div>
                     </div>
 
-                    <div className="mt-6 grid gap-3 sm:grid-cols-2">
-
-                        <OperationalItem
-                            label="Por atribuir"
-                            value={
-                                metrics.pending
-                            }
-                            icon={Clock3}
-                            className="bg-amber-50 text-amber-700"
-                        />
-
-                        <OperationalItem
-                            label="Em andamento"
-                            value={
-                                metrics.inProgress
-                            }
-                            icon={Truck}
-                            className="bg-indigo-50 text-indigo-700"
-                        />
-
-                        <OperationalItem
-                            label="Entregues"
-                            value={
-                                metrics.delivered
-                            }
-                            icon={
-                                CheckCircle2
-                            }
-                            className="bg-green-50 text-green-700"
-                        />
-
-                        <Link
-                            href="/admin/orders"
-                            className="
-                                flex
-                                items-center
-                                justify-between
-                                rounded-2xl
-                                border
-                                border-gray-100
-                                p-4
-                                transition
-                                hover:border-[#D6DEC8]
-                                hover:bg-[#FAFBF8]
-                            "
-                        >
-
-                            <span className="text-sm font-medium text-gray-600">
-                                Ver encomendas
-                            </span>
-
-                            <ArrowRight
-                                size={17}
-                                className="text-[#55624A]"
-                            />
-
-                        </Link>
-
-                    </div>
-
-                </SectionCard>
-
-                {/* FLORISTS */}
-
-                <SectionCard>
-
-                    <div className="flex items-center gap-3">
-
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F3F5EE] text-[#55624A]">
-                            <Flower2
-                                size={22}
-                            />
+                    <div className="rounded-[24px] border border-[#E7EAE2] bg-[#F8F9F5] p-5 sm:p-6">
+                        <div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-[#65745A] shadow-sm"><Flower2 size={21} /></div><div><h3 className="font-semibold text-[#2F3B2A]">Atalhos de gestão</h3><p className="mt-0.5 text-xs text-[#858D7F]">Acede rapidamente às áreas principais</p></div></div>
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+                            <QuickLink href="/admin/products" icon={<Package size={17} />} label="Produtos" />
+                            <QuickLink href="/admin/florists" icon={<Store size={17} />} label="Floristas" />
+                            <QuickLink href="/admin/customers" icon={<Users size={17} />} label="Clientes" />
+                            <QuickLink href="/admin/orders" icon={<ShoppingBag size={17} />} label="Encomendas" />
                         </div>
-
-                        <div>
-
-                            <h2 className="text-xl font-bold text-[#2F3B2A]">
-                                Rede de floristas
-                            </h2>
-
-                            <p className="text-sm text-gray-500">
-                                Estado da rede parceira
-                            </p>
-
-                        </div>
-
                     </div>
+                </div>
+            </section>
 
-                    <div className="mt-6 space-y-3">
-
-                        <FloristMetric
-                            label="Total de floristas"
-                            value={
-                                florists.length
-                            }
-                        />
-
-                        <FloristMetric
-                            label="Floristas ativas"
-                            value={
-                                activeFlorists
-                            }
-                        />
-
-                        <FloristMetric
-                            label="A aceitar encomendas"
-                            value={
-                                acceptingFlorists
-                            }
-                            highlight
-                        />
-
-                    </div>
-
-                    <Link
-                        href="/admin/florists"
-                        className="
-                            mt-5
-                            flex
-                            items-center
-                            justify-between
-                            rounded-2xl
-                            bg-[#F5F7F2]
-                            p-4
-                            text-sm
-                            font-medium
-                            text-[#55624A]
-                            transition
-                            hover:bg-[#E9EDE3]
-                        "
-                    >
-                        Gerir floristas
-
-                        <ArrowRight
-                            size={17}
-                        />
-                    </Link>
-
-                </SectionCard>
-
+            <div className="flex flex-col gap-2 border-t border-[#E7EAE2] pt-5 text-xs text-[#92998D] sm:flex-row sm:items-center sm:justify-between">
+                <span>Momentos em Flor · Painel de administração</span>
+                <span>Dados carregados a partir da API</span>
             </div>
-
-            {/* ================================================================== */}
-            {/* QUICK ACTIONS                                                      */}
-            {/* ================================================================== */}
-
-            <SectionCard>
-
-                <div>
-
-                    <h2 className="text-xl font-bold text-[#2F3B2A]">
-                        Acesso rápido
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-500">
-                        Aceda rapidamente às principais áreas.
-                    </p>
-
-                </div>
-
-                <div className="mt-6 grid gap-4 md:grid-cols-3">
-
-                    <QuickAction
-                        href="/admin/orders"
-                        icon={
-                            ShoppingCart
-                        }
-                        title="Encomendas"
-                        description="Consultar e gerir encomendas."
-                    />
-
-                    <QuickAction
-                        href="/admin/florists"
-                        icon={Flower2}
-                        title="Floristas"
-                        description="Gerir a rede de floristas."
-                    />
-
-                    <QuickAction
-                        href="/admin/users"
-                        icon={Package}
-                        title="Utilizadores"
-                        description="Gerir clientes e administradores."
-                    />
-
-                </div>
-
-            </SectionCard>
-
         </div>
     );
 }
 
-/* ========================================================================== */
-/* OPERATIONAL ITEM                                                           */
-/* ========================================================================== */
-
-type OperationalItemProps = {
-    label: string;
-    value: number;
-    icon: React.ElementType;
-    className: string;
-};
-
-function OperationalItem({
-    label,
-    value,
-    icon: Icon,
-    className,
-}: OperationalItemProps) {
-    return (
-        <div className="flex items-center justify-between rounded-2xl border border-gray-100 p-4">
-
-            <div className="flex items-center gap-3">
-
-                <div
-                    className={`
-                        flex
-                        h-10
-                        w-10
-                        items-center
-                        justify-center
-                        rounded-xl
-                        ${className}
-                    `}
-                >
-                    <Icon size={18} />
-                </div>
-
-                <span className="text-sm font-medium text-gray-600">
-                    {label}
-                </span>
-
-            </div>
-
-            <span className="text-lg font-bold text-[#2F3B2A]">
-                {value}
-            </span>
-
-        </div>
-    );
+function MetricCard({ title, value, detail, icon, accent, href, loading }: { title: string; value: string; detail: string; icon: React.ReactNode; accent: "sage" | "sand" | "blue" | "amber"; href: string; loading: boolean }) {
+    const accents = {
+        sage: "bg-[#F0F3EA] text-[#5C6B50]",
+        sand: "bg-[#F8F1E7] text-[#9B7949]",
+        blue: "bg-[#EDF4F6] text-[#547B86]",
+        amber: "bg-[#FBF3E4] text-[#A47C37]",
+    };
+    return <Link href={href} className="group rounded-[22px] border border-[#E7EAE2] bg-white p-5 shadow-[0_4px_24px_rgba(47,59,42,0.025)] transition hover:-translate-y-0.5 hover:shadow-md sm:p-6">
+        <div className="flex items-start justify-between gap-3"><div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${accents[accent]}`}>{icon}</div><ArrowUpRight size={17} className="text-[#B1B7AB] transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[#55624A]" /></div>
+        <p className="mt-5 text-sm font-medium text-[#858D7F]">{title}</p>
+        <p className="mt-1.5 text-3xl font-semibold tracking-tight text-[#2F3B2A]">{loading ? <span className="inline-block h-9 w-16 animate-pulse rounded-lg bg-[#F0F2ED]" /> : value}</p>
+        <p className="mt-2 text-xs text-[#92998D]">{detail}</p>
+    </Link>;
 }
 
-/* ========================================================================== */
-/* FLORIST METRIC                                                             */
-/* ========================================================================== */
-
-type FloristMetricProps = {
-    label: string;
-    value: number;
-    highlight?: boolean;
-};
-
-function FloristMetric({
-    label,
-    value,
-    highlight = false,
-}: FloristMetricProps) {
-    return (
-        <div className="flex items-center justify-between rounded-2xl border border-gray-100 p-4">
-
-            <span className="text-sm font-medium text-gray-600">
-                {label}
-            </span>
-
-            <span
-                className={`
-                    text-lg
-                    font-bold
-                    ${
-                        highlight
-                            ? "text-green-600"
-                            : "text-[#2F3B2A]"
-                    }
-                `}
-            >
-                {value}
-            </span>
-
-        </div>
-    );
+function StatusSummary({ label, count, total, color, loading }: { label: string; count: number; total: number; color: string; loading: boolean }) {
+    const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+    return <div>
+        <div className="mb-2 flex items-center justify-between gap-3"><span className="text-sm text-[#596252]">{label}</span><span className="text-xs font-semibold tabular-nums text-[#35412F]">{loading ? "—" : count}</span></div>
+        <div className="h-2 overflow-hidden rounded-full bg-[#F0F2ED]"><div className={`h-full rounded-full transition-all ${color}`} style={{ width: loading ? "0%" : `${percentage}%` }} /></div>
+    </div>;
 }
 
-/* ========================================================================== */
-/* QUICK ACTION                                                               */
-/* ========================================================================== */
-
-type QuickActionProps = {
-    href: string;
-    icon: React.ElementType;
-    title: string;
-    description: string;
-};
-
-function QuickAction({
-    href,
-    icon: Icon,
-    title,
-    description,
-}: QuickActionProps) {
-    return (
-        <Link
-            href={href}
-            className="
-                group
-                rounded-2xl
-                border
-                border-gray-100
-                bg-[#FAFBF8]
-                p-5
-                transition
-                hover:border-[#D6DEC8]
-                hover:bg-[#F5F7F2]
-            "
-        >
-
-            <div className="flex items-center justify-between">
-
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-[#55624A] shadow-sm">
-                    <Icon size={21} />
-                </div>
-
-                <ArrowRight
-                    size={18}
-                    className="
-                        text-gray-300
-                        transition
-                        group-hover:translate-x-1
-                        group-hover:text-[#55624A]
-                    "
-                />
-
-            </div>
-
-            <h3 className="mt-5 font-semibold text-[#2F3B2A]">
-                {title}
-            </h3>
-
-            <p className="mt-1 text-sm text-gray-500">
-                {description}
-            </p>
-
-        </Link>
-    );
+function QuickLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
+    return <Link href={href} className="group flex items-center justify-between gap-2 rounded-xl border border-[#E7EAE2] bg-white px-3.5 py-3 text-sm font-medium text-[#4B5644] transition hover:border-[#CDD5C4] hover:bg-white hover:text-[#2F3B2A]"><span className="flex items-center gap-2.5">{icon}{label}</span><ArrowDownRight size={15} className="text-[#A6AEA0] transition group-hover:translate-x-0.5 group-hover:translate-y-0.5" /></Link>;
 }

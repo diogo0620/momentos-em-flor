@@ -1,25 +1,27 @@
+
+export interface PaginationMetadata {
+  page: number;
+  pageSize: number;
+  total: number;
+  pages: number;
+}
+
+export interface PaginatedResponse<T> extends PaginationMetadata {
+  items: T[];
+}
+
 export class ApiResponse {
-  static success<T>(data: T, message?: string) {
-    return {
-      success: true,
-      message,
-      data,
-    };
+  static success<T>(data: T): T {
+    return data;
   }
 
   static paginated<T>(
-    data: T[],
-    pagination: {
-      page: number;
-      pageSize: number;
-      total: number;
-      pages: number;
-    },
-  ) {
+    items: T[],
+    pagination: PaginationMetadata,
+  ): PaginatedResponse<T> {
     return {
-      success: true,
-      data,
-      pagination,
+      items,
+      ...pagination,
     };
   }
 }

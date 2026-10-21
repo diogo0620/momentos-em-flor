@@ -5,5 +5,5 @@ export class UpdatedResponseDto {
         example: 1,
         description: 'ID of the upated resource',
     })
-    id: number;
+    id!: number;
 }

@@ -1,13 +1,12 @@
+
 "use client";
 
 import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import {
-    useCallback,
-    useEffect,
-    useState,
-} from "react";
-
-import {
+    ArrowDown,
+    ArrowUp,
+    ArrowUpDown,
     ChevronLeft,
     ChevronRight,
     FolderTree,
@@ -19,84 +18,67 @@ import {
 
 import PageHeader from "@/components/admin/common/PageHeader";
 import SearchInput from "@/components/admin/common/SearchInput";
+import StatusBadge from "@/components/admin/common/StatusBadge";
 import DataTable from "@/components/admin/DataTable";
 
-import {
-    getAdminCategories,
-    type Category,
-    type GetCategoriesParams,
-} from "@/lib/api/categories";
+import type { AdminCategoryList } from "@/types/categories/admin/admin-category-list";
+import type { PaginationParams } from "@/lib/api/common/base-api";
+import { adminCategoriesApi } from "@/lib/api/categories/admin-categories";
 
 const PAGE_SIZE = 10;
 
+type SortOrder = "asc" | "desc";
+
+/* ========================================================================== */
+/* PAGE                                                                       */
+/* ========================================================================== */
+
 export default function AdminCategoriesPage() {
-    const [categories, setCategories] =
-        useState<Category[]>([]);
+    const [categories, setCategories] = useState<AdminCategoryList[]>([]);
 
-    const [pagination, setPagination] =
-        useState({
-            page: 1,
-            pageSize: PAGE_SIZE,
-            total: 0,
-            pages: 0,
-        });
+    const [page, setPage] = useState(1);
+    const [pages, setPages] = useState(0);
+    const [total, setTotal] = useState(0);
 
-    const [search, setSearch] =
-        useState("");
+    const [searchInput, setSearchInput] = useState("");
+    const [search, setSearch] = useState("");
 
-    const [searchInput, setSearchInput] =
-        useState("");
+    const [activeFilter, setActiveFilter] = useState("");
 
-    const [sort, setSort] =
-        useState("name");
+    const [sort, setSort] = useState("name");
+    const [order, setOrder] = useState<SortOrder>("asc");
 
-    const [order, setOrder] =
-        useState<"asc" | "desc">("asc");
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const [isLoading, setIsLoading] =
-        useState(true);
-
-    const [error, setError] =
-        useState<string | null>(null);
+    /* ====================================================================== */
+    /* LOAD CATEGORIES                                                        */
+    /* ====================================================================== */
 
     const loadCategories = useCallback(
-        async (
-            params: GetCategoriesParams = {},
-        ) => {
+        async (requestedPage = 1) => {
             try {
                 setIsLoading(true);
                 setError(null);
 
-                const response =
-                    await getAdminCategories({
-                        page:
-                            params.page ??
-                            pagination.page,
+                const params: PaginationParams = {
+                    page: requestedPage,
+                    pageSize: PAGE_SIZE,
+                    search: search || undefined,
+                    sort,
+                    order,
+                };
 
-                        pageSize:
-                            params.pageSize ??
-                            pagination.pageSize,
+                if (activeFilter !== "") {
+                    params.active = activeFilter === "true";
+                }
 
-                        search:
-                            params.search ??
-                            search,
+                const response = await adminCategoriesApi.getAll(params);
 
-                        sort:
-                            params.sort ??
-                            sort,
-
-                        order:
-                            params.order ??
-                            order,
-                    });
-
-                setCategories(
-                    response.data,
-                );
-
-                setPagination(
-                    response.pagination,
-                );
+                setCategories(response.items);
+                setPage(response.page);
+                setPages(response.pages);
+                setTotal(response.total);
             } catch (err) {
                 setError(
                     err instanceof Error
@@ -107,110 +89,72 @@ export default function AdminCategoriesPage() {
                 setIsLoading(false);
             }
         },
-        [
-            pagination.page,
-            pagination.pageSize,
-            search,
-            sort,
-            order,
-        ],
+        [search, activeFilter, sort, order],
     );
 
+    /* ====================================================================== */
+    /* EFFECTS                                                                */
+    /* ====================================================================== */
+
     useEffect(() => {
-        loadCategories({
-            page: 1,
-        });
-    }, [
-        search,
-        sort,
-        order,
-    ]);
+        void loadCategories(1);
+    }, [loadCategories]);
 
-    function handleSearch(
-        value: string,
-    ) {
-        setSearchInput(value);
-    }
+    /* ====================================================================== */
+    /* SEARCH                                                                 */
+    /* ====================================================================== */
 
-    function submitSearch(
-        event: React.FormEvent,
-    ) {
+    function handleSearch(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-
-        setSearch(
-            searchInput.trim(),
-        );
+        setSearch(searchInput.trim());
     }
 
-    function handleSort(
-        field: string,
-    ) {
+    /* ====================================================================== */
+    /* FILTERS                                                                */
+    /* ====================================================================== */
+
+    function handleResetFilters() {
+        setSearchInput("");
+        setSearch("");
+        setActiveFilter("");
+    }
+
+    /* ====================================================================== */
+    /* SORT                                                                   */
+    /* ====================================================================== */
+
+    function handleSort(field: string) {
         if (sort === field) {
-            setOrder(
-                (current) =>
-                    current === "asc"
-                        ? "desc"
-                        : "asc",
+            setOrder((current) =>
+                current === "asc" ? "desc" : "asc",
             );
-
-            return;
+        } else {
+            setSort(field);
+            setOrder("asc");
         }
-
-        setSort(field);
-        setOrder("asc");
     }
 
-    function goToPage(
-        page: number,
-    ) {
-        if (
-            page < 1 ||
-            page > pagination.pages
-        ) {
-            return;
-        }
-
-        loadCategories({
-            page,
-        });
-    }
-
-    const activeCategories =
-        categories.filter(
-            (category) =>
-                category.active,
-        ).length;
-
-    const inactiveCategories =
-        categories.length -
-        activeCategories;
+    /* ====================================================================== */
+    /* RENDER                                                                 */
+    /* ====================================================================== */
 
     return (
-        <div className="space-y-8 pb-10">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-6 pb-10">
+            {/* HEADER */}
+
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <PageHeader
                     title="Categorias"
-                    subtitle="Gere as categorias disponíveis para organizar os produtos da plataforma."
+                    subtitle="Gere as categorias utilizadas para organizar os produtos do Momentos em Flor."
                 />
 
                 <Link
                     href="/admin/categories/new"
                     className="
-                        inline-flex
-                        items-center
-                        justify-center
-                        gap-2
-                        rounded-2xl
-                        bg-[#55624A]
-                        px-5
-                        py-3
-                        text-sm
-                        font-semibold
-                        text-white
-                        shadow-sm
-                        transition
-                        hover:bg-[#46523C]
-                        hover:shadow-md
+                        inline-flex items-center justify-center gap-2
+                        rounded-2xl bg-[#55624A] px-5 py-3
+                        text-sm font-semibold text-white shadow-sm
+                        transition hover:bg-[#46523C]
                     "
                 >
                     <Plus size={18} />
@@ -218,189 +162,114 @@ export default function AdminCategoriesPage() {
                 </Link>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-                <SummaryCard
-                    icon={FolderTree}
-                    label="Total de categorias"
-                    value={
-                        pagination.total
-                    }
-                    description="Categorias existentes"
-                />
+            {/* SEARCH AND FILTERS */}
 
-                <SummaryCard
-                    label="Categorias ativas"
-                    value={
-                        activeCategories
-                    }
-                    description="Nesta página"
-                    valueClassName="text-green-700"
-                />
-
-                <SummaryCard
-                    label="Categorias inativas"
-                    value={
-                        inactiveCategories
-                    }
-                    description="Nesta página"
-                    valueClassName="text-gray-500"
-                />
-            </div>
-
-            <div className="rounded-3xl bg-white p-5 shadow-sm sm:p-6">
+            <section className="rounded-3xl bg-white p-5 shadow-sm sm:p-6">
                 <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]">
-                        <SlidersHorizontal
-                            size={19}
-                        />
+                        <SlidersHorizontal size={19} />
                     </div>
 
                     <div>
                         <h2 className="font-semibold text-[#2F3B2A]">
-                            Pesquisar e ordenar
+                            Pesquisa e filtros
                         </h2>
 
                         <p className="text-xs text-gray-400">
-                            Encontre rapidamente a
-                            categoria que procura.
+                            Encontra categorias pelo nome, slug ou estado.
                         </p>
                     </div>
                 </div>
 
                 <form
-                    onSubmit={
-                        submitSearch
-                    }
-                    className="mt-5 flex flex-col gap-3 lg:flex-row"
+                    onSubmit={handleSearch}
+                    className="mt-5 space-y-4"
                 >
-                    <div className="flex-1">
-                        <SearchInput
-                            value={
-                                searchInput
-                            }
-                            onChange={
-                                handleSearch
-                            }
-                            placeholder="Pesquisar por nome ou slug..."
-                        />
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                        <div className="flex-1">
+                            <SearchInput
+                                value={searchInput}
+                                onChange={setSearchInput}
+                                placeholder="Pesquisar categorias..."
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            className="
+                                inline-flex items-center justify-center gap-2
+                                rounded-2xl bg-[#55624A] px-5 py-3
+                                text-sm font-semibold text-white
+                                transition hover:bg-[#46523C]
+                            "
+                        >
+                            <Search size={17} />
+                            Pesquisar
+                        </button>
                     </div>
 
-                    <select
-                        value={sort}
-                        onChange={(event) =>
-                            handleSort(
-                                event.target.value,
-                            )
-                        }
-                        className="
-                            rounded-2xl
-                            border
-                            border-gray-200
-                            bg-white
-                            px-4
-                            py-3
-                            text-sm
-                            text-gray-700
-                            outline-none
-                            transition
-                            focus:border-[#55624A]
-                            focus:ring-4
-                            focus:ring-[#55624A]/10
-                        "
-                    >
-                        <option value="name">
-                            Ordenar por nome
-                        </option>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        <FilterSelect
+                            label="Estado"
+                            value={activeFilter}
+                            onChange={setActiveFilter}
+                        >
+                            <option value="">Todos os estados</option>
+                            <option value="true">Ativas</option>
+                            <option value="false">Inativas</option>
+                        </FilterSelect>
+                    </div>
 
-                        <option value="slug">
-                            Ordenar por slug
-                        </option>
-
-                        <option value="createdAt">
-                            Ordenar por data
-                        </option>
-
-                        <option value="active">
-                            Ordenar por estado
-                        </option>
-                    </select>
-
-                    <button
-                        type="submit"
-                        className="
-                            inline-flex
-                            items-center
-                            justify-center
-                            gap-2
-                            rounded-2xl
-                            bg-[#55624A]
-                            px-5
-                            py-3
-                            text-sm
-                            font-semibold
-                            text-white
-                            transition
-                            hover:bg-[#46523C]
-                        "
-                    >
-                        <Search size={17} />
-                        Pesquisar
-                    </button>
+                    <div className="flex justify-end">
+                        <button
+                            type="button"
+                            onClick={handleResetFilters}
+                            className="text-sm font-medium text-gray-500 transition hover:text-[#55624A]"
+                        >
+                            Limpar filtros
+                        </button>
+                    </div>
                 </form>
-            </div>
+            </section>
+
+            {/* ERROR */}
 
             {error && (
-                <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-sm text-red-600">
-                    {error}
+                <div className="flex flex-col gap-3 rounded-2xl border border-red-100 bg-red-50 p-5 text-sm text-red-600 sm:flex-row sm:items-center sm:justify-between">
+                    <p>{error}</p>
+
+                    <button
+                        type="button"
+                        onClick={() => void loadCategories(page)}
+                        className="font-semibold underline"
+                    >
+                        Tentar novamente
+                    </button>
                 </div>
             )}
+
+            {/* CATEGORIES TABLE */}
 
             <DataTable>
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead>
                             <tr className="border-b border-gray-100 bg-[#FAFBF8] text-left">
-                                <th className="px-6 py-4">
+                                <th className="px-5 py-4">
                                     <SortButton
                                         label="Categoria"
                                         field="name"
-                                        currentSort={
-                                            sort
-                                        }
-                                        order={
-                                            order
-                                        }
-                                        onSort={
-                                            handleSort
-                                        }
+                                        currentSort={sort}
+                                        order={order}
+                                        onSort={handleSort}
                                     />
                                 </th>
 
-                                <th className="px-6 py-4">
-                                    <SortButton
-                                        label="Slug"
-                                        field="slug"
-                                        currentSort={
-                                            sort
-                                        }
-                                        order={
-                                            order
-                                        }
-                                        onSort={
-                                            handleSort
-                                        }
-                                    />
-                                </th>
-
-                                <th className="px-6 py-4 font-semibold text-[#2F3B2A]">
-                                    Descrição
-                                </th>
-
-                                <th className="px-6 py-4 font-semibold text-[#2F3B2A]">
+                                <th className="px-5 py-4 font-semibold text-[#2F3B2A]">
                                     Estado
                                 </th>
 
-                                <th className="px-6 py-4 text-right font-semibold text-[#2F3B2A]">
+                                <th className="px-5 py-4 text-right font-semibold text-[#2F3B2A]">
                                     Ações
                                 </th>
                             </tr>
@@ -409,212 +278,117 @@ export default function AdminCategoriesPage() {
                         <tbody>
                             {isLoading ? (
                                 <LoadingRows />
-                            ) : categories.length ===
-                              0 ? (
-                                <EmptyCategories />
-                            ) : (
-                                categories.map(
-                                    (
-                                        category,
-                                    ) => (
-                                        <CategoryRow
-                                            key={
-                                                category.id
-                                            }
-                                            category={
-                                                category
-                                            }
+                            ) : categories.length === 0 ? (
+                                <tr>
+                                    <td
+                                        colSpan={3}
+                                        className="px-6 py-20 text-center"
+                                    >
+                                        <FolderTree
+                                            size={28}
+                                            className="mx-auto text-[#55624A]"
                                         />
-                                    ),
-                                )
+
+                                        <p className="mt-4 font-semibold text-[#2F3B2A]">
+                                            Nenhuma categoria encontrada
+                                        </p>
+
+                                        <p className="mt-1 text-sm text-gray-400">
+                                            Experimenta alterar a pesquisa ou os filtros.
+                                        </p>
+                                    </td>
+                                </tr>
+                            ) : (
+                                categories.map((category) => (
+                                    <CategoryRow
+                                        key={category.id}
+                                        category={category}
+                                    />
+                                ))
                             )}
                         </tbody>
                     </table>
                 </div>
 
-                {!isLoading &&
-                    pagination.pages >
-                        0 && (
-                        <div className="flex flex-col gap-4 border-t border-gray-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                                <p className="text-sm text-gray-500">
-                                    A mostrar{" "}
-                                    <span className="font-semibold text-gray-700">
-                                        {
-                                            categories.length
-                                        }
-                                    </span>{" "}
-                                    de{" "}
-                                    <span className="font-semibold text-gray-700">
-                                        {
-                                            pagination.total
-                                        }
-                                    </span>{" "}
-                                    categorias
-                                </p>
+                {/* PAGINATION */}
 
-                                <p className="mt-1 text-xs text-gray-400">
-                                    Página{" "}
-                                    {
-                                        pagination.page
-                                    }{" "}
-                                    de{" "}
-                                    {
-                                        pagination.pages
-                                    }
-                                </p>
-                            </div>
+                {!isLoading && pages > 0 && (
+                    <div className="flex flex-col gap-4 border-t border-gray-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm text-gray-500">
+                            A mostrar{" "}
+                            <span className="font-semibold text-gray-700">
+                                {categories.length}
+                            </span>{" "}
+                            de{" "}
+                            <span className="font-semibold text-gray-700">
+                                {total}
+                            </span>{" "}
+                            categorias
+                        </p>
 
-                            <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    disabled={
-                                        pagination.page <=
-                                        1
-                                    }
-                                    onClick={() =>
-                                        goToPage(
-                                            pagination.page -
-                                                1,
-                                        )
-                                    }
-                                    className="
-                                        flex
-                                        h-10
-                                        w-10
-                                        items-center
-                                        justify-center
-                                        rounded-xl
-                                        border
-                                        border-gray-200
-                                        bg-white
-                                        text-gray-600
-                                        transition
-                                        hover:border-[#D6DEC8]
-                                        hover:bg-[#F5F7F2]
-                                        disabled:cursor-not-allowed
-                                        disabled:opacity-40
-                                    "
-                                >
-                                    <ChevronLeft
-                                        size={18}
-                                    />
-                                </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                disabled={page <= 1}
+                                onClick={() => void loadCategories(page - 1)}
+                                aria-label="Página anterior"
+                                className="
+                                    flex h-10 w-10 items-center justify-center
+                                    rounded-xl border border-gray-200 text-gray-600
+                                    transition hover:bg-[#F5F7F2]
+                                    disabled:cursor-not-allowed disabled:opacity-40
+                                "
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
 
-                                <div className="flex h-10 min-w-10 items-center justify-center rounded-xl bg-[#55624A] px-3 text-sm font-semibold text-white">
-                                    {
-                                        pagination.page
-                                    }
-                                </div>
+                            <span className="flex h-10 min-w-10 items-center justify-center rounded-xl bg-[#55624A] px-3 text-sm font-semibold text-white">
+                                {page}
+                            </span>
 
-                                <button
-                                    type="button"
-                                    disabled={
-                                        pagination.page >=
-                                        pagination.pages
-                                    }
-                                    onClick={() =>
-                                        goToPage(
-                                            pagination.page +
-                                                1,
-                                        )
-                                    }
-                                    className="
-                                        flex
-                                        h-10
-                                        w-10
-                                        items-center
-                                        justify-center
-                                        rounded-xl
-                                        border
-                                        border-gray-200
-                                        bg-white
-                                        text-gray-600
-                                        transition
-                                        hover:border-[#D6DEC8]
-                                        hover:bg-[#F5F7F2]
-                                        disabled:cursor-not-allowed
-                                        disabled:opacity-40
-                                    "
-                                >
-                                    <ChevronRight
-                                        size={18}
-                                    />
-                                </button>
-                            </div>
+                            <span className="text-sm text-gray-400">
+                                / {pages}
+                            </span>
+
+                            <button
+                                type="button"
+                                disabled={page >= pages}
+                                onClick={() => void loadCategories(page + 1)}
+                                aria-label="Página seguinte"
+                                className="
+                                    flex h-10 w-10 items-center justify-center
+                                    rounded-xl border border-gray-200 text-gray-600
+                                    transition hover:bg-[#F5F7F2]
+                                    disabled:cursor-not-allowed disabled:opacity-40
+                                "
+                            >
+                                <ChevronRight size={18} />
+                            </button>
                         </div>
-                    )}
+                    </div>
+                )}
             </DataTable>
         </div>
     );
 }
 
-type SummaryCardProps = {
-    icon?: React.ElementType;
-    label: string;
-    value: string | number;
-    description: string;
-    valueClassName?: string;
-};
-
-function SummaryCard({
-    icon: Icon,
-    label,
-    value,
-    description,
-    valueClassName = "text-[#2F3B2A]",
-}: SummaryCardProps) {
-    return (
-        <div className="rounded-3xl bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
-                {Icon && (
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]">
-                        <Icon size={19} />
-                    </div>
-                )}
-
-                <div
-                    className={
-                        Icon
-                            ? "text-right"
-                            : "w-full"
-                    }
-                >
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                        {label}
-                    </p>
-
-                    <p
-                        className={`
-                            mt-2
-                            text-2xl
-                            font-bold
-                            ${valueClassName}
-                        `}
-                    >
-                        {value}
-                    </p>
-
-                    <p className="mt-1 text-xs text-gray-400">
-                        {description}
-                    </p>
-                </div>
-            </div>
-        </div>
-    );
-}
+/* ========================================================================== */
+/* CATEGORY ROW                                                               */
+/* ========================================================================== */
 
 function CategoryRow({
     category,
 }: {
-    category: Category;
+    category: AdminCategoryList;
 }) {
     return (
         <tr className="group border-b border-gray-50 transition hover:bg-[#FAFBF8]">
-            <td className="px-6 py-5">
+            {/* CATEGORY */}
+
+            <td className="px-5 py-5">
                 <div className="flex items-center gap-4">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F3F5EE] text-[#55624A]">
-                        <FolderTree size={20} />
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F3F5EE] text-[#55624A]">
+                        <FolderTree size={21} />
                     </div>
 
                     <div className="min-w-0">
@@ -622,57 +396,33 @@ function CategoryRow({
                             {category.name}
                         </p>
 
-                        <p className="mt-1 text-xs text-gray-400">
-                            #{category.id}
+                        <p className="mt-1 truncate text-xs text-gray-400">
+                            /{category.slug}
                         </p>
                     </div>
                 </div>
             </td>
 
-            <td className="px-6 py-5">
-                <span className="inline-flex rounded-full bg-[#F3F5EE] px-3 py-1.5 text-xs font-medium text-[#55624A]">
-                    /{category.slug}
-                </span>
+            {/* STATUS */}
+
+            <td className="px-5 py-5">
+                <StatusBadge
+                    status={category.active ? "Ativo" : "Inativo"}
+                />
             </td>
 
-            <td className="max-w-md px-6 py-5">
-                <p className="truncate text-sm text-gray-500">
-                    {category.description ||
-                        "Sem descrição"}
-                </p>
-            </td>
+            {/* ACTIONS */}
 
-            <td className="px-6 py-5">
-                {category.active ? (
-                    <span className="inline-flex items-center gap-2 rounded-full border border-green-100 bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700">
-                        <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                        Ativa
-                    </span>
-                ) : (
-                    <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-600">
-                        <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />
-                        Inativa
-                    </span>
-                )}
-            </td>
-
-            <td className="px-6 py-5">
-                <div className="flex items-center justify-end gap-2">
+            <td className="px-5 py-5">
+                <div className="flex items-center justify-end">
                     <Link
                         href={`/admin/categories/${category.id}/edit`}
                         title="Editar categoria"
-                        aria-label="Editar categoria"
+                        aria-label={`Editar ${category.name}`}
                         className="
-                            flex
-                            h-9
-                            w-9
-                            items-center
-                            justify-center
-                            rounded-xl
-                            text-gray-400
-                            transition
-                            hover:bg-[#F3F5EE]
-                            hover:text-[#55624A]
+                            flex h-9 w-9 items-center justify-center
+                            rounded-xl text-gray-400 transition
+                            hover:bg-[#F3F5EE] hover:text-[#55624A]
                         "
                     >
                         <Pencil size={17} />
@@ -683,13 +433,9 @@ function CategoryRow({
     );
 }
 
-type SortButtonProps = {
-    label: string;
-    field: string;
-    currentSort: string;
-    order: "asc" | "desc";
-    onSort: (field: string) => void;
-};
+/* ========================================================================== */
+/* SORT BUTTON                                                                */
+/* ========================================================================== */
 
 function SortButton({
     label,
@@ -697,100 +443,98 @@ function SortButton({
     currentSort,
     order,
     onSort,
-}: SortButtonProps) {
-    const active =
-        currentSort === field;
+}: {
+    label: string;
+    field: string;
+    currentSort: string;
+    order: SortOrder;
+    onSort: (field: string) => void;
+}) {
+    const isActive = currentSort === field;
 
     return (
         <button
             type="button"
-            onClick={() =>
-                onSort(field)
-            }
+            onClick={() => onSort(field)}
             className="
-                inline-flex
-                items-center
-                gap-2
-                font-semibold
-                text-[#2F3B2A]
-                transition
-                hover:text-[#55624A]
+                inline-flex items-center gap-2
+                font-semibold text-[#2F3B2A]
+                transition hover:text-[#55624A]
             "
         >
             {label}
 
-            <span
-                className={`
-                    text-xs
-                    ${
-                        active
-                            ? "text-[#55624A]"
-                            : "text-gray-300"
-                    }
-                `}
-            >
-                {active
-                    ? order === "asc"
-                        ? "↑"
-                        : "↓"
-                    : "↕"}
-            </span>
+            {isActive ? (
+                order === "asc" ? (
+                    <ArrowUp size={15} className="text-[#55624A]" />
+                ) : (
+                    <ArrowDown size={15} className="text-[#55624A]" />
+                )
+            ) : (
+                <ArrowUpDown size={15} className="text-gray-400" />
+            )}
         </button>
     );
 }
 
+/* ========================================================================== */
+/* FILTER SELECT                                                              */
+/* ========================================================================== */
+
+function FilterSelect({
+    label,
+    value,
+    onChange,
+    children,
+}: {
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+    children: React.ReactNode;
+}) {
+    return (
+        <label className="block">
+            <span className="mb-2 block text-xs font-semibold text-gray-500">
+                {label}
+            </span>
+
+            <select
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+                className="
+                    w-full rounded-xl border border-gray-200 bg-white
+                    px-3 py-3 text-sm text-gray-700 outline-none transition
+                    focus:border-[#55624A] focus:ring-4 focus:ring-[#55624A]/10
+                "
+            >
+                {children}
+            </select>
+        </label>
+    );
+}
+
+/* ========================================================================== */
+/* LOADING ROWS                                                               */
+/* ========================================================================== */
+
 function LoadingRows() {
     return (
         <>
-            {Array.from({
-                length: 6,
-            }).map((_, index) => (
+            {Array.from({ length: 5 }).map((_, rowIndex) => (
                 <tr
-                    key={index}
+                    key={rowIndex}
                     className="border-b border-gray-50"
                 >
-                    {Array.from({
-                        length: 5,
-                    }).map(
-                        (_, cellIndex) => (
-                            <td
-                                key={
-                                    cellIndex
-                                }
-                                className="px-6 py-5"
-                            >
-                                <div className="h-5 animate-pulse rounded-lg bg-gray-100" />
-                            </td>
-                        ),
-                    )}
+                    {Array.from({ length: 3 }).map((_, cellIndex) => (
+                        <td
+                            key={cellIndex}
+                            className="px-5 py-5"
+                        >
+                            <div className="h-5 animate-pulse rounded-lg bg-gray-100" />
+                        </td>
+                    ))}
                 </tr>
             ))}
         </>
     );
 }
-
-function EmptyCategories() {
-    return (
-        <tr>
-            <td
-                colSpan={5}
-                className="px-6 py-20 text-center"
-            >
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F5F7F2] text-[#55624A]">
-                    <FolderTree size={27} />
-                </div>
-
-                <p className="mt-5 text-lg font-semibold text-[#2F3B2A]">
-                    Nenhuma categoria encontrada
-                </p>
-
-                <p className="mx-auto mt-2 max-w-sm text-sm text-gray-400">
-                    Não encontrámos categorias
-                    correspondentes aos filtros
-                    aplicados.
-                </p>
-            </td>
-        </tr>
-    );
-}
-

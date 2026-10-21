@@ -1,559 +1,442 @@
 "use client";
 
-import {
-    useCallback,
-    useEffect,
-    useState,
-} from "react";
-
 import Link from "next/link";
-
+import { useCallback, useEffect, useState } from "react";
 import {
-    Eye,
+    ArrowDown,
+    ArrowUp,
+    ArrowUpDown,
+    ChevronLeft,
+    ChevronRight,
+    Pencil,
     Package,
-    Plus,
+    Search,
+    SlidersHorizontal,
 } from "lucide-react";
 
 import PageHeader from "@/components/admin/common/PageHeader";
 import SearchInput from "@/components/admin/common/SearchInput";
-import FilterBar from "@/components/admin/common/FilterBar";
 import DataTable from "@/components/admin/DataTable";
 
-import type {
-    Order,
-    Pagination,
-} from "@/types/order";
+import type { PaginationParams } from "@/lib/api/common/base-api";
+import { adminOrdersApi } from "@/lib/api/orders/admin-orders";
+import type { AdminOrderList } from "@/types/orders/admin/admin-order-list";
+import type { AdminOrderStatus } from "@/types/orders/admin/admin-order-status";
 
-import { ordersApi } from "@/lib/api/orders";
+const PAGE_SIZE = 10;
 
+type SortOrder = "asc" | "desc";
 
-function getStatusLabel(
-    status: Order["status"],
-) {
-    switch (status) {
-        case "CREATED":
-            return "Criada";
+type OrderQueryParams = PaginationParams & {
+    status?: AdminOrderStatus;
+};
 
-        case "WAITING_FOR_FLORISTS":
-            return "À espera de florista";
+const STATUS_OPTIONS: { value: AdminOrderStatus; label: string }[] = [
+    { value: "CREATED", label: "Criada" },
+    { value: "PENDING_PAYMENT", label: "Pendente de pagamento" },
+    { value: "WAITING_FOR_FLORISTS", label: "À espera de floristas" },
+    { value: "ASSIGNED", label: "Atribuída" },
+    { value: "IN_PRODUCTION", label: "Em preparação" },
+    { value: "READY_FOR_DELIVERY", label: "Pronta para entrega" },
+    { value: "DELIVERED", label: "Entregue" },
+    { value: "CANCELLED", label: "Cancelada" },
+];
 
-        case "ASSIGNED":
-            return "Atribuída";
+const STATUS_STYLES: Record<AdminOrderStatus, string> = {
+    CREATED: "border-gray-200 bg-gray-100 text-gray-600",
+    PENDING_PAYMENT: "border-amber-100 bg-amber-50 text-amber-700",
+    WAITING_FOR_FLORISTS: "border-yellow-100 bg-yellow-50 text-yellow-700",
+    ASSIGNED: "border-blue-100 bg-blue-50 text-blue-700",
+    IN_PRODUCTION: "border-indigo-100 bg-indigo-50 text-indigo-700",
+    READY_FOR_DELIVERY: "border-violet-100 bg-violet-50 text-violet-700",
+    DELIVERED: "border-green-100 bg-green-50 text-green-700",
+    CANCELLED: "border-red-100 bg-red-50 text-red-700",
+};
 
-        case "IN_PRODUCTION":
-            return "Em preparação";
-
-        case "READY_FOR_DELIVERY":
-            return "Pronta para entrega";
-
-        case "DELIVERED":
-            return "Entregue";
-
-        case "CANCELLED":
-            return "Cancelada";
-
-        default:
-            return status;
-    }
+function getStatusLabel(status: AdminOrderStatus) {
+    return STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status;
 }
 
-
-function getStatusClass(
-    status: Order["status"],
-) {
-    switch (status) {
-        case "DELIVERED":
-            return "bg-green-100 text-green-700";
-
-        case "CANCELLED":
-            return "bg-red-100 text-red-700";
-
-        case "ASSIGNED":
-        case "IN_PRODUCTION":
-        case "READY_FOR_DELIVERY":
-            return "bg-blue-100 text-blue-700";
-
-        case "WAITING_FOR_FLORISTS":
-            return "bg-yellow-100 text-yellow-700";
-
-        case "CREATED":
-        default:
-            return "bg-gray-100 text-gray-600";
-    }
+function formatPrice(value: number) {
+    return new Intl.NumberFormat("pt-PT", {
+        style: "currency",
+        currency: "EUR",
+    }).format(Number(value));
 }
 
+function formatDate(value: string) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "—";
+
+    return new Intl.DateTimeFormat("pt-PT", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(date);
+}
 
 export default function AdminOrdersPage() {
-    const [orders, setOrders] =
-        useState<Order[]>([]);
+    const [orders, setOrders] = useState<AdminOrderList[]>([]);
 
-    const [pagination, setPagination] =
-        useState<Pagination>({
-            page: 1,
-            pageSize: 20,
-            total: 0,
-            pages: 1,
-        });
+    const [page, setPage] = useState(1);
+    const [pages, setPages] = useState(0);
+    const [total, setTotal] = useState(0);
 
-    const [search, setSearch] =
-        useState("");
+    const [searchInput, setSearchInput] = useState("");
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
 
-    const [loading, setLoading] =
-        useState(true);
+    const [sort, setSort] = useState("createdAt");
+    const [order, setOrder] = useState<SortOrder>("desc");
 
-    const [error, setError] =
-        useState<string | null>(null);
-
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const loadOrders = useCallback(
-        async (
-            page: number = 1,
-            currentSearch: string = search,
-        ) => {
+        async (requestedPage = 1) => {
             try {
-                setLoading(true);
+                setIsLoading(true);
                 setError(null);
 
-                const response =
-                    await ordersApi.getAll({
-                        page,
-                        pageSize: 20,
-                        search:
-                            currentSearch.trim() ||
-                            undefined,
-                        sort: "id",
-                        order: "desc",
-                    });
+                const params: OrderQueryParams = {
+                    page: requestedPage,
+                    pageSize: PAGE_SIZE,
+                    search: search || undefined,
+                    sort,
+                    order,
+                };
 
-                setOrders(response.data);
+                if (statusFilter) {
+                    params.status = statusFilter as AdminOrderStatus;
+                }
 
-                setPagination(
-                    response.pagination,
-                );
+                const response = await adminOrdersApi.getAll(params);
+
+                setOrders(response.items);
+                setPage(response.page);
+                setPages(response.pages);
+                setTotal(response.total);
             } catch (err) {
-                console.error(err);
-
                 setError(
                     err instanceof Error
                         ? err.message
                         : "Não foi possível carregar as encomendas.",
                 );
             } finally {
-                setLoading(false);
+                setIsLoading(false);
             }
         },
-        [search],
+        [search, statusFilter, sort, order],
     );
 
-
     useEffect(() => {
-        loadOrders(1, search);
-    }, [
-        search,
-        loadOrders,
-    ]);
+        void loadOrders(1);
+    }, [loadOrders]);
 
-
-    function handlePreviousPage() {
-        if (
-            pagination.page <= 1 ||
-            loading
-        ) {
-            return;
-        }
-
-        loadOrders(
-            pagination.page - 1,
-            search,
-        );
+    function handleSearch(event: React.FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        setSearch(searchInput.trim());
     }
 
-
-    function handleNextPage() {
-        if (
-            pagination.page >=
-                pagination.pages ||
-            loading
-        ) {
-            return;
-        }
-
-        loadOrders(
-            pagination.page + 1,
-            search,
-        );
+    function resetFilters() {
+        setSearchInput("");
+        setSearch("");
+        setStatusFilter("");
     }
 
+    function handleSort(field: string) {
+        if (sort === field) {
+            setOrder((current) => (current === "asc" ? "desc" : "asc"));
+        } else {
+            setSort(field);
+            setOrder(field === "createdAt" ? "desc" : "asc");
+        }
+    }
 
     return (
-        <div>
+        <div className="space-y-6 pb-10">
+            <PageHeader
+                title="Encomendas"
+                subtitle="Consulta e acompanha as encomendas realizadas na plataforma."
+            />
 
-            {/* HEADER */}
-
-            <div className="flex items-start justify-between gap-6">
-
-                <div className="flex-1">
-
-                    <PageHeader
-                        title="Encomendas"
-                        subtitle="Gerir as encomendas da Momentos em Flor."
-                    />
-
+            <section className="rounded-3xl bg-white p-5 shadow-sm sm:p-6">
+                <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]">
+                        <SlidersHorizontal size={19} />
+                    </div>
+                    <div>
+                        <h2 className="font-semibold text-[#2F3B2A]">Pesquisa e filtros</h2>
+                        <p className="text-xs text-gray-400">
+                            Pesquisa por encomenda, cliente ou localização e filtra pelo estado.
+                        </p>
+                    </div>
                 </div>
 
-                <Link
-                    href="/admin/orders/new"
-                    className="
-                        mt-1
-                        inline-flex
-                        shrink-0
-                        items-center
-                        gap-2
-                        rounded-full
-                        bg-[#55624A]
-                        px-5
-                        py-3
-                        text-sm
-                        font-medium
-                        text-white
-                        shadow-sm
-                        transition
-                        hover:opacity-90
-                    "
-                >
-                    <Plus size={17} />
-                    Nova encomenda
-                </Link>
+                <form onSubmit={handleSearch} className="mt-5 space-y-4">
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                        <div className="flex-1">
+                            <SearchInput
+                                value={searchInput}
+                                onChange={setSearchInput}
+                                placeholder="Número, cliente, email ou localidade..."
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#55624A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#46523C]"
+                        >
+                            <Search size={17} />
+                            Pesquisar
+                        </button>
+                    </div>
 
-            </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="block">
+                            <span className="mb-2 block text-xs font-semibold text-gray-500">
+                                Estado da encomenda
+                            </span>
+                            <select
+                                value={statusFilter}
+                                onChange={(event) => setStatusFilter(event.target.value)}
+                                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700 outline-none transition focus:border-[#55624A] focus:ring-4 focus:ring-[#55624A]/10"
+                            >
+                                <option value="">Todos os estados</option>
+                                {STATUS_OPTIONS.map((status) => (
+                                    <option key={status.value} value={status.value}>
+                                        {status.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                    </div>
 
-
-            {/* FILTERS */}
-
-            <div className="mt-8">
-
-                <FilterBar>
-
-                    <SearchInput
-                        value={search}
-                        onChange={setSearch}
-                        placeholder="Pesquisar por encomenda, cliente..."
-                    />
-
-                </FilterBar>
-
-            </div>
-
-
-            {/* ERROR */}
+                    <div className="flex justify-end">
+                        <button
+                            type="button"
+                            onClick={resetFilters}
+                            className="text-sm font-medium text-gray-500 transition hover:text-[#55624A]"
+                        >
+                            Limpar filtros
+                        </button>
+                    </div>
+                </form>
+            </section>
 
             {error && (
-                <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
-                    {error}
+                <div className="flex flex-col gap-3 rounded-2xl border border-red-100 bg-red-50 p-5 text-sm text-red-600 sm:flex-row sm:items-center sm:justify-between">
+                    <p>{error}</p>
+                    <button
+                        type="button"
+                        onClick={() => void loadOrders(page)}
+                        className="font-semibold underline"
+                    >
+                        Tentar novamente
+                    </button>
                 </div>
             )}
 
-
-            {/* TABLE */}
-
-            <div className="mt-8">
-
-                <DataTable>
-
-                    <div className="overflow-x-auto">
-
-                        <table className="w-full">
-
-                            <thead>
-
-                                <tr className="border-b border-gray-100 text-left text-sm text-gray-500">
-
-                                    <th className="px-6 py-4 font-medium">
-                                        Encomenda
-                                    </th>
-
-                                    <th className="px-6 py-4 font-medium">
-                                        Cliente
-                                    </th>
-
-                                    <th className="px-6 py-4 font-medium">
-                                        Entrega
-                                    </th>
-
-                                    <th className="px-6 py-4 font-medium">
-                                        Total
-                                    </th>
-
-                                    <th className="px-6 py-4 font-medium">
-                                        Estado
-                                    </th>
-
-                                    <th className="px-6 py-4 text-right font-medium">
-                                        Ações
-                                    </th>
-
+            <DataTable>
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead>
+                            <tr className="border-b border-gray-100 bg-[#FAFBF8] text-left">
+                                <th className="px-5 py-4">
+                                    <SortButton label="Encomenda" field="orderNumber" currentSort={sort} order={order} onSort={handleSort} />
+                                </th>
+                                <th className="px-5 py-4">
+                                    <SortButton label="Cliente" field="customerFirstName" currentSort={sort} order={order} onSort={handleSort} />
+                                </th>
+                                <th className="px-5 py-4">
+                                    <SortButton label="Entrega" field="deliveryCity" currentSort={sort} order={order} onSort={handleSort} />
+                                </th>
+                                <th className="px-5 py-4">
+                                    <SortButton label="Total" field="total" currentSort={sort} order={order} onSort={handleSort} />
+                                </th>
+                                <th className="px-5 py-4">
+                                    <SortButton label="Estado" field="status" currentSort={sort} order={order} onSort={handleSort} />
+                                </th>
+                                <th className="px-5 py-4">
+                                    <SortButton label="Data de criação" field="createdAt" currentSort={sort} order={order} onSort={handleSort} />
+                                </th>
+                                <th className="px-5 py-4 text-right font-semibold text-[#2F3B2A]">
+                                    Ações
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {isLoading ? (
+                                <LoadingRows />
+                            ) : orders.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} className="px-6 py-20 text-center">
+                                        <Package size={30} className="mx-auto text-[#55624A]" />
+                                        <p className="mt-4 font-semibold text-[#2F3B2A]">
+                                            Nenhuma encomenda encontrada
+                                        </p>
+                                        <p className="mt-1 text-sm text-gray-400">
+                                            Experimenta alterar a pesquisa ou o filtro de estado.
+                                        </p>
+                                    </td>
                                 </tr>
-
-                            </thead>
-
-
-                            <tbody>
-
-                                {loading ? (
-
-                                    <tr>
-
-                                        <td
-                                            colSpan={6}
-                                            className="px-6 py-16 text-center text-gray-500"
-                                        >
-                                            A carregar encomendas...
+                            ) : (
+                                orders.map((orderItem) => (
+                                    <tr
+                                        key={orderItem.id}
+                                        className="group border-b border-gray-50 transition hover:bg-[#FAFBF8]"
+                                    >
+                                        <td className="px-5 py-5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F3F5EE] text-[#55624A]">
+                                                    <Package size={20} />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="font-semibold text-[#2F3B2A]">
+                                                        {orderItem.orderNumber}
+                                                    </p>
+                                                </div>
+                                            </div>
                                         </td>
-
-                                    </tr>
-
-                                ) : orders.length === 0 ? (
-
-                                    <tr>
-
-                                        <td
-                                            colSpan={6}
-                                            className="px-6 py-16 text-center"
-                                        >
-
-                                            <Package
-                                                size={36}
-                                                className="mx-auto text-gray-300"
-                                            />
-
-                                            <p className="mt-4 font-medium text-gray-600">
-                                                Nenhuma encomenda encontrada
+                                        <td className="px-5 py-5">
+                                            <p className="font-medium text-[#2F3B2A]">
+                                                {orderItem.customerFirstName} {orderItem.customerLastName}
                                             </p>
-
-                                            <p className="mt-1 text-sm text-gray-400">
-                                                Tente alterar os critérios de pesquisa.
+                                            <p className="mt-1 text-xs text-gray-400">
+                                                {orderItem.customerEmail}
                                             </p>
-
                                         </td>
-
-                                    </tr>
-
-                                ) : (
-
-                                    orders.map(
-                                        (order) => (
-
-                                            <tr
-                                                key={order.id}
-                                                className="border-b border-gray-50 transition hover:bg-[#F9FAF7]"
+                                        <td className="px-5 py-5">
+                                            <p className="text-sm font-medium text-[#2F3B2A]">
+                                                {orderItem.deliveryCity}
+                                            </p>
+                                            <p className="mt-1 text-xs text-gray-400">
+                                                {orderItem.deliveryDistrict}
+                                            </p>
+                                        </td>
+                                        <td className="px-5 py-5 font-semibold text-[#2F3B2A]">
+                                            {formatPrice(orderItem.total)}
+                                        </td>
+                                        <td className="px-5 py-5">
+                                            <span
+                                                className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold ${STATUS_STYLES[orderItem.status]}`}
                                             >
+                                                {getStatusLabel(orderItem.status)}
+                                            </span>
+                                        </td>
+                                        <td className="px-5 py-5 text-sm text-gray-500">
+                                            {formatDate(orderItem.createdAt)}
+                                        </td>
+                                        <td className="px-5 py-5">
+                                            <div className="flex items-center justify-end">
+                                                <Link
+                                                    href={`/admin/orders/${orderItem.id}`}
+                                                    title="Editar encomenda"
+                                                    aria-label={`Editar encomenda ${orderItem.orderNumber}`}
+                                                    className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition hover:bg-[#F3F5EE] hover:text-[#55624A]"
+                                                >
+                                                    <Pencil size={17} />
+                                                </Link>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
 
-                                                <td className="px-6 py-5">
-
-                                                    <Link
-                                                        href={`/admin/orders/${order.id}`}
-                                                        className="font-semibold text-[#2F3B2A] transition hover:text-[#55624A]"
-                                                    >
-                                                        {order.orderNumber}
-                                                    </Link>
-
-                                                    <p className="mt-1 text-xs text-gray-400">
-                                                        #{order.id}
-                                                    </p>
-
-                                                </td>
-
-
-                                                <td className="px-6 py-5">
-
-                                                    <p className="font-medium text-gray-800">
-                                                        {order.customerFirstName}{" "}
-                                                        {order.customerLastName}
-                                                    </p>
-
-                                                    <p className="mt-1 text-sm text-gray-400">
-                                                        {order.customerEmail}
-                                                    </p>
-
-                                                </td>
-
-
-                                                <td className="px-6 py-5">
-
-                                                    <p className="font-medium text-gray-700">
-                                                        {order.recipientFirstName}{" "}
-                                                        {order.recipientLastName ?? ""}
-                                                    </p>
-
-                                                    <p className="mt-1 text-sm text-gray-400">
-                                                        {order.deliveryCity}
-                                                    </p>
-
-                                                </td>
-
-
-                                                <td className="px-6 py-5">
-
-                                                    <span className="font-semibold text-[#2F3B2A]">
-                                                        {order.total.toFixed(
-                                                            2,
-                                                        )}{" "}
-                                                        €
-                                                    </span>
-
-                                                </td>
-
-
-                                                <td className="px-6 py-5">
-
-                                                    <span
-                                                        className={`
-                                                            inline-flex
-                                                            rounded-full
-                                                            px-3
-                                                            py-1
-                                                            text-xs
-                                                            font-medium
-                                                            ${getStatusClass(
-                                                                order.status,
-                                                            )}
-                                                        `}
-                                                    >
-                                                        {getStatusLabel(
-                                                            order.status,
-                                                        )}
-                                                    </span>
-
-                                                </td>
-
-
-                                                <td className="px-6 py-5 text-right">
-
-                                                    <Link
-                                                        href={`/admin/orders/${order.id}`}
-                                                        className="
-                                                            inline-flex
-                                                            h-10
-                                                            w-10
-                                                            items-center
-                                                            justify-center
-                                                            rounded-full
-                                                            text-gray-500
-                                                            transition
-                                                            hover:bg-[#F3F5EE]
-                                                            hover:text-[#55624A]
-                                                        "
-                                                        title="Ver encomenda"
-                                                    >
-                                                        <Eye
-                                                            size={18}
-                                                        />
-                                                    </Link>
-
-                                                </td>
-
-                                            </tr>
-
-                                        ),
-                                    )
-
-                                )}
-
-                            </tbody>
-
-                        </table>
-
+                {!isLoading && pages > 0 && (
+                    <div className="flex flex-col gap-4 border-t border-gray-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p className="text-sm text-gray-500">
+                                A mostrar{" "}
+                                <span className="font-semibold text-gray-700">{orders.length}</span> de{" "}
+                                <span className="font-semibold text-gray-700">{total}</span> encomendas
+                            </p>
+                            <p className="mt-1 text-xs text-gray-400">
+                                Página {page} de {pages}
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                disabled={page <= 1}
+                                onClick={() => void loadOrders(page - 1)}
+                                aria-label="Página anterior"
+                                className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition hover:bg-[#F5F7F2] disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            <span className="flex h-10 min-w-10 items-center justify-center rounded-xl bg-[#55624A] px-3 text-sm font-semibold text-white">
+                                {page}
+                            </span>
+                            <span className="text-sm text-gray-400">/ {pages}</span>
+                            <button
+                                type="button"
+                                disabled={page >= pages}
+                                onClick={() => void loadOrders(page + 1)}
+                                aria-label="Página seguinte"
+                                className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition hover:bg-[#F5F7F2] disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                        </div>
                     </div>
-
-
-                    {/* PAGINATION */}
-
-                    {!loading &&
-                        pagination.total > 0 && (
-
-                            <div className="flex items-center justify-between border-t border-gray-100 px-6 py-4">
-
-                                <p className="text-sm text-gray-500">
-                                    {pagination.total}{" "}
-                                    {pagination.total === 1
-                                        ? "encomenda"
-                                        : "encomendas"}
-                                </p>
-
-
-                                <div className="flex items-center gap-2">
-
-                                    <button
-                                        type="button"
-                                        disabled={
-                                            pagination.page <=
-                                                1 ||
-                                            loading
-                                        }
-                                        onClick={
-                                            handlePreviousPage
-                                        }
-                                        className="
-                                            rounded-xl
-                                            border
-                                            border-gray-200
-                                            px-4
-                                            py-2
-                                            text-sm
-                                            transition
-                                            hover:bg-[#F5F7F2]
-                                            disabled:cursor-not-allowed
-                                            disabled:opacity-40
-                                        "
-                                    >
-                                        Anterior
-                                    </button>
-
-
-                                    <span className="px-3 text-sm text-gray-500">
-                                        Página{" "}
-                                        {pagination.page}{" "}
-                                        de{" "}
-                                        {pagination.pages}
-                                    </span>
-
-
-                                    <button
-                                        type="button"
-                                        disabled={
-                                            pagination.page >=
-                                                pagination.pages ||
-                                            loading
-                                        }
-                                        onClick={
-                                            handleNextPage
-                                        }
-                                        className="
-                                            rounded-xl
-                                            border
-                                            border-gray-200
-                                            px-4
-                                            py-2
-                                            text-sm
-                                            transition
-                                            hover:bg-[#F5F7F2]
-                                            disabled:cursor-not-allowed
-                                            disabled:opacity-40
-                                        "
-                                    >
-                                        Seguinte
-                                    </button>
-
-                                </div>
-
-                            </div>
-
-                        )}
-
-                </DataTable>
-
-            </div>
-
+                )}
+            </DataTable>
         </div>
+    );
+}
+
+function SortButton({
+    label,
+    field,
+    currentSort,
+    order,
+    onSort,
+}: {
+    label: string;
+    field: string;
+    currentSort: string;
+    order: SortOrder;
+    onSort: (field: string) => void;
+}) {
+    const isActive = currentSort === field;
+
+    return (
+        <button
+            type="button"
+            onClick={() => onSort(field)}
+            className="inline-flex items-center gap-2 font-semibold text-[#2F3B2A] transition hover:text-[#55624A]"
+        >
+            {label}
+            {isActive ? (
+                order === "asc" ? (
+                    <ArrowUp size={15} className="text-[#55624A]" />
+                ) : (
+                    <ArrowDown size={15} className="text-[#55624A]" />
+                )
+            ) : (
+                <ArrowUpDown size={15} className="text-gray-400" />
+            )}
+        </button>
+    );
+}
+
+function LoadingRows() {
+    return (
+        <>
+            {Array.from({ length: 5 }).map((_, rowIndex) => (
+                <tr key={rowIndex} className="border-b border-gray-50">
+                    {Array.from({ length: 7 }).map((_, cellIndex) => (
+                        <td key={cellIndex} className="px-5 py-5">
+                            <div className="h-5 animate-pulse rounded-lg bg-gray-100" />
+                        </td>
+                    ))}
+                </tr>
+            ))}
+        </>
     );
 }

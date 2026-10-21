@@ -3,15 +3,17 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 
-import { UsersService } from '@/users/users.service';
 import { Exceptions } from '@/common/exceptions/exceptions';
-import { AUTH_MESSAGES } from '../constants/auth.messages';
+import { PrismaService } from '@/prisma/prisma.service';
+import { AuthUserDto } from '../dtos/auth-user.dto';
+import { ERROR_MESSAGES } from '@/common/errors/error-messages';
+import { ApiResponse } from '@/common/responses/api-response';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
     constructor(
         config: ConfigService,
-        private readonly usersService: UsersService,
+        private readonly prisma: PrismaService
     ) {
         super({
             jwtFromRequest:
@@ -24,19 +26,31 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     async validate(payload: {
         sub: number;
     }) {
-        const user = await this.usersService.findById(payload.sub);
+        const user = await this.findOne(payload.sub);
 
-        if (!user || !user.active) {
-            Exceptions.unauthorized(AUTH_MESSAGES.INVALID_CREDENTIALS);
-        }
+        if (!user || !user.active)
+            Exceptions.unauthorized();
 
         return {
             id: user.id,
             email: user.email,
             firstName: user.firstName,
             lastName: user.lastName,
-            role: user.role,
-            floristId: user.floristId,
+            role: user.role
         };
+    }
+
+    private async findOne(id: number): Promise<AuthUserDto> {
+        const user = await this.prisma.user.findUnique({
+            where: { id },
+        });
+
+        if (!user) {
+            Exceptions.notFound(ERROR_MESSAGES.USER_NOT_FOUND);
+        }
+
+        return ApiResponse.success(
+            user
+        );
     }
 }

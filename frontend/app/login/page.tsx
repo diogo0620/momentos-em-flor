@@ -33,6 +33,7 @@ export default function LoginPage() {
     const [isSubmitting, setIsSubmitting] =
         useState(false);
 
+        /*
     useEffect(() => {
         if (
             !isLoading &&
@@ -49,6 +50,7 @@ export default function LoginPage() {
         user,
         router,
     ]);
+    */
 
     async function handleSubmit(
         event: FormEvent<HTMLFormElement>,

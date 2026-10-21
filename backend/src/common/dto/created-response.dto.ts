@@ -5,5 +5,5 @@ export class CreatedResponseDto {
         example: 1,
         description: 'ID of the created resource',
     })
-    id: number;
+    id!: number;
 }

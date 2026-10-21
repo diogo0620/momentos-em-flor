@@ -43,13 +43,32 @@ async function refreshAccessToken(): Promise<string | null> {
     }
 }
 
+
 export async function apiUpload<T>(
     endpoint: string,
     file: File,
+    options?: {
+        isPrimary?: boolean;
+        sortOrder?: number;
+    },
 ): Promise<T> {
     const formData = new FormData();
 
     formData.append("file", file);
+
+    if (options?.isPrimary !== undefined) {
+        formData.append(
+            "isPrimary",
+            String(options.isPrimary),
+        );
+    }
+
+    if (options?.sortOrder !== undefined) {
+        formData.append(
+            "sortOrder",
+            String(options.sortOrder),
+        );
+    }
 
     const headers = new Headers();
 
@@ -116,6 +135,7 @@ export async function apiUpload<T>(
     return response.json();
 }
 
+
 export async function apiFetch<T>(
     endpoint: string,
     options: ApiOptions = {},
@@ -158,6 +178,7 @@ export async function apiFetch<T>(
         },
     );
 
+    
     if (
         response.status === 401 &&
         !skipRefresh
@@ -181,6 +202,7 @@ export async function apiFetch<T>(
             );
         }
     }
+    
 
     if (!response.ok) {
         let message =

@@ -1,10 +1,13 @@
-import { CreatedResponseDto } from "../dto/created-response.dto";
-import { UpdatedResponseDto } from "../dto/updated-response.dto";
+import { EntityIdResponseDto } from '@/common/responses/dto/entity-id-response.dto';
 
+export interface MapperInterface<
+  TEntity,
+  TDetailResponse,
+  TListResponse,
+> {
+  toCreatedResponse(entity: TEntity): EntityIdResponseDto;
 
-export interface Mapper<TEntity, TResponse> {
-    toResponse(entity: TEntity): TResponse;
-    toResponses(entities: TEntity[]): TResponse[];
-    toCreatedResponse(entity: TEntity): CreatedResponseDto;
-    toUpdatedResponse(entity: TEntity): UpdatedResponseDto;
+  toDetailResponse(entity: TEntity): TDetailResponse;
+
+  toListResponse(entities: TEntity[]): TListResponse[];
 }

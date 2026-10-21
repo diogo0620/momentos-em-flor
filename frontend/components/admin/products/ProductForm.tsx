@@ -1,712 +1,513 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-
-import { getCategories } from "@/lib/api/categories";
-import type { Category } from "@/lib/api/categories";
-
-import { getTaxCodes } from "@/lib/api/tax-codes";
-import type { TaxCode } from "@/lib/api/tax-codes";
-
 import {
-    createProduct,
-    updateProduct,
-    updateProductConfiguration,
-    uploadProductImage,
-    type AdminProductDetail,
-    type ProductConfigurationComponent,
-    type ProductConfigurationImage,
-    type ProductConfigurationVariant,
-} from "@/lib/api/products";
+    AlertTriangle,
+    ArrowLeft,
+    ImagePlus,
+    Plus,
+    Save,
+    Trash2,
+    Upload,
+    X,
+} from "lucide-react";
 
-type Props = {
+import { adminProductsApi } from "@/lib/api/products/admin-products";
+import { adminTaxCodesApi } from "@/lib/api/tax-codes/admin-tax-codes";
+import { publicCategoriesApi } from "@/lib/api/categories/public-categories";
+
+import type { AdminProductDetail } from "@/types/products/admin/admin-product-detail";
+import type { AdminCreateProduct } from "@/types/products/admin/admin-create-product";
+import type { AdminUpdateProduct } from "@/types/products/admin/admin-update-product";
+import type { ProductType } from "@/types/products/admin/admin-product-list";
+import type { PublicCategoryList } from "@/types/categories/public/public-category-list";
+import type { AdminTaxCodeList } from "@/types/tax-codes/admin/admin-tax-code-list";
+
+type ProductFormProps = {
     product?: AdminProductDetail;
 };
 
-type ComponentForm = ProductConfigurationComponent;
-
-type VariantForm = ProductConfigurationVariant & {
-    clientId?: string;
+type ComponentFormItem = {
+    id?: number;
+    name: string;
+    minQuantity: number;
+    recommendedQuantity: number;
+    maxQuantity: number;
+    customerPricePerAdditionalUnit: number;
+    floristPricePerAdditionalUnit: number;
 };
 
-type ImageForm = ProductConfigurationImage & {
-    previewUrl?: string;
-    fileName?: string;
+type ProductImageItem = {
+    id?: number;
+    url: string;
+    sortOrder: number;
 };
 
-const VARIANT_TYPES = [
-    "SIZE",
-    "COLOR",
-    "STYLE",
-    "OTHER",
-] as const;
+type VariantFormItem = {
+    id?: number;
+    type: "SIZE";
+    name: string;
+    description: string;
+    customerPrice: number;
+    floristPrice: number;
+    imageFile?: File;
+    image?: string;
+};
 
-function createComponent(
-    sortOrder: number,
-): ComponentForm {
-    return {
-        name: "",
-        minQuantity: 0,
-        recommendedQuantity: 1,
-        maxQuantity: 1,
-        customerPricePerAdditionalUnit: 0,
-        floristPricePerAdditionalUnit: 0,
-        active: true,
-        sortOrder,
-    };
+const inputClassName =
+    "w-full rounded-xl border border-[#E2E6DD] bg-white px-4 py-3 text-sm text-[#2F3B2A] outline-none transition placeholder:text-[#A0A89A] focus:border-[#55624A] focus:ring-4 focus:ring-[#55624A]/10 disabled:cursor-not-allowed disabled:bg-[#F3F5EE]";
+
+const labelClassName = "mb-2 block text-sm font-medium text-[#374132]";
+
+const sectionClassName =
+    "rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-sm sm:p-8";
+
+function generateSlug(value: string): string {
+    return value
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
 }
 
-function createVariant(
-    sortOrder: number,
-): VariantForm {
-    return {
-        clientId: crypto.randomUUID(),
-        type: "SIZE",
-        name: "",
-        code: "",
-        customerPrice: 0,
-        floristPrice: 0,
-        active: true,
-        sortOrder,
-        imageId: null,
-    };
+function formatPrice(value: number): string {
+    return new Intl.NumberFormat("pt-PT", {
+        style: "currency",
+        currency: "EUR",
+    }).format(value);
 }
 
-function normaliseComponents(
-    components: AdminProductDetail["components"],
-): ComponentForm[] {
-    return [...components]
-        .sort(
-            (a, b) =>
-                a.sortOrder - b.sortOrder,
-        )
-        .map((component, index) => ({
+function toNumber(value: string): number {
+    return value === "" ? 0 : Number(value);
+}
+
+function formatDate(value: unknown): string {
+    if (typeof value !== "string" && !(value instanceof Date)) return "—";
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return "—";
+
+    return new Intl.DateTimeFormat("pt-PT", {
+        dateStyle: "short",
+        timeStyle: "short",
+    }).format(date);
+}
+
+function ImagePreview({
+    file,
+    src,
+    alt,
+    className = "h-28 w-28",
+}: {
+    file?: File;
+    src?: string;
+    alt: string;
+    className?: string;
+}) {
+    const [preview, setPreview] = useState<string | undefined>(src);
+
+    useEffect(() => {
+        if (!file) {
+            setPreview(src);
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(file);
+        setPreview(objectUrl);
+
+        return () => URL.revokeObjectURL(objectUrl);
+    }, [file, src]);
+
+    if (!preview) {
+        return (
+            <div
+                className={`${className} flex shrink-0 items-center justify-center rounded-xl border border-dashed border-[#D8DED1] bg-[#F8F9F5] text-[#A0A89A]`}
+            >
+                <ImagePlus size={24} />
+            </div>
+        );
+    }
+
+    return (
+        <img
+            src={preview}
+            alt={alt}
+            className={`${className} shrink-0 rounded-xl border border-[#E8EBE4] object-cover`}
+        />
+    );
+}
+
+function SectionHeading({
+    title,
+    description,
+}: {
+    title: string;
+    description: string;
+}) {
+    return (
+        <div className="mb-7">
+            <h2 className="text-lg font-semibold text-[#2F3B2A]">
+                {title}
+            </h2>
+            <p className="mt-1 text-sm text-[#7A8474]">{description}</p>
+        </div>
+    );
+}
+
+export default function ProductForm({ product }: ProductFormProps) {
+    const router = useRouter();
+    const isEditing = Boolean(product);
+
+    const [name, setName] = useState(product?.name ?? "");
+    const [slug, setSlug] = useState(product?.slug ?? "");
+    const [description, setDescription] = useState(product?.description ?? "");
+    const [slugManuallyEdited, setSlugManuallyEdited] = useState(Boolean(product));
+
+    const [type, setType] = useState<ProductType>(product?.type ?? "SALE");
+    const [customerPrice, setCustomerPrice] = useState(
+        String(product?.customerPrice ?? ""),
+    );
+    const [floristPrice, setFloristPrice] = useState(
+        String(product?.floristPrice ?? ""),
+    );
+    const [rentalDeposit, setRentalDeposit] = useState(
+        product?.rentalDeposit != null ? String(product.rentalDeposit) : "",
+    );
+
+    const [taxCodeId, setTaxCodeId] = useState(
+        product?.taxCode != null ? Number(product.taxCode.id) : ""
+    );
+
+    const [featured, setFeatured] = useState(product?.featured ?? false);
+    const [active, setActive] = useState(product?.active ?? true);
+
+    const [categories, setCategories] = useState<PublicCategoryList[]>([]);
+    const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>(
+        product?.categories.map((category) => category.id) ?? [],
+    );
+
+    const [taxCodes, setTaxCodes] = useState<AdminTaxCodeList[]>([]);
+    const [loadingOptions, setLoadingOptions] = useState(true);
+
+    const [existingImages, setExistingImages] = useState<ProductImageItem[]>(
+        (product?.images ?? []).map((url, index) => ({ url, sortOrder: index })),
+    );
+    const [removedImageIds, setRemovedImageIds] = useState<number[]>([]);
+    const [imageFiles, setImageFiles] = useState<File[]>([]);
+
+    const [components, setComponents] = useState<ComponentFormItem[]>(
+        product?.components.map((component) => ({
             id: component.id,
             name: component.name,
             minQuantity: component.minQuantity,
-            recommendedQuantity:
-                component.recommendedQuantity,
+            recommendedQuantity: component.recommendedQuantity,
             maxQuantity: component.maxQuantity,
             customerPricePerAdditionalUnit:
                 component.customerPricePerAdditionalUnit,
             floristPricePerAdditionalUnit:
                 component.floristPricePerAdditionalUnit,
-            active: component.active,
-            sortOrder: index,
-        }));
-}
+        })) ?? [],
+    );
 
-function normaliseVariants(
-    variants: AdminProductDetail["variants"],
-): VariantForm[] {
-    return [...variants]
-        .sort(
-            (a, b) =>
-                a.sortOrder - b.sortOrder,
-        )
-        .map((variant, index) => ({
+    const [variants, setVariants] = useState<VariantFormItem[]>(
+        product?.variants.map((variant) => ({
             id: variant.id,
             type: variant.type,
             name: variant.name,
-            code: variant.code,
+            description: variant.description ?? "",
             customerPrice: variant.customerPrice,
             floristPrice: variant.floristPrice,
-            active: variant.active,
-            sortOrder: index,
-            imageId:
-                variant.image?.id ?? null,
-        }));
-}
+            image: variant.image ?? ""
+        })) ?? [],
+    );
 
-function normaliseImages(
-    images: AdminProductDetail["images"],
-): ImageForm[] {
-    return [...images]
-        .sort(
-            (a, b) =>
-                a.sortOrder - b.sortOrder,
-        )
-        .map((image, index) => ({
-            id: image.id,
-            fileId: image.fileId,
-            altText: image.altText,
-            sortOrder: index,
-            isPrimary: image.isPrimary,
-            variantId: image.variantId,
-            variantClientId: null,
-            previewUrl: image.url,
-        }));
-}
-
-export default function ProductForm({
-    product,
-}: Props) {
-    const router = useRouter();
-
-    const isEditing = !!product;
-
-    const [categories, setCategories] =
-        useState<Category[]>([]);
-
-    const [taxCodes, setTaxCodes] =
-        useState<TaxCode[]>([]);
-
-    const [name, setName] =
-        useState(product?.name ?? "");
-
-    const [type, setType] =
-        useState(product?.type ?? "SALE");
-
-    const [rentalDeposit, setRentalDeposit] =
-        useState(
-            product?.rentalDeposit?.toString() ?? "",
-        );
-
-    const [featured, setFeatured] =
-        useState(product?.featured ?? false);
-
-    const [description, setDescription] =
-        useState(product?.description ?? "");
-
-    const [customerPrice, setCustomerPrice] =
-        useState(product?.customerPrice?.toString() ?? "");
-
-    const [floristPrice, setFloristPrice] =
-        useState(product?.floristPrice?.toString() ?? "");
-
-    const [categoryId, setCategoryId] =
-        useState(
-            product?.category?.id?.toString() ??
-            "",
-        );
-
-    const [taxCodeId, setTaxCodeId] =
-        useState(
-            product?.taxCode?.id?.toString() ??
-            "",
-        );
-
-    const [active, setActive] =
-        useState(product?.active ?? true);
-
-    const [components, setComponents] =
-        useState<ComponentForm[]>(
-            product
-                ? normaliseComponents(
-                    product.components,
-                )
-                : [],
-        );
-
-    const [variants, setVariants] =
-        useState<VariantForm[]>(
-            product
-                ? normaliseVariants(
-                    product.variants,
-                )
-                : [],
-        );
-
-    const [images, setImages] =
-        useState<ImageForm[]>(
-            product
-                ? normaliseImages(product.images)
-                : [],
-        );
-
-    const [
-        isLoadingCategories,
-        setIsLoadingCategories,
-    ] = useState(true);
-
-    const [
-        isLoadingTaxCodes,
-        setIsLoadingTaxCodes,
-    ] = useState(true);
-
-    const [isSubmitting, setIsSubmitting] =
-        useState(false);
-
-    const [uploadingImage, setUploadingImage] =
-        useState(false);
-
-    const [error, setError] =
-        useState<string | null>(null);
-
-    const [success, setSuccess] =
-        useState<string | null>(null);
-
-    const configurationMode = useMemo(() => {
-        if (components.length > 0) {
-            return "components";
-        }
-
-        if (variants.length > 0) {
-            return "variants";
-        }
-
-        return null;
-    }, [
-        components.length,
-        variants.length,
-    ]);
+    const [saving, setSaving] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [warning, setWarning] = useState<string | null>(null);
 
     useEffect(() => {
-        async function loadCategories() {
+        if (!slugManuallyEdited) {
+            setSlug(generateSlug(name));
+        }
+    }, [name, slugManuallyEdited]);
+
+    useEffect(() => {
+        if (!product) return;
+
+        let cancelled = false;
+
+        async function loadProductImages() {
             try {
-                setIsLoadingCategories(true);
+                const response = await adminProductsApi.getImages(product.id);
+                const root = response as unknown;
+                const object = root && typeof root === "object"
+                    ? root as Record<string, unknown>
+                    : null;
+                const data = object && "data" in object ? object.data : root;
+                const dataObject = data && typeof data === "object"
+                    ? data as Record<string, unknown>
+                    : null;
+                const records = Array.isArray(data)
+                    ? data
+                    : dataObject && Array.isArray(dataObject.items)
+                        ? dataObject.items
+                        : dataObject && Array.isArray(dataObject.images)
+                            ? dataObject.images
+                            : [];
 
-                const response =
-                    await getCategories();
+                const mapped = records.flatMap((item, index) => {
+                    if (!item || typeof item !== "object") return [];
+                    const image = item as Record<string, unknown>;
+                    const url = typeof image.url === "string"
+                        ? image.url
+                        : typeof image.imageUrl === "string"
+                            ? image.imageUrl
+                            : typeof image.path === "string"
+                                ? image.path
+                                : undefined;
+                    const id = typeof image.id === "number"
+                        ? image.id
+                        : typeof image.id === "string" && image.id.trim() !== ""
+                            ? Number(image.id)
+                            : undefined;
 
-                setCategories(
-                    response.data.filter(
-                        (category) =>
-                            category.active ||
-                            category.id ===
-                            product?.category?.id,
-                    ),
-                );
+                    if (!url) return [];
+                    return [{
+                        id: Number.isFinite(id) ? id : undefined,
+                        url,
+                        sortOrder: typeof image.sortOrder === "number" ? image.sortOrder : index,
+                    }];
+                }).sort((a, b) => a.sortOrder - b.sortOrder)
+                  .map((image, index) => ({ ...image, sortOrder: index }));
+
+                if (!cancelled && mapped.length > 0) {
+                    setExistingImages(mapped);
+                }
             } catch {
-                setError(
-                    "Não foi possível carregar as categorias.",
-                );
-            } finally {
-                setIsLoadingCategories(false);
+                // Keep the image URLs from the product detail as a fallback.
             }
         }
 
-        loadCategories();
-    }, [product?.category?.id]);
+        void loadProductImages();
+        return () => { cancelled = true; };
+    }, [product]);
 
     useEffect(() => {
-        async function loadTaxCodes() {
+        let cancelled = false;
+
+        async function loadOptions() {
+            setLoadingOptions(true);
+
             try {
-                setIsLoadingTaxCodes(true);
+                const [categoryResponse, taxCodeResponse] = await Promise.all([
+                    publicCategoriesApi.getAll({
+                        page: 1,
+                        pageSize: 100,
+                    }),
+                    adminTaxCodesApi.getAll({
+                        page: 1,
+                        pageSize: 100,
+                        sort: "name",
+                        order: "asc",
+                        active: true,
+                    }),
+                ]);
 
-                const response =
-                    await getTaxCodes();
-
-                setTaxCodes(
-                    response.data.filter(
-                        (taxCode) =>
-                            taxCode.active ||
-                            taxCode.id ===
-                            product?.taxCode?.id,
-                    ),
-                );
-            } catch {
-                setError(
-                    "Não foi possível carregar os códigos de IVA.",
-                );
+                if (!cancelled) {
+                    setCategories(categoryResponse.items);
+                    setTaxCodes(taxCodeResponse.items);
+                }
+            } catch (err) {
+                if (!cancelled) {
+                    setError(
+                        err instanceof Error
+                            ? `Não foi possível carregar as categorias ou os códigos fiscais: ${err.message}`
+                            : "Não foi possível carregar as opções do formulário.",
+                    );
+                }
             } finally {
-                setIsLoadingTaxCodes(false);
+                if (!cancelled) setLoadingOptions(false);
             }
         }
 
-        loadTaxCodes();
-    }, [product?.taxCode?.id]);
+        void loadOptions();
 
-    function reorder<
-        T extends { sortOrder: number },
-    >(
-        items: T[],
-        fromIndex: number,
-        toIndex: number,
-    ): T[] {
-        if (
-            fromIndex < 0 ||
-            toIndex < 0 ||
-            fromIndex >= items.length ||
-            toIndex >= items.length
-        ) {
-            return items;
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
+        const selectedFiles = Array.from(event.target.files ?? []);
+        event.target.value = "";
+
+        if (selectedFiles.length === 0) return;
+
+        const validFiles: File[] = [];
+        const invalidFiles: string[] = [];
+
+        for (const file of selectedFiles) {
+            if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+                invalidFiles.push(`${file.name}: formato não suportado`);
+            } else if (file.size > 5 * 1024 * 1024) {
+                invalidFiles.push(`${file.name}: excede 5 MB`);
+            } else {
+                validFiles.push(file);
+            }
         }
 
-        const next = [...items];
+        if (invalidFiles.length > 0) {
+            setError(`Algumas imagens não foram adicionadas. ${invalidFiles.join("; ")}.`);
+        } else {
+            setError(null);
+        }
 
-        const [item] =
-            next.splice(fromIndex, 1);
-
-        next.splice(toIndex, 0, item);
-
-        return next.map((entry, index) => ({
-            ...entry,
-            sortOrder: index,
-        }));
+        setImageFiles((current) => [...current, ...validFiles]);
     }
 
-    function moveComponent(
-        index: number,
-        direction: -1 | 1,
-    ) {
-        setComponents((current) =>
-            reorder(
-                current,
-                index,
-                index + direction,
-            ),
-        );
+    function removeNewImage(index: number) {
+        setImageFiles((current) => current.filter((_, i) => i !== index));
     }
 
-    function moveVariant(
-        index: number,
-        direction: -1 | 1,
-    ) {
-        setVariants((current) =>
-            reorder(
-                current,
-                index,
-                index + direction,
-            ),
-        );
+    function removeExistingImage(index: number) {
+        const image = existingImages[index];
+        if (!image) return;
+
+        if (image.id === undefined) {
+            setError("Não foi possível identificar esta imagem no servidor. Atualiza a página e tenta novamente.");
+            return;
+        }
+
+        setRemovedImageIds((current) => [...current, image.id!]);
+        setExistingImages((current) => current.filter((_, i) => i !== index));
+        setError(null);
     }
 
-    function moveImage(
-        index: number,
-        direction: -1 | 1,
-    ) {
-        setImages((current) =>
-            reorder(
-                current,
-                index,
-                index + direction,
-            ),
+    function toggleCategory(categoryId: number) {
+        setSelectedCategoryIds((current) =>
+            current.includes(categoryId)
+                ? current.filter((id) => id !== categoryId)
+                : [...current, categoryId],
         );
     }
 
     function addComponent() {
         if (variants.length > 0) {
-            setVariants([]);
+            setError(
+                "Um produto não pode ter variantes e componentes ao mesmo tempo. Remove as variantes primeiro.",
+            );
+            return;
         }
 
+        setError(null);
         setComponents((current) => [
             ...current,
-            createComponent(current.length),
+            {
+                name: "",
+                minQuantity: 0,
+                recommendedQuantity: 1,
+                maxQuantity: 10,
+                customerPricePerAdditionalUnit: 0,
+                floristPricePerAdditionalUnit: 0,
+            },
         ]);
+    }
+
+    function updateComponent(
+        index: number,
+        changes: Partial<ComponentFormItem>,
+    ) {
+        setComponents((current) =>
+            current.map((component, i) =>
+                i === index ? { ...component, ...changes } : component,
+            ),
+        );
+    }
+
+    function removeComponent(index: number) {
+        setComponents((current) => current.filter((_, i) => i !== index));
     }
 
     function addVariant() {
         if (components.length > 0) {
-            setComponents([]);
+            setError(
+                "Um produto não pode ter variantes e componentes ao mesmo tempo. Remove os componentes primeiro.",
+            );
+            return;
         }
 
+        setError(null);
         setVariants((current) => [
             ...current,
-            createVariant(current.length),
+            {
+                type: "SIZE",
+                name: "",
+                description: "",
+                customerPrice: toNumber(customerPrice),
+                floristPrice: toNumber(floristPrice),
+                image: "",
+            },
         ]);
     }
 
-    function removeComponent(index: number) {
-        setComponents((current) =>
-            current
-                .filter(
-                    (_, itemIndex) =>
-                        itemIndex !== index,
-                )
-                .map((item, itemIndex) => ({
-                    ...item,
-                    sortOrder: itemIndex,
-                })),
+    function updateVariant(
+        index: number,
+        changes: Partial<VariantFormItem>,
+    ) {
+        setVariants((current) =>
+            current.map((variant, i) =>
+                i === index ? { ...variant, ...changes } : variant,
+            ),
         );
     }
 
     function removeVariant(index: number) {
-        const variant = variants[index];
-
-        if (!variant) {
-            return;
-        }
-
-        setImages((current) =>
-            current.map((image) => {
-                const matchesExistingVariant =
-                    variant.id != null &&
-                    image.variantId ===
-                    variant.id;
-
-                const matchesNewVariant =
-                    variant.clientId != null &&
-                    image.variantClientId ===
-                    variant.clientId;
-
-                if (
-                    matchesExistingVariant ||
-                    matchesNewVariant
-                ) {
-                    return {
-                        ...image,
-                        variantId: null,
-                        variantClientId: null,
-                    };
-                }
-
-                return image;
-            }),
-        );
-
-        setVariants((current) =>
-            current
-                .filter(
-                    (_, itemIndex) =>
-                        itemIndex !== index,
-                )
-                .map((item, itemIndex) => ({
-                    ...item,
-                    sortOrder: itemIndex,
-                })),
-        );
+        setVariants((current) => current.filter((_, i) => i !== index));
     }
 
-    function removeImage(index: number) {
-        setImages((current) =>
-            current
-                .filter(
-                    (_, itemIndex) =>
-                        itemIndex !== index,
-                )
-                .map((item, itemIndex) => ({
-                    ...item,
-                    sortOrder: itemIndex,
-                })),
-        );
-    }
+    function validate(): string | null {
+        if (!name.trim()) return "O nome do produto é obrigatório.";
 
-    async function handleImageUpload(
-        event: React.ChangeEvent<HTMLInputElement>,
-    ) {
-        const file =
-            event.target.files?.[0];
+        if (!generateSlug(slug)) return "O slug do produto é obrigatório.";
 
-        event.target.value = "";
-
-        if (!file) {
-            return;
+        if (!taxCodeId || !taxCodes.some((code) => code.id === Number(taxCodeId))) {
+            return "Seleciona um código fiscal ativo.";
         }
 
-        setError(null);
-        setUploadingImage(true);
-
-        try {
-            const uploaded =
-                await uploadProductImage(file);
-
-            setImages((current) => [
-                ...current,
-                {
-                    fileId: uploaded.id,
-                    altText: "",
-                    sortOrder: current.length,
-                    isPrimary:
-                        current.length === 0,
-                    variantId: null,
-                    variantClientId: null,
-                    previewUrl: uploaded.url,
-                    fileName:
-                        uploaded.originalName,
-                },
-            ]);
-        } catch (err) {
-            setError(
-                err instanceof Error
-                    ? err.message
-                    : "Não foi possível carregar a imagem.",
-            );
-        } finally {
-            setUploadingImage(false);
-        }
-    }
-
-    function setPrimaryImage(
-        index: number,
-    ) {
-        setImages((current) =>
-            current.map(
-                (image, imageIndex) => ({
-                    ...image,
-                    isPrimary:
-                        imageIndex === index,
-                }),
-            ),
-        );
-    }
-
-    function isVariantImageAlreadyUsed(
-        imageIndex: number,
-        variant: VariantForm,
-    ) {
-        return images.some(
-            (image, currentImageIndex) => {
-                if (
-                    currentImageIndex ===
-                    imageIndex
-                ) {
-                    return false;
-                }
-
-                if (
-                    variant.id != null &&
-                    image.variantId === variant.id
-                ) {
-                    return true;
-                }
-
-                if (
-                    variant.clientId != null &&
-                    image.variantClientId ===
-                    variant.clientId
-                ) {
-                    return true;
-                }
-
-                return false;
-            },
-        );
-    }
-
-    function setImageVariant(
-        imageIndex: number,
-        value: string,
-    ) {
-        if (value === "") {
-            setImages((current) =>
-                current.map(
-                    (image, currentIndex) =>
-                        currentIndex ===
-                            imageIndex
-                            ? {
-                                ...image,
-                                variantId:
-                                    null,
-                                variantClientId:
-                                    null,
-                            }
-                            : image,
-                ),
-            );
-
-            return;
+        if (selectedCategoryIds.length === 0) {
+            return "Seleciona pelo menos uma categoria.";
         }
 
-        const variant = variants.find(
-            (item) => {
-                if (item.id != null) {
-                    return (
-                        `id:${item.id}` ===
-                        value
-                    );
-                }
+        const customer = toNumber(customerPrice);
+        const florist = toNumber(floristPrice);
 
-                if (item.clientId) {
-                    return (
-                        `client:${item.clientId}` ===
-                        value
-                    );
-                }
-
-                return false;
-            },
-        );
-
-        if (!variant) {
-            return;
+        if (customer <= 0) {
+            return "O preço para o cliente deve ser superior a zero.";
         }
 
-        if (
-            isVariantImageAlreadyUsed(
-                imageIndex,
-                variant,
-            )
-        ) {
-            setError(
-                `A variante "${variant.name || "sem nome"}" já tem uma imagem associada.`,
-            );
-
-            return;
+        if (florist < 0 || florist >= customer) {
+            return "O preço da florista tem de ser estritamente inferior ao preço do cliente.";
         }
 
-        setError(null);
-
-        setImages((current) =>
-            current.map(
-                (image, currentIndex) => {
-                    if (
-                        currentIndex !==
-                        imageIndex
-                    ) {
-                        return image;
-                    }
-
-                    return {
-                        ...image,
-                        variantId:
-                            variant.id ??
-                            null,
-                        variantClientId:
-                            variant.id
-                                ? null
-                                : variant.clientId ??
-                                null,
-                    };
-                },
-            ),
-        );
-    }
-
-    function validateBasicInfo(): string | null {
-        if (!name.trim()) {
-            return "O nome do produto é obrigatório.";
+        if (type === "RENTAL" && (rentalDeposit.trim() === "" || toNumber(rentalDeposit) < 0)) {
+            return "Define uma caução válida para o produto de aluguer.";
         }
 
-        if (!categoryId) {
-            return "Selecione uma categoria.";
+        if (existingImages.length + imageFiles.length === 0) {
+            return "O produto tem de ter pelo menos uma imagem.";
         }
 
-        if (!taxCodeId) {
-            return "Selecione o código de IVA.";
+        if (components.length > 0 && variants.length > 0) {
+            return "O produto não pode ter componentes e variantes simultaneamente.";
         }
 
-        return null;
-    }
+        for (let index = 0; index < components.length; index++) {
+            const component = components[index];
 
-    function validatePricing(): string | null {
-        if (customerPrice === "") {
-            return "O preço para o cliente é obrigatório.";
-        }
-
-        if (floristPrice === "") {
-            return "O preço para a florista é obrigatório.";
-        }
-
-        const customer = Number(customerPrice);
-        const florist = Number(floristPrice);
-
-        if (!Number.isFinite(customer) || customer < 0) {
-            return "O preço para o cliente é inválido.";
-        }
-
-        if (!Number.isFinite(florist) || florist < 0) {
-            return "O preço para a florista é inválido.";
-        }
-
-        if (type === "RENTAL") {
-            if (!rentalDeposit.trim()) {
-                return "Indique o valor da caução do aluguer.";
-            }
-
-            const deposit = Number(rentalDeposit);
-
-            if (!Number.isFinite(deposit) || deposit < 0) {
-                return "O valor da caução é inválido.";
-            }
-        }
-
-        return null;
-    }
-
-    function validateComponents(): string | null {
-        for (const [index, component] of components.entries()) {
             if (!component.name.trim()) {
                 return `Indica o nome do componente ${index + 1}.`;
             }
@@ -716,1604 +517,1117 @@ export default function ProductForm({
                 component.recommendedQuantity < component.minQuantity ||
                 component.maxQuantity < component.recommendedQuantity
             ) {
-                return `As quantidades do componente "${component.name}" são inválidas.`;
+                return `Verifica as quantidades mínimas, recomendadas e máximas do componente "${component.name}".`;
             }
 
             if (
-                component.customerPricePerAdditionalUnit < 0 ||
-                component.floristPricePerAdditionalUnit < 0
+                component.customerPricePerAdditionalUnit <= 0 ||
+                component.floristPricePerAdditionalUnit < 0 ||
+                component.floristPricePerAdditionalUnit >=
+                    component.customerPricePerAdditionalUnit
             ) {
-                return `Os valores do componente "${component.name}" são inválidos.`;
+                return `No componente "${component.name}", o preço adicional da florista tem de ser inferior ao preço adicional do cliente, e o preço do cliente tem de ser superior a zero.`;
             }
         }
 
-        return null;
-    }
+        for (let index = 0; index < variants.length; index++) {
+            const variant = variants[index];
 
-    function validateVariants(): string | null {
-        for (const [index, variant] of variants.entries()) {
             if (!variant.name.trim()) {
                 return `Indica o nome da variante ${index + 1}.`;
             }
 
-            if (variant.customerPrice < 0) {
-                return `O preço para o cliente da variante "${variant.name}" é inválido.`;
+            if (
+                variant.customerPrice < customer ||
+                variant.floristPrice < 0 ||
+                variant.floristPrice >= variant.customerPrice
+            ) {
+                return `Verifica os preços da variante "${variant.name}". O preço da variante para o cliente não pode ser inferior ao preço base e o preço da florista tem de ser estritamente inferior.`;
             }
 
-            if (variant.floristPrice < 0) {
-                return `O preço para a florista da variante "${variant.name}" é inválido.`;
+            if (index === 0 && variant.customerPrice !== customer) {
+                return "O preço para o cliente da primeira variante tem de ser igual ao preço base do produto.";
+            }
+
+            if (!variant.imageFile && !variant.image) {
+                return `Adiciona uma imagem à variante "${variant.name}".`;
             }
         }
 
         return null;
     }
 
-    function validateImages(): string | null {
-        const assignedVariants = new Set<string>();
-
-        for (const image of images) {
-            const variantKey =
-                image.variantId != null
-                    ? `id:${image.variantId}`
-                    : image.variantClientId
-                        ? `client:${image.variantClientId}`
-                        : null;
-
-            if (!variantKey) {
-                continue;
-            }
-
-            if (assignedVariants.has(variantKey)) {
-                return "Uma variante não pode ter mais do que uma imagem associada.";
-            }
-
-            assignedVariants.add(variantKey);
-        }
-
-        return null;
-    }
-
-    function validateForm(): string | null {
-        return (
-            validateBasicInfo() ??
-            validatePricing() ??
-            validateComponents() ??
-            validateVariants() ??
-            validateImages()
-        );
-    }
-
-    function buildConfiguration() {
-        return {
-            components: components.map(
-                (component, index) => ({
-                    ...component,
-                    sortOrder: index,
-                }),
-            ),
-
-            variants: variants.map(
-                (variant, index) => ({
-                    ...variant,
-                    sortOrder: index,
-                }),
-            ),
-
-            images: images.map(
-                (image, index) => ({
-                    id: image.id,
-                    fileId: image.fileId,
-                    altText:
-                        image.altText || null,
-                    sortOrder: index,
-                    isPrimary:
-                        image.isPrimary,
-                    variantId:
-                        image.variantId ??
-                        null,
-                    variantClientId:
-                        image.variantClientId ??
-                        null,
-                }),
-            ),
-        };
-    }
-
-    async function handleSubmit(
-        event: React.FormEvent<HTMLFormElement>,
-    ) {
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-
         setError(null);
-        setSuccess(null);
+        setWarning(null);
 
-        const validationError =
-            validateForm();
+        const validationError = validate();
 
         if (validationError) {
             setError(validationError);
             return;
         }
 
-        const parsedCustomerPrice = Number(customerPrice);
-        const parsedFloristPrice = Number(floristPrice);
+        setSaving(true);
 
-        const parsedCategoryId =
-            Number(categoryId);
-
-        const parsedTaxCodeId =
-            Number(taxCodeId);
-
-        const parsedRentalDeposit =
-            type === "RENTAL" ? Number(rentalDeposit) : null;
+        let createdProductId: number | null = null;
 
         try {
-            setIsSubmitting(true);
+            const payload = {
+                name: name.trim(),
+                slug: generateSlug(slug),
+                description: description.trim() || undefined,
+                customerPrice: toNumber(customerPrice),
+                floristPrice: toNumber(floristPrice),
+                featured,
+                categoryIds: selectedCategoryIds,
+                taxCodeId: Number(taxCodeId),
+                components: components.map((component) => ({
+                    ...(component.id !== undefined ? { id: component.id } : {}),
+                    name: component.name.trim(),
+                    minQuantity: component.minQuantity,
+                    recommendedQuantity: component.recommendedQuantity,
+                    maxQuantity: component.maxQuantity,
+                    customerPricePerAdditionalUnit:
+                        component.customerPricePerAdditionalUnit,
+                    floristPricePerAdditionalUnit:
+                        component.floristPricePerAdditionalUnit,
+                })),
+                variants: variants.map((variant) => ({
+                    ...(variant.id !== undefined ? { id: variant.id } : {}),
+                    type: variant.type,
+                    name: variant.name.trim(),
+                    description: variant.description.trim(),
+                    customerPrice: variant.customerPrice,
+                    floristPrice: variant.floristPrice,
+                })),
+                active,
+                ...(type === "RENTAL"
+                    ? { rentalDeposit: toNumber(rentalDeposit) }
+                    : {}),
+            };
 
-            if (isEditing) {
-                await updateProduct(
-                    product.id,
-                    {
-                        name: name.trim(),
-                        description:
-                            description.trim() ||
-                            undefined,
-                        customerPrice: parsedCustomerPrice,
-                        floristPrice: parsedFloristPrice,
-                        categoryId:
-                            parsedCategoryId,
-                        taxCodeId:
-                            parsedTaxCodeId,
-                        active,
-                        featured,
-                        rentalDeposit: parsedRentalDeposit,
-                    },
+            if (product) {
+                const updatePayload: AdminUpdateProduct = payload;
+                await adminProductsApi.update(product.id, updatePayload);
+                createdProductId = product.id;
+            } else {
+                const createPayload: AdminCreateProduct = {
+                    ...payload,
+                    type,
+                };
+
+                const created = await adminProductsApi.create(createPayload);
+                createdProductId = created.id;
+            }
+
+            // Re-fetch to obtain the persisted IDs for variants before uploading images.
+            const savedProduct = await adminProductsApi.getById(createdProductId);
+
+            const uploadErrors: string[] = [];
+
+            // Remove apenas as imagens que o utilizador marcou para remoção.
+            for (const imageId of removedImageIds) {
+                try {
+                    await adminProductsApi.deleteImage(createdProductId, imageId);
+                } catch (err) {
+                    uploadErrors.push(
+                        `Não foi possível remover a imagem ${imageId}: ${err instanceof Error ? err.message : "falha na remoção"}`,
+                    );
+                }
+            }
+
+            // Carrega apenas as imagens novas; as imagens existentes são mantidas.
+            for (let index = 0; index < imageFiles.length; index++) {
+                try {
+                    await adminProductsApi.uploadImage(createdProductId, imageFiles[index], {
+                        isPrimary: existingImages.length === 0 && index === 0,
+                        sortOrder: existingImages.length + index,
+                    });
+                } catch (err) {
+                    uploadErrors.push(
+                        `Imagem "${imageFiles[index].name}": ${err instanceof Error ? err.message : "falha no upload"}`,
+                    );
+                }
+            }
+
+            for (let index = 0; index < variants.length; index++) {
+                const variant = variants[index];
+
+                if (!variant.imageFile) continue;
+
+                const savedVariant =
+                    savedProduct.variants.find(
+                        (item) => variant.id !== undefined && item.id === variant.id,
+                    ) ?? savedProduct.variants[index];
+
+                if (!savedVariant) {
+                    uploadErrors.push(
+                        `Não foi possível encontrar a variante "${variant.name}" para carregar a imagem.`,
+                    );
+                    continue;
+                }
+
+                try {
+                    await adminProductsApi.uploadVariantImage(
+                        createdProductId,
+                        savedVariant.id,
+                        variant.imageFile,
+                    );
+                } catch (err) {
+                    uploadErrors.push(
+                        `Imagem da variante "${variant.name}": ${
+                            err instanceof Error ? err.message : "falha no upload"
+                        }`,
+                    );
+                }
+            }
+
+            if (uploadErrors.length > 0) {
+                setWarning(
+                    `O produto foi guardado, mas alguns uploads falharam:\n${uploadErrors.join("\n")}\nPodes voltar a editar o produto e carregar as imagens em falta.`,
                 );
-
-                await updateProductConfiguration(
-                    product.id,
-                    buildConfiguration(),
-                );
-
-                router.push(
-                    `/admin/products/${product.id}`,
-                );
-
-                router.refresh();
-
                 return;
             }
 
-            const response =
-                await createProduct({
-                    name: name.trim(),
-                    description:
-                        description.trim() ||
-                        undefined,
-                    customerPrice: parsedCustomerPrice,
-                    floristPrice: parsedFloristPrice,
-                    categoryId:
-                        parsedCategoryId,
-                    taxCodeId:
-                        parsedTaxCodeId,
-                    active,
-                    type,
-                    featured,
-                    rentalDeposit: parsedRentalDeposit,
-                });
-
-            const createdProduct =
-                response.data;
-
-            if (
-                createdProduct?.id &&
-                (components.length > 0 ||
-                    variants.length > 0 ||
-                    images.length > 0)
-            ) {
-                await updateProductConfiguration(
-                    createdProduct.id,
-                    buildConfiguration(),
+            router.push("/admin/products");
+            router.refresh();
+        } catch (err) {
+            if (createdProductId !== null) {
+                setWarning(
+                    `O produto (ID ${createdProductId}) já foi guardado, mas ocorreu um erro numa etapa posterior. Não cries novamente o produto. Verifica a edição do produto para confirmar as imagens.`,
+                );
+            } else {
+                setError(
+                    err instanceof Error
+                        ? err.message
+                        : "Não foi possível guardar o produto. Tenta novamente.",
                 );
             }
+        } finally {
+            setSaving(false);
+        }
+    }
 
-            router.push(
-                `/admin/products/${createdProduct.id}`,
-            );
+    async function handleDelete() {
+        if (!product || deleting) return;
 
+        setDeleting(true);
+        setError(null);
+
+        try {
+            await adminProductsApi.delete(product.id);
+            router.push("/admin/products");
             router.refresh();
         } catch (err) {
             setError(
                 err instanceof Error
                     ? err.message
-                    : "Não foi possível guardar o produto.",
+                    : "Não foi possível eliminar o produto.",
             );
+            setShowDeleteConfirmation(false);
         } finally {
-            setIsSubmitting(false);
+            setDeleting(false);
         }
     }
 
     return (
-        <form
-            onSubmit={handleSubmit}
-            className="space-y-8"
-        >
+        <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="flex items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-semibold text-[#2F3B2A]">
+                        {isEditing ? "Editar produto" : "Novo produto"}
+                    </h1>
+                    <p className="mt-1 text-sm text-[#7A8474]">
+                        Define a informação, os preços, as imagens e as opções do produto.
+                    </p>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2">
+                    {product && (
+                        <button
+                            type="button"
+                            onClick={() => setShowDeleteConfirmation(true)}
+                            disabled={saving || deleting}
+                            className="inline-flex items-center gap-2 rounded-full border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <Trash2 size={16} />
+                            Eliminar produto
+                        </button>
+                    )}
+
+                    <button
+                        type="button"
+                        onClick={() => router.push("/admin/products")}
+                        className="inline-flex items-center gap-2 rounded-xl border border-[#E2E6DD] px-4 py-2.5 text-sm font-medium text-[#55624A] transition hover:bg-[#F3F5EE]"
+                        disabled={saving || deleting}
+                    >
+                        <ArrowLeft size={16} />
+                        Voltar
+                    </button>
+                </div>
+            </div>
+
+
             {error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div
+                    role="alert"
+                    className="whitespace-pre-line rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700"
+                >
                     {error}
                 </div>
             )}
 
-            {success && (
-                <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                    {success}
+            {warning && (
+                <div
+                    role="alert"
+                    className="whitespace-pre-line rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800"
+                >
+                    {warning}
+                    <div className="mt-4">
+                        <button
+                            type="button"
+                            onClick={() => router.push(`/admin/products/${createdProductIdForRoute(product)}/edit`)}
+                            className="text-sm font-semibold underline"
+                        >
+                            Voltar à edição do produto
+                        </button>
+                    </div>
                 </div>
             )}
 
-            <section className="rounded-xl border bg-white p-6 shadow-sm">
-                <div className="mb-6">
-                    <h2 className="text-lg font-semibold text-gray-900">
-                        Informação básica
-                    </h2>
+            <section className={sectionClassName}>
+                <SectionHeading
+                    title="Informação geral"
+                    description="Nome, endereço, descrição, tipo e categoria do produto."
+                />
 
-                    <p className="mt-1 text-sm text-gray-500">
-                        Informação principal do
-                        produto.
-                    </p>
-                </div>
-
-                <div className="grid gap-6 md:grid-cols-2">
-                    <div className="md:col-span-2">
-                        <label className="mb-2 block text-sm font-medium text-gray-700">
-                            Nome
+                <div className="grid gap-5 md:grid-cols-2">
+                    <div>
+                        <label htmlFor="name" className={labelClassName}>
+                            Nome <span className="text-red-500">*</span>
                         </label>
-
                         <input
-                            type="text"
+                            id="name"
                             value={name}
-                            onChange={(event) =>
-                                setName(
-                                    event.target
-                                        .value,
-                                )
-                            }
-                            className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
-                            placeholder="Nome do produto"
+                            onChange={(event) => setName(event.target.value)}
+                            className={inputClassName}
+                            placeholder="Ex.: Bouquet Primavera"
+                            required
+                            disabled={saving}
+                        />
+                    </div>
+
+                    <div>
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                            <label htmlFor="slug" className={labelClassName}>
+                                Slug <span className="text-red-500">*</span>
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSlugManuallyEdited(false);
+                                    setSlug(generateSlug(name));
+                                }}
+                                className="text-xs font-medium text-[#55624A] hover:text-[#35412F]"
+                                disabled={saving}
+                            >
+                                Gerar automaticamente
+                            </button>
+                        </div>
+                        <input
+                            id="slug"
+                            value={slug}
+                            onChange={(event) => {
+                                setSlug(event.target.value);
+                                setSlugManuallyEdited(true);
+                            }}
+                            className={inputClassName}
+                            placeholder="bouquet-primavera"
+                            required
+                            disabled={saving}
                         />
                     </div>
 
                     <div className="md:col-span-2">
-                        <label className="mb-2 block text-sm font-medium text-gray-700">
+                        <label htmlFor="description" className={labelClassName}>
                             Descrição
                         </label>
-
                         <textarea
+                            id="description"
                             value={description}
-                            onChange={(event) =>
-                                setDescription(
-                                    event.target
-                                        .value,
-                                )
-                            }
-                            rows={5}
-                            className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
-                            placeholder="Descrição do produto"
+                            onChange={(event) => setDescription(event.target.value)}
+                            className={`${inputClassName} min-h-28 resize-y`}
+                            rows={4}
+                            placeholder="Descreve o produto..."
+                            disabled={saving}
                         />
                     </div>
 
                     <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-700">
-                            Categoria
+                        <label htmlFor="type" className={labelClassName}>
+                            Tipo de produto <span className="text-red-500">*</span>
                         </label>
-
                         <select
-                            value={categoryId}
-                            onChange={(event) =>
-                                setCategoryId(
-                                    event.target
-                                        .value,
-                                )
-                            }
-                            disabled={
-                                isLoadingCategories
-                            }
-                            className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
-                        >
-                            <option value="">
-                                {isLoadingCategories
-                                    ? "A carregar..."
-                                    : "Selecionar categoria"}
-                            </option>
-
-                            {categories.map(
-                                (category) => (
-                                    <option
-                                        key={
-                                            category.id
-                                        }
-                                        value={
-                                            category.id
-                                        }
-                                    >
-                                        {
-                                            category.name
-                                        }
-                                    </option>
-                                ),
-                            )}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-700">
-                            Tipo de produto
-                        </label>
-
-                        <select
+                            id="type"
                             value={type}
-                            onChange={(event) =>
-                                setType(
-                                    event.target.value as "SALE" | "RENTAL",
-                                )
-                            }
-                            disabled={isEditing}
-                            className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100 disabled:text-gray-500"
+                            onChange={(event) => setType(event.target.value as ProductType)}
+                            className={inputClassName}
+                            disabled={saving || isEditing}
                         >
-                            <option value="SALE">
-                                Venda
-                            </option>
-                            <option value="RENTAL">
-                                Aluguer
-                            </option>
+                            <option value="SALE">Venda</option>
+                            <option value="RENTAL">Aluguer</option>
                         </select>
-
                         {isEditing && (
-                            <p className="mt-1 text-xs text-gray-500">
-                                O tipo do produto não pode ser alterado depois de criado.
+                            <p className="mt-2 text-xs text-[#8A9383]">
+                                O tipo não é alterável durante a edição.
                             </p>
                         )}
                     </div>
 
                     <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-700">
-                            Código de IVA
+                        <label htmlFor="taxCodeId" className={labelClassName}>
+                            Código fiscal <span className="text-red-500">*</span>
                         </label>
-
                         <select
+                            id="taxCodeId"
                             value={taxCodeId}
-                            onChange={(event) =>
-                                setTaxCodeId(
-                                    event.target
-                                        .value,
-                                )
-                            }
-                            disabled={
-                                isLoadingTaxCodes
-                            }
-                            className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
+                            onChange={(event) => setTaxCodeId(event.target.value)}
+                            className={inputClassName}
+                            required
+                            disabled={saving || loadingOptions}
                         >
                             <option value="">
-                                {isLoadingTaxCodes
-                                    ? "A carregar..."
-                                    : "Selecionar código de IVA"}
+                                {loadingOptions
+                                    ? "A carregar códigos fiscais..."
+                                    : "Seleciona um código fiscal"}
                             </option>
-
-                            {taxCodes.map(
-                                (taxCode) => (
-                                    <option
-                                        key={
-                                            taxCode.id
-                                        }
-                                        value={
-                                            taxCode.id
-                                        }
-                                    >
-                                        {taxCode.name}
-                                        {" · "}
-                                        {taxCode.rate}%
-                                    </option>
-                                ),
-                            )}
+                            {taxCodes.map((taxCode) => (
+                                <option key={taxCode.id} value={taxCode.id}>
+                                    {taxCode.name} — {taxCode.rate}%
+                                </option>
+                            ))}
                         </select>
+                        {!loadingOptions && taxCodes.length === 0 && (
+                            <p className="mt-2 text-xs text-amber-700">
+                                Não foram encontrados códigos fiscais ativos.
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <label className={labelClassName}>Categorias</label>
+                        {loadingOptions ? (
+                            <p className="text-sm text-[#7A8474]">
+                                A carregar categorias...
+                            </p>
+                        ) : categories.length === 0 ? (
+                            <p className="text-sm text-amber-700">
+                                Não foram encontradas categorias.
+                            </p>
+                        ) : (
+                            <div className="flex flex-wrap gap-2">
+                                {categories.map((category) => {
+                                    const selected = selectedCategoryIds.includes(category.id);
+
+                                    return (
+                                        <button
+                                            key={category.id}
+                                            type="button"
+                                            onClick={() => toggleCategory(category.id)}
+                                            disabled={saving}
+                                            className={`rounded-full border px-4 py-2 text-sm transition ${
+                                                selected
+                                                    ? "border-[#55624A] bg-[#55624A] text-white"
+                                                    : "border-[#E2E6DD] bg-white text-[#55624A] hover:bg-[#F3F5EE]"
+                                            }`}
+                                        >
+                                            {category.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 </div>
             </section>
 
-            <section className="rounded-xl border bg-white p-6 shadow-sm">
-                <div className="mb-6">
-                    <h2 className="text-lg font-semibold text-gray-900">
-                        Preços
-                    </h2>
+            <section className={sectionClassName}>
+                <SectionHeading
+                    title="Preços"
+                    description="O preço pago pelo cliente tem de ser superior ao preço da florista."
+                />
 
-                    <p className="mt-1 text-sm text-gray-500">
-                        Ambos os preços são valores finais e incluem IVA.
-                    </p>
-                </div>
-
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-5 md:grid-cols-2">
                     <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-700">
-                            Preço (Cliente)
+                        <label htmlFor="customerPrice" className={labelClassName}>
+                            Preço para o cliente (€) <span className="text-red-500">*</span>
                         </label>
-
-                        <div className="relative">
-                            <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={customerPrice}
-                                onChange={(event) =>
-                                    setCustomerPrice(
-                                        event.target
-                                            .value,
-                                    )
-                                }
-                                className="w-full rounded-lg border px-3 py-2 pr-12 text-sm outline-none focus:ring-2 focus:ring-black"
-                                placeholder="0.00"
-                            />
-
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
-                                €
-                            </span>
-                        </div>
+                        <input
+                            id="customerPrice"
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            value={customerPrice}
+                            onChange={(event) => setCustomerPrice(event.target.value)}
+                            className={inputClassName}
+                            required
+                            disabled={saving}
+                        />
                     </div>
 
                     <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-700">
-                            Preço (Florista)
+                        <label htmlFor="floristPrice" className={labelClassName}>
+                            Preço para a florista (€) <span className="text-red-500">*</span>
                         </label>
-
-                        <div className="relative">
-                            <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={floristPrice}
-                                onChange={(event) =>
-                                    setFloristPrice(event.target.value)
-                                }
-                                className="w-full rounded-lg border px-3 py-2 pr-12 text-sm outline-none focus:ring-2 focus:ring-black"
-                                placeholder="0.00"
-                            />
-
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
-                                €
-                            </span>
-                        </div>
+                        <input
+                            id="floristPrice"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={floristPrice}
+                            onChange={(event) => setFloristPrice(event.target.value)}
+                            className={inputClassName}
+                            required
+                            disabled={saving}
+                        />
                     </div>
+
                     {type === "RENTAL" && (
                         <div className="md:col-span-2">
-                            <label className="mb-2 block text-sm font-medium text-gray-700">
-                                Caução do aluguer
+                            <label htmlFor="rentalDeposit" className={labelClassName}>
+                                Caução (€) <span className="text-red-500">*</span>
                             </label>
-
-                            <div className="relative">
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    required
-                                    value={rentalDeposit}
-                                    onChange={(event) =>
-                                        setRentalDeposit(event.target.value)
-                                    }
-                                    className="w-full rounded-lg border px-3 py-2 pr-12 text-sm outline-none focus:ring-2 focus:ring-black"
-                                    placeholder="0.00"
-                                />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
-                                    €
-                                </span>
-                            </div>
-
-                            <p className="mt-1 text-xs text-gray-500">
-                                A caução é independente do preço do aluguer.
-                            </p>
+                            <input
+                                id="rentalDeposit"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={rentalDeposit}
+                                onChange={(event) => setRentalDeposit(event.target.value)}
+                                className={inputClassName}
+                                required
+                                disabled={saving}
+                            />
                         </div>
                     )}
                 </div>
+            </section>
 
-                {taxCodeId && (
-                    <div className="mt-6 rounded-lg bg-gray-50 p-4">
-                        <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                            IVA aplicado
-                        </div>
+            <section className={sectionClassName}>
+                <SectionHeading
+                    title="Imagens do produto"
+                    description="Adiciona uma ou mais imagens JPEG, PNG ou WebP. Tamanho máximo de 5 MB por imagem."
+                />
 
-                        <div className="mt-1 text-sm font-medium text-gray-900">
-                            {taxCodes.find(
-                                (taxCode) =>
-                                    taxCode.id ===
-                                    Number(
-                                        taxCodeId,
-                                    ),
-                            )?.rate ?? 0}
-                            %
+                <label
+                    htmlFor="productImages"
+                    className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#D8DED1] bg-[#F8F9F5] px-5 py-8 text-center transition hover:border-[#55624A]"
+                >
+                    <Upload size={25} className="mb-3 text-[#55624A]" />
+                    <span className="text-sm font-semibold text-[#2F3B2A]">
+                        Escolher imagens
+                    </span>
+                    <span className="mt-1 text-xs text-[#7A8474]">
+                        Podes selecionar vários ficheiros
+                    </span>
+                    <input
+                        id="productImages"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        multiple
+                        onChange={handleImageChange}
+                        className="hidden"
+                        disabled={saving}
+                    />
+                </label>
+
+                {(existingImages.length > 0 || imageFiles.length > 0) && (
+                    <div className="mt-5">
+                        <p className="mb-3 text-xs text-[#7A8474]">
+                            Imagens atuais e novas. Podes remover as que não pretendes manter.
+                        </p>
+                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                            {existingImages.map((image, index) => (
+                                <div key={`existing-${image.id ?? image.url}`} className="min-w-0 space-y-2">
+                                    <div className="relative">
+                                        <ImagePreview
+                                            src={image.url}
+                                            alt={`Imagem atual ${index + 1}`}
+                                            className="h-36 w-full"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => removeExistingImage(index)}
+                                            aria-label={`Remover imagem atual ${index + 1}`}
+                                            title="Remover imagem"
+                                            disabled={saving}
+                                            className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-red-600 shadow-sm hover:bg-red-50 disabled:opacity-40"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+                                    <p className="truncate text-xs text-[#7A8474]">Imagem atual</p>
+                                </div>
+                            ))}
+                            {imageFiles.map((file, index) => (
+                                <div key={`${file.name}-${file.size}-${index}`} className="min-w-0 space-y-2">
+                                    <div className="relative">
+                                        <ImagePreview
+                                            file={file}
+                                            alt={file.name}
+                                            className="h-36 w-full"
+                                        />
+                                        <span className="absolute bottom-2 left-2 rounded-full bg-[#55624A] px-2.5 py-1 text-[10px] font-semibold text-white">
+                                            Nova
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeNewImage(index)}
+                                            aria-label={`Remover nova imagem ${index + 1}`}
+                                            title="Remover imagem"
+                                            disabled={saving}
+                                            className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-red-600 shadow-sm hover:bg-red-50 disabled:opacity-40"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+                                    <p className="truncate text-xs text-[#7A8474]">{file.name}</p>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}
             </section>
 
-            <section className="rounded-xl border bg-white p-6 shadow-sm">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <section className={sectionClassName}>
+                <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <h2 className="text-lg font-semibold text-gray-900">
-                            Configuração
+                        <h2 className="text-lg font-semibold text-[#2F3B2A]">
+                            Componentes ou variantes
                         </h2>
-
-                        <p className="mt-1 text-sm text-gray-500">
-                            Escolhe entre componentes
-                            personalizáveis ou variantes.
+                        <p className="mt-1 text-sm text-[#7A8474]">
+                            Escolhe uma configuração. Um produto não pode ter ambos.
                         </p>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                         <button
                             type="button"
                             onClick={addComponent}
-                            className={`rounded-lg border px-4 py-2 text-sm font-medium ${configurationMode ===
-                                "components"
-                                ? "bg-black text-white"
-                                : "bg-white text-gray-700"
-                                }`}
+                            disabled={saving || variants.length > 0}
+                            className="inline-flex items-center gap-2 rounded-xl border border-[#D8DED1] px-4 py-2.5 text-sm font-semibold text-[#55624A] transition hover:bg-[#F3F5EE] disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            + Componente
+                            <Plus size={16} />
+                            Componente
                         </button>
-
                         <button
                             type="button"
                             onClick={addVariant}
-                            className={`rounded-lg border px-4 py-2 text-sm font-medium ${configurationMode ===
-                                "variants"
-                                ? "bg-black text-white"
-                                : "bg-white text-gray-700"
-                                }`}
+                            disabled={saving || components.length > 0}
+                            className="inline-flex items-center gap-2 rounded-xl bg-[#55624A] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#46523C] disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            + Variante
+                            <Plus size={16} />
+                            Variante
                         </button>
                     </div>
                 </div>
 
+                {components.length === 0 && variants.length === 0 && (
+                    <div className="rounded-2xl border border-dashed border-[#D8DED1] bg-[#F8F9F5] px-5 py-8 text-center">
+                        <p className="text-sm font-medium text-[#55624A]">
+                            Sem componentes ou variantes
+                        </p>
+                        <p className="mt-1 text-xs text-[#7A8474]">
+                            Podes guardar o produto apenas com o seu preço base.
+                        </p>
+                    </div>
+                )}
+
                 {components.length > 0 && (
-                    <div className="mt-6 space-y-4">
-                        {components.map(
-                            (
-                                component,
-                                index,
-                            ) => (
-                                <div
-                                    key={
-                                        component.id ??
-                                        `component-${index}`
-                                    }
-                                    className="rounded-xl border bg-gray-50 p-5"
-                                >
-                                    <div className="mb-4 flex items-center justify-between">
-                                        <h3 className="font-medium text-gray-900">
-                                            Componente{" "}
-                                            {index +
-                                                1}
-                                        </h3>
+                    <div className="space-y-5">
+                        {components.map((component, index) => (
+                            <div
+                                key={component.id ?? `component-${index}`}
+                                className="rounded-2xl border border-[#E8EBE4] bg-[#FCFCFA] p-5"
+                            >
+                                <div className="mb-5 flex items-center justify-between gap-3">
+                                    <h3 className="font-semibold text-[#2F3B2A]">
+                                        Componente {index + 1}
+                                    </h3>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeComponent(index)}
+                                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50"
+                                        disabled={saving}
+                                    >
+                                        <Trash2 size={14} />
+                                        Remover
+                                    </button>
+                                </div>
 
-                                        <div className="flex gap-1">
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    moveComponent(
-                                                        index,
-                                                        -1,
-                                                    )
-                                                }
-                                                disabled={
-                                                    index ===
-                                                    0
-                                                }
-                                                className="rounded border px-2 py-1 text-xs disabled:opacity-40"
-                                            >
-                                                ↑
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    moveComponent(
-                                                        index,
-                                                        1,
-                                                    )
-                                                }
-                                                disabled={
-                                                    index ===
-                                                    components.length -
-                                                    1
-                                                }
-                                                className="rounded border px-2 py-1 text-xs disabled:opacity-40"
-                                            >
-                                                ↓
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    removeComponent(
-                                                        index,
-                                                    )
-                                                }
-                                                className="rounded border border-red-200 px-2 py-1 text-xs text-red-600"
-                                            >
-                                                Remover
-                                            </button>
-                                        </div>
+                                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                    <div className="sm:col-span-2 lg:col-span-3">
+                                        <label className={labelClassName}>Nome</label>
+                                        <input
+                                            value={component.name}
+                                            onChange={(event) =>
+                                                updateComponent(index, {
+                                                    name: event.target.value,
+                                                })
+                                            }
+                                            className={inputClassName}
+                                            placeholder="Ex.: Rosas"
+                                            required
+                                            disabled={saving}
+                                        />
                                     </div>
 
-                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                        <div className="lg:col-span-3">
-                                            <label className="mb-1 block text-xs font-medium text-gray-600">
-                                                Nome
-                                            </label>
+                                    <div>
+                                        <label className={labelClassName}>Quantidade mínima</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            value={component.minQuantity}
+                                            onChange={(event) =>
+                                                updateComponent(index, {
+                                                    minQuantity: toNumber(event.target.value),
+                                                })
+                                            }
+                                            className={inputClassName}
+                                            required
+                                            disabled={saving}
+                                        />
+                                    </div>
 
-                                            <input
-                                                value={
-                                                    component.name
-                                                }
-                                                onChange={(
-                                                    event,
-                                                ) =>
-                                                    setComponents(
-                                                        (
-                                                            current,
-                                                        ) =>
-                                                            current.map(
-                                                                (
-                                                                    item,
-                                                                    itemIndex,
-                                                                ) =>
-                                                                    itemIndex ===
-                                                                        index
-                                                                        ? {
-                                                                            ...item,
-                                                                            name: event.target.value,
-                                                                        }
-                                                                        : item,
-                                                            ),
-                                                    )
-                                                }
-                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
-                                                placeholder="Ex.: Chocolates"
-                                            />
-                                        </div>
+                                    <div>
+                                        <label className={labelClassName}>Quantidade recomendada</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            value={component.recommendedQuantity}
+                                            onChange={(event) =>
+                                                updateComponent(index, {
+                                                    recommendedQuantity: toNumber(event.target.value),
+                                                })
+                                            }
+                                            className={inputClassName}
+                                            required
+                                            disabled={saving}
+                                        />
+                                    </div>
 
-                                        <div>
-                                            <label className="mb-1 block text-xs font-medium text-gray-600">
-                                                Mínimo
-                                            </label>
+                                    <div>
+                                        <label className={labelClassName}>Quantidade máxima</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            value={component.maxQuantity}
+                                            onChange={(event) =>
+                                                updateComponent(index, {
+                                                    maxQuantity: toNumber(event.target.value),
+                                                })
+                                            }
+                                            className={inputClassName}
+                                            required
+                                            disabled={saving}
+                                        />
+                                    </div>
 
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                value={
-                                                    component.minQuantity
-                                                }
-                                                onChange={(
-                                                    event,
-                                                ) =>
-                                                    setComponents(
-                                                        (
-                                                            current,
-                                                        ) =>
-                                                            current.map(
-                                                                (
-                                                                    item,
-                                                                    itemIndex,
-                                                                ) =>
-                                                                    itemIndex ===
-                                                                        index
-                                                                        ? {
-                                                                            ...item,
-                                                                            minQuantity:
-                                                                                Number(
-                                                                                    event
-                                                                                        .target
-                                                                                        .value,
-                                                                                ),
-                                                                        }
-                                                                        : item,
-                                                            ),
-                                                    )
-                                                }
-                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-1 block text-xs font-medium text-gray-600">
-                                                Recomendado
-                                            </label>
-
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                value={
-                                                    component.recommendedQuantity
-                                                }
-                                                onChange={(
-                                                    event,
-                                                ) =>
-                                                    setComponents(
-                                                        (
-                                                            current,
-                                                        ) =>
-                                                            current.map(
-                                                                (
-                                                                    item,
-                                                                    itemIndex,
-                                                                ) =>
-                                                                    itemIndex ===
-                                                                        index
-                                                                        ? {
-                                                                            ...item,
-                                                                            recommendedQuantity:
-                                                                                Number(
-                                                                                    event
-                                                                                        .target
-                                                                                        .value,
-                                                                                ),
-                                                                        }
-                                                                        : item,
-                                                            ),
-                                                    )
-                                                }
-                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-1 block text-xs font-medium text-gray-600">
-                                                Máximo
-                                            </label>
-
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                value={
-                                                    component.maxQuantity
-                                                }
-                                                onChange={(
-                                                    event,
-                                                ) =>
-                                                    setComponents(
-                                                        (
-                                                            current,
-                                                        ) =>
-                                                            current.map(
-                                                                (
-                                                                    item,
-                                                                    itemIndex,
-                                                                ) =>
-                                                                    itemIndex ===
-                                                                        index
-                                                                        ? {
-                                                                            ...item,
-                                                                            maxQuantity:
-                                                                                Number(
-                                                                                    event
-                                                                                        .target
-                                                                                        .value,
-                                                                                ),
-                                                                        }
-                                                                        : item,
-                                                            ),
-                                                    )
-                                                }
-                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-1 block text-xs font-medium text-gray-600">
-                                                Preço Adicional (Cliente)
-                                            </label>
-
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                value={
-                                                    component.customerPricePerAdditionalUnit
-                                                }
-                                                onChange={(
-                                                    event,
-                                                ) =>
-                                                    setComponents(
-                                                        (
-                                                            current,
-                                                        ) =>
-                                                            current.map(
-                                                                (
-                                                                    item,
-                                                                    itemIndex,
-                                                                ) =>
-                                                                    itemIndex ===
-                                                                        index
-                                                                        ? {
-                                                                            ...item,
-                                                                            customerPricePerAdditionalUnit:
-                                                                                Number(
-                                                                                    event
-                                                                                        .target
-                                                                                        .value,
-                                                                                ),
-                                                                        }
-                                                                        : item,
-                                                            ),
-                                                    )
-                                                }
-                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-1 block text-xs font-medium text-gray-600">
-                                                Preço Adicional (Florista)
-                                            </label>
-
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                value={
-                                                    component.floristPricePerAdditionalUnit
-                                                }
-                                                onChange={(
-                                                    event,
-                                                ) =>
-                                                    setComponents(
-                                                        (
-                                                            current,
-                                                        ) =>
-                                                            current.map(
-                                                                (
-                                                                    item,
-                                                                    itemIndex,
-                                                                ) =>
-                                                                    itemIndex ===
-                                                                        index
-                                                                        ? {
-                                                                            ...item,
-                                                                            floristPricePerAdditionalUnit:
-                                                                                Number(
-                                                                                    event
-                                                                                        .target
-                                                                                        .value,
-                                                                                ),
-                                                                        }
-                                                                        : item,
-                                                            ),
-                                                    )
-                                                }
-                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
-                                            />
-                                        </div>
-
-                                        <label className="flex items-center gap-2 text-sm text-gray-700">
-                                            <input
-                                                type="checkbox"
-                                                checked={
-                                                    component.active
-                                                }
-                                                onChange={(
-                                                    event,
-                                                ) =>
-                                                    setComponents(
-                                                        (
-                                                            current,
-                                                        ) =>
-                                                            current.map(
-                                                                (
-                                                                    item,
-                                                                    itemIndex,
-                                                                ) =>
-                                                                    itemIndex ===
-                                                                        index
-                                                                        ? {
-                                                                            ...item,
-                                                                            active: event.target.checked,
-                                                                        }
-                                                                        : item,
-                                                            ),
-                                                    )
-                                                }
-                                            />
-                                            Ativo
+                                    <div>
+                                        <label className={labelClassName}>
+                                            Preço adicional cliente (€)
                                         </label>
+                                        <input
+                                            type="number"
+                                            min="0.01"
+                                            step="0.01"
+                                            value={component.customerPricePerAdditionalUnit}
+                                            onChange={(event) =>
+                                                updateComponent(index, {
+                                                    customerPricePerAdditionalUnit: toNumber(
+                                                        event.target.value,
+                                                    ),
+                                                })
+                                            }
+                                            className={inputClassName}
+                                            required
+                                            disabled={saving}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className={labelClassName}>
+                                            Preço adicional florista (€)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={component.floristPricePerAdditionalUnit}
+                                            onChange={(event) =>
+                                                updateComponent(index, {
+                                                    floristPricePerAdditionalUnit: toNumber(
+                                                        event.target.value,
+                                                    ),
+                                                })
+                                            }
+                                            className={inputClassName}
+                                            required
+                                            disabled={saving}
+                                        />
                                     </div>
                                 </div>
-                            ),
-                        )}
+                            </div>
+                        ))}
                     </div>
                 )}
 
                 {variants.length > 0 && (
-                    <div className="mt-6 space-y-4">
-                        {variants.map(
-                            (
-                                variant,
-                                index,
-                            ) => (
-                                <div
-                                    key={
-                                        variant.id ??
-                                        variant.clientId ??
-                                        `variant-${index}`
-                                    }
-                                    className="rounded-xl border bg-gray-50 p-5"
-                                >
-                                    <div className="mb-4 flex items-center justify-between">
-                                        <h3 className="font-medium text-gray-900">
-                                            Variante{" "}
-                                            {index +
-                                                1}
-                                        </h3>
+                    <div className="space-y-5">
+                        {variants.map((variant, index) => (
+                            <div
+                                key={variant.id ?? `variant-${index}`}
+                                className="rounded-2xl border border-[#E8EBE4] bg-[#FCFCFA] p-5"
+                            >
+                                <div className="mb-5 flex items-center justify-between gap-3">
+                                    <h3 className="font-semibold text-[#2F3B2A]">
+                                        Variante {index + 1}
+                                    </h3>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeVariant(index)}
+                                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50"
+                                        disabled={saving}
+                                    >
+                                        <Trash2 size={14} />
+                                        Remover
+                                    </button>
+                                </div>
 
-                                        <div className="flex gap-1">
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    moveVariant(
-                                                        index,
-                                                        -1,
-                                                    )
-                                                }
-                                                disabled={
-                                                    index ===
-                                                    0
-                                                }
-                                                className="rounded border px-2 py-1 text-xs disabled:opacity-40"
-                                            >
-                                                ↑
-                                            </button>
+                                <div className="grid gap-5 md:grid-cols-[1fr_2fr]">
+                                    <div>
+                                        <label className={labelClassName}>
+                                            Imagem <span className="text-red-500">*</span>
+                                        </label>
 
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    moveVariant(
-                                                        index,
-                                                        1,
-                                                    )
-                                                }
-                                                disabled={
-                                                    index ===
-                                                    variants.length -
-                                                    1
-                                                }
-                                                className="rounded border px-2 py-1 text-xs disabled:opacity-40"
-                                            >
-                                                ↓
-                                            </button>
+                                        <ImagePreview
+                                            file={variant.imageFile}
+                                            src={variant.image || undefined}
+                                            alt={`Imagem da variante ${variant.name || index + 1}`}
+                                            className="mb-3 h-44 w-full"
+                                        />
 
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    removeVariant(
-                                                        index,
-                                                    )
-                                                }
-                                                className="rounded border border-red-200 px-2 py-1 text-xs text-red-600"
-                                            >
-                                                Remover
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                                        <div>
-                                            <label className="mb-1 block text-xs font-medium text-gray-600">
-                                                Tipo
-                                            </label>
-
-                                            <select
-                                                value={
-                                                    variant.type
-                                                }
-                                                onChange={(
-                                                    event,
-                                                ) =>
-                                                    setVariants(
-                                                        (
-                                                            current,
-                                                        ) =>
-                                                            current.map(
-                                                                (
-                                                                    item,
-                                                                    itemIndex,
-                                                                ) =>
-                                                                    itemIndex ===
-                                                                        index
-                                                                        ? {
-                                                                            ...item,
-                                                                            type: event.target.value,
-                                                                        }
-                                                                        : item,
-                                                            ),
-                                                    )
-                                                }
-                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
-                                            >
-                                                {VARIANT_TYPES.map(
-                                                    (
-                                                        type,
-                                                    ) => (
-                                                        <option
-                                                            key={
-                                                                type
-                                                            }
-                                                            value={
-                                                                type
-                                                            }
-                                                        >
-                                                            {
-                                                                type
-                                                            }
-                                                        </option>
-                                                    ),
-                                                )}
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-1 block text-xs font-medium text-gray-600">
-                                                Nome
-                                            </label>
-
+                                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#D8DED1] px-4 py-2.5 text-sm font-medium text-[#55624A] hover:bg-[#F3F5EE]">
+                                            <ImagePlus size={16} />
+                                            Escolher imagem
                                             <input
-                                                value={
-                                                    variant.name
-                                                }
-                                                onChange={(
-                                                    event,
-                                                ) =>
-                                                    setVariants(
-                                                        (
-                                                            current,
-                                                        ) =>
-                                                            current.map(
-                                                                (
-                                                                    item,
-                                                                    itemIndex,
-                                                                ) =>
-                                                                    itemIndex ===
-                                                                        index
-                                                                        ? {
-                                                                            ...item,
-                                                                            name: event.target.value,
-                                                                        }
-                                                                        : item,
-                                                            ),
-                                                    )
-                                                }
-                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
-                                                placeholder="Ex.: Vermelho"
+                                                type="file"
+                                                accept="image/jpeg,image/png,image/webp"
+                                                className="hidden"
+                                                disabled={saving}
+                                                onChange={(event) => {
+                                                    const file = event.target.files?.[0];
+                                                    event.target.value = "";
+
+                                                    if (!file) return;
+
+                                                    if (
+                                                        ![
+                                                            "image/jpeg",
+                                                            "image/png",
+                                                            "image/webp",
+                                                        ].includes(file.type)
+                                                    ) {
+                                                        setError(
+                                                            "A imagem da variante tem de ser JPEG, PNG ou WebP.",
+                                                        );
+                                                        return;
+                                                    }
+
+                                                    if (file.size > 5 * 1024 * 1024) {
+                                                        setError(
+                                                            "A imagem da variante não pode exceder 5 MB.",
+                                                        );
+                                                        return;
+                                                    }
+
+                                                    setError(null);
+                                                    updateVariant(index, {
+                                                        imageFile: file,
+                                                    });
+                                                }}
                                             />
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-1 block text-xs font-medium text-gray-600">
-                                                Código
-                                            </label>
-
-                                            <input
-                                                value={
-                                                    variant.code ??
-                                                    ""
-                                                }
-                                                onChange={(
-                                                    event,
-                                                ) =>
-                                                    setVariants(
-                                                        (
-                                                            current,
-                                                        ) =>
-                                                            current.map(
-                                                                (
-                                                                    item,
-                                                                    itemIndex,
-                                                                ) =>
-                                                                    itemIndex ===
-                                                                        index
-                                                                        ? {
-                                                                            ...item,
-                                                                            code: event.target.value,
-                                                                        }
-                                                                        : item,
-                                                            ),
-                                                    )
-                                                }
-                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
-                                                placeholder="Opcional"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-1 block text-xs font-medium text-gray-600">
-                                                Preço (Cliente)
-                                            </label>
-
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                value={
-                                                    variant.customerPrice
-                                                }
-                                                onChange={(
-                                                    event,
-                                                ) =>
-                                                    setVariants(
-                                                        (
-                                                            current,
-                                                        ) =>
-                                                            current.map(
-                                                                (
-                                                                    item,
-                                                                    itemIndex,
-                                                                ) =>
-                                                                    itemIndex ===
-                                                                        index
-                                                                        ? {
-                                                                            ...item,
-                                                                            customerPrice:
-                                                                                Number(
-                                                                                    event
-                                                                                        .target
-                                                                                        .value,
-                                                                                ),
-                                                                        }
-                                                                        : item,
-                                                            ),
-                                                    )
-                                                }
-                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-1 block text-xs font-medium text-gray-600">
-                                                Preço (Florista)
-                                            </label>
-
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                value={
-                                                    variant.floristPrice
-                                                }
-                                                onChange={(
-                                                    event,
-                                                ) =>
-                                                    setVariants(
-                                                        (
-                                                            current,
-                                                        ) =>
-                                                            current.map(
-                                                                (
-                                                                    item,
-                                                                    itemIndex,
-                                                                ) =>
-                                                                    itemIndex ===
-                                                                        index
-                                                                        ? {
-                                                                            ...item,
-                                                                            floristPrice:
-                                                                                Number(
-                                                                                    event
-                                                                                        .target
-                                                                                        .value,
-                                                                                ),
-                                                                        }
-                                                                        : item,
-                                                            ),
-                                                    )
-                                                }
-                                                className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
-                                            />
-                                        </div>
-
-                                        <label className="flex items-center gap-2 text-sm text-gray-700">
-                                            <input
-                                                type="checkbox"
-                                                checked={
-                                                    variant.active ??
-                                                    true
-                                                }
-                                                onChange={(
-                                                    event,
-                                                ) =>
-                                                    setVariants(
-                                                        (
-                                                            current,
-                                                        ) =>
-                                                            current.map(
-                                                                (
-                                                                    item,
-                                                                    itemIndex,
-                                                                ) =>
-                                                                    itemIndex ===
-                                                                        index
-                                                                        ? {
-                                                                            ...item,
-                                                                            active: event.target.checked,
-                                                                        }
-                                                                        : item,
-                                                            ),
-                                                    )
-                                                }
-                                            />
-                                            Ativo
                                         </label>
                                     </div>
+
+                                    <div className="grid content-start gap-4 sm:grid-cols-2">
+                                        <div>
+                                            <label className={labelClassName}>Tipo</label>
+                                            <select
+                                                value={variant.type}
+                                                onChange={(event) =>
+                                                    updateVariant(index, {
+                                                        type: event.target.value as "SIZE",
+                                                    })
+                                                }
+                                                className={inputClassName}
+                                                disabled={saving}
+                                            >
+                                                <option value="SIZE">Tamanho</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className={labelClassName}>Nome</label>
+                                            <input
+                                                value={variant.name}
+                                                onChange={(event) =>
+                                                    updateVariant(index, {
+                                                        name: event.target.value,
+                                                    })
+                                                }
+                                                className={inputClassName}
+                                                placeholder="Ex.: Grande"
+                                                required
+                                                disabled={saving}
+                                            />
+                                        </div>
+
+                                        <div className="sm:col-span-2">
+                                            <label className={labelClassName}>Descrição</label>
+                                            <textarea
+                                                value={variant.description}
+                                                onChange={(event) =>
+                                                    updateVariant(index, {
+                                                        description: event.target.value,
+                                                    })
+                                                }
+                                                className={`${inputClassName} min-h-20 resize-y`}
+                                                rows={2}
+                                                disabled={saving}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className={labelClassName}>
+                                                Preço cliente (€)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="0.01"
+                                                step="0.01"
+                                                value={variant.customerPrice}
+                                                onChange={(event) =>
+                                                    updateVariant(index, {
+                                                        customerPrice: toNumber(
+                                                            event.target.value,
+                                                        ),
+                                                    })
+                                                }
+                                                className={inputClassName}
+                                                required
+                                                disabled={saving}
+                                            />
+                                            {index === 0 && (
+                                                <p className="mt-2 text-xs text-[#7A8474]">
+                                                    Tem de ser igual ao preço base.
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <label className={labelClassName}>
+                                                Preço florista (€)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                value={variant.floristPrice}
+                                                onChange={(event) =>
+                                                    updateVariant(index, {
+                                                        floristPrice: toNumber(
+                                                            event.target.value,
+                                                        ),
+                                                    })
+                                                }
+                                                className={inputClassName}
+                                                required
+                                                disabled={saving}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
-                            ),
-                        )}
+                            </div>
+                        ))}
                     </div>
                 )}
-
-                {configurationMode ===
-                    null && (
-                        <div className="mt-6 rounded-lg border border-dashed p-8 text-center">
-                            <p className="text-sm text-gray-500">
-                                Este produto não tem
-                                configuração.
-                            </p>
-                        </div>
-                    )}
             </section>
 
-            <section className="rounded-xl border bg-white p-6 shadow-sm">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                        <h2 className="text-lg font-semibold text-gray-900">
-                            Imagens
-                        </h2>
+            <section className={sectionClassName}>
+                <SectionHeading
+                    title="Visibilidade"
+                    description="Define se o produto está ativo e se deve aparecer em destaque."
+                />
 
-                        <p className="mt-1 text-sm text-gray-500">
-                            Adiciona as imagens do
-                            produto e, quando aplicável,
-                            associa uma imagem a uma
-                            variante.
-                        </p>
-                    </div>
-
-                    <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-black px-4 py-2 text-sm font-medium text-white">
-                        {uploadingImage
-                            ? "A carregar..."
-                            : "Adicionar imagem"}
-
+                <div className="space-y-4">
+                    <label className="flex cursor-pointer items-start gap-3">
                         <input
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            className="hidden"
-                            disabled={
-                                uploadingImage
-                            }
-                            onChange={
-                                handleImageUpload
-                            }
+                            type="checkbox"
+                            checked={active}
+                            onChange={(event) => setActive(event.target.checked)}
+                            className="mt-1 h-4 w-4 accent-[#55624A]"
+                            disabled={saving}
                         />
+                        <span>
+                            <span className="block text-sm font-medium text-[#374132]">
+                                Produto ativo
+                            </span>
+                            <span className="mt-1 block text-xs text-[#7A8474]">
+                                O produto pode ser apresentado na plataforma.
+                            </span>
+                        </span>
+                    </label>
+
+                    <label className="flex cursor-pointer items-start gap-3">
+                        <input
+                            type="checkbox"
+                            checked={featured}
+                            onChange={(event) => setFeatured(event.target.checked)}
+                            className="mt-1 h-4 w-4 accent-[#55624A]"
+                            disabled={saving}
+                        />
+                        <span>
+                            <span className="block text-sm font-medium text-[#374132]">
+                                Produto em destaque
+                            </span>
+                            <span className="mt-1 block text-xs text-[#7A8474]">
+                                Permite destacar o produto nas áreas relevantes da loja.
+                            </span>
+                        </span>
                     </label>
                 </div>
-
-                {images.length === 0 ? (
-                    <div className="mt-6 rounded-lg border border-dashed p-8 text-center">
-                        <p className="text-sm text-gray-500">
-                            Ainda não existem imagens.
-                        </p>
-                    </div>
-                ) : (
-                    <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                        {images.map(
-                            (
-                                image,
-                                index,
-                            ) => (
-                                <div
-                                    key={
-                                        image.id ??
-                                        `image-${image.fileId}-${index}`
-                                    }
-                                    className="overflow-hidden rounded-xl border bg-white"
-                                >
-                                    <div className="aspect-square bg-gray-100">
-                                        {image.previewUrl && (
-                                            <img
-                                                src={
-                                                    image.previewUrl
-                                                }
-                                                alt={
-                                                    image.altText ??
-                                                    ""
-                                                }
-                                                className="h-full w-full object-cover"
-                                            />
-                                        )}
-                                    </div>
-
-                                    <div className="space-y-4 p-4">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div className="min-w-0">
-                                                <p className="truncate text-sm font-medium text-gray-900">
-                                                    {image.fileName ??
-                                                        `Imagem ${index + 1}`}
-                                                </p>
-
-                                                {image.isPrimary && (
-                                                    <span className="mt-1 inline-block rounded-full bg-black px-2 py-0.5 text-xs text-white">
-                                                        Principal
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <div className="flex shrink-0 gap-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        moveImage(
-                                                            index,
-                                                            -1,
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        index ===
-                                                        0
-                                                    }
-                                                    className="rounded border px-2 py-1 text-xs disabled:opacity-40"
-                                                >
-                                                    ↑
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        moveImage(
-                                                            index,
-                                                            1,
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        index ===
-                                                        images.length -
-                                                        1
-                                                    }
-                                                    className="rounded border px-2 py-1 text-xs disabled:opacity-40"
-                                                >
-                                                    ↓
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-1 block text-xs font-medium text-gray-600">
-                                                Variante
-                                            </label>
-
-                                            <select
-                                                value={
-                                                    image.variantId !=
-                                                        null
-                                                        ? `id:${image.variantId}`
-                                                        : image.variantClientId
-                                                            ? `client:${image.variantClientId}`
-                                                            : ""
-                                                }
-                                                onChange={(
-                                                    event,
-                                                ) =>
-                                                    setImageVariant(
-                                                        index,
-                                                        event
-                                                            .target
-                                                            .value,
-                                                    )
-                                                }
-                                                disabled={
-                                                    variants.length ===
-                                                    0
-                                                }
-                                                className="w-full rounded-lg border px-3 py-2 text-sm"
-                                            >
-                                                <option value="">
-                                                    Imagem geral
-                                                    do produto
-                                                </option>
-
-                                                {variants.map(
-                                                    (
-                                                        variant,
-                                                        variantIndex,
-                                                    ) => {
-                                                        const value =
-                                                            variant.id !=
-                                                                null
-                                                                ? `id:${variant.id}`
-                                                                : `client:${variant.clientId}`;
-
-                                                        return (
-                                                            <option
-                                                                key={
-                                                                    variant.id ??
-                                                                    variant.clientId ??
-                                                                    variantIndex
-                                                                }
-                                                                value={
-                                                                    value
-                                                                }
-                                                            >
-                                                                {
-                                                                    variant.type
-                                                                }{" "}
-                                                                ·{" "}
-                                                                {variant.name ||
-                                                                    `Variante ${variantIndex + 1}`}
-                                                            </option>
-                                                        );
-                                                    },
-                                                )}
-                                            </select>
-
-                                            {variants.length ===
-                                                0 && (
-                                                    <p className="mt-1 text-xs text-gray-400">
-                                                        Adiciona primeiro
-                                                        uma variante para
-                                                        poder associar a
-                                                        imagem.
-                                                    </p>
-                                                )}
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-1 block text-xs font-medium text-gray-600">
-                                                Alt text
-                                            </label>
-
-                                            <input
-                                                value={
-                                                    image.altText ??
-                                                    ""
-                                                }
-                                                onChange={(
-                                                    event,
-                                                ) =>
-                                                    setImages(
-                                                        (
-                                                            current,
-                                                        ) =>
-                                                            current.map(
-                                                                (
-                                                                    item,
-                                                                    itemIndex,
-                                                                ) =>
-                                                                    itemIndex ===
-                                                                        index
-                                                                        ? {
-                                                                            ...item,
-                                                                            altText: event.target.value,
-                                                                        }
-                                                                        : item,
-                                                            ),
-                                                    )
-                                                }
-                                                className="w-full rounded-lg border px-3 py-2 text-sm"
-                                                placeholder="Descrição da imagem"
-                                            />
-                                        </div>
-
-                                        <div className="flex items-center justify-between gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    setPrimaryImage(
-                                                        index,
-                                                    )
-                                                }
-                                                disabled={
-                                                    image.isPrimary
-                                                }
-                                                className="rounded-lg border px-3 py-2 text-xs font-medium disabled:opacity-40"
-                                            >
-                                                Tornar principal
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    removeImage(
-                                                        index,
-                                                    )
-                                                }
-                                                className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600"
-                                            >
-                                                Remover
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ),
-                        )}
-                    </div>
-                )}
             </section>
 
-            <section className="rounded-xl border bg-white p-6 shadow-sm">
-                <div>
-                    <h2 className="text-lg font-semibold text-gray-900">
-                        Estado
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-500">
-                        Define se o produto está disponível
-                        no sistema.
+            {isEditing && product && (
+                <section className="rounded-3xl border border-[#E8EBE4] bg-[#F8F9F5] p-6 sm:p-8">
+                    <h2 className="text-lg font-semibold text-[#2F3B2A]">Informação do registo</h2>
+                    <p className="mt-1 text-sm text-[#7A8474]">
+                        Datas de criação e última atualização do produto.
                     </p>
-                </div>
+                    <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                        <div>
+                            <p className="text-sm text-[#7A8474]">Criado em</p>
+                            <p className="mt-1 text-sm font-medium text-[#2F3B2A]">
+                                {formatDate((product as unknown as Record<string, unknown>).createdAt)}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-[#7A8474]">Última atualização</p>
+                            <p className="mt-1 text-sm font-medium text-[#2F3B2A]">
+                                {formatDate((product as unknown as Record<string, unknown>).updatedAt)}
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            )}
 
-                <label className="mt-5 flex cursor-pointer items-center gap-3">
-                    <input
-                        type="checkbox"
-                        checked={active}
-                        onChange={(event) =>
-                            setActive(
-                                event.target.checked,
-                            )
-                        }
-                        className="h-4 w-4"
-                    />
 
-                    <span className="text-sm font-medium text-gray-700">
-                        Produto ativo
-                    </span>
-                </label>
-
-                <label className="mt-5 flex cursor-pointer items-center gap-3">
-                    <input
-                        type="checkbox"
-                        checked={featured}
-                        onChange={(event) =>
-                            setFeatured(event.target.checked)
-                        }
-                        className="h-4 w-4"
-                    />
-
-                    <span className="text-sm font-medium text-gray-700">
-                        Produto em destaque
-                    </span>
-                </label>
-            </section>
-
-            <div className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <button
                     type="button"
-                    onClick={() =>
-                        router.back()
-                    }
-                    disabled={isSubmitting}
-                    className="rounded-lg border px-5 py-2.5 text-sm font-medium text-gray-700 disabled:opacity-50"
+                    onClick={() => router.push("/admin/products")}
+                    className="rounded-xl border border-[#E2E6DD] px-5 py-3 text-sm font-semibold text-[#55624A] transition hover:bg-[#F3F5EE]"
+                    disabled={saving}
                 >
                     Cancelar
                 </button>
 
                 <button
                     type="submit"
-                    disabled={
-                        isSubmitting ||
-                        uploadingImage ||
-                        isLoadingTaxCodes
-                    }
-                    className="rounded-lg bg-black px-5 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={saving || loadingOptions}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#55624A] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#46523C] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                    {isSubmitting
+                    <Save size={17} />
+                    {saving
                         ? "A guardar..."
                         : isEditing
-                            ? "Guardar alterações"
-                            : "Criar produto"}
+                          ? "Guardar alterações"
+                          : "Criar produto"}
                 </button>
             </div>
+
+            {showDeleteConfirmation && product && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget && !deleting) {
+                            setShowDeleteConfirmation(false);
+                        }
+                    }}
+                >
+                    <div
+                        role="alertdialog"
+                        aria-modal="true"
+                        aria-labelledby="delete-product-title"
+                        aria-describedby="delete-product-description"
+                        className="w-full max-w-md rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)] sm:p-8"
+                    >
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+                            <AlertTriangle size={24} />
+                        </div>
+
+                        <h2
+                            id="delete-product-title"
+                            className="mt-5 text-xl font-semibold text-[#2F3B2A]"
+                        >
+                            Eliminar produto?
+                        </h2>
+
+                        <p
+                            id="delete-product-description"
+                            className="mt-3 text-sm leading-6 text-[#7A8474]"
+                        >
+                            Estás prestes a eliminar o produto{" "}
+                            <span className="font-semibold text-[#374132]">
+                                {product.name}
+                            </span>
+                            . Esta ação pode ser irreversível. Tens a certeza de que
+                            pretendes continuar?
+                        </p>
+
+                        <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setShowDeleteConfirmation(false)}
+                                disabled={deleting}
+                                className="rounded-full border border-[#DDE2D7] px-5 py-3 text-sm font-medium text-[#55624A] transition hover:bg-[#F3F5EE] disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleDelete}
+                                disabled={deleting}
+                                className="inline-flex items-center justify-center gap-2 rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <Trash2 size={16} />
+                                {deleting ? "A eliminar..." : "Sim, eliminar"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </form>
     );
+}
+
+function createdProductIdForRoute(product?: AdminProductDetail): number | string {
+    return product?.id ?? "";
 }

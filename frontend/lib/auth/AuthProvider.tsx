@@ -88,8 +88,8 @@ export function AuthProvider({
         }, []);
 
     useEffect(() => {
-        restoreSession();
-    }, [restoreSession]);
+    restoreSession();
+}, [restoreSession]);
 
     /* ====================================================================== */
     /* LOGIN                                                                  */

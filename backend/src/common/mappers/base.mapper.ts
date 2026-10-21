@@ -1,30 +1,25 @@
-import { Mapper } from './mapper.interface';
-import { CreatedResponseDto } from '../dto/created-response.dto';
-import { UpdatedResponseDto } from '../dto/updated-response.dto';
-
-export interface EntityWithId {
-    id: number;
-}
+import { EntityIdResponseDto } from '@/common/responses/dto/entity-id-response.dto';
+import { MapperInterface } from './mapper.interface';
 
 export abstract class BaseMapper<
-    TEntity extends EntityWithId,
-    TResponse,
-> implements Mapper<TEntity, TResponse> {
-    abstract toResponse(entity: TEntity): TResponse;
+  TEntity extends { id: number },
+  TDetailResponse,
+  TListResponse,
+> implements MapperInterface<TEntity, TDetailResponse, TListResponse>
+{
+  toCreatedResponse(entity: TEntity): EntityIdResponseDto {
+    return {
+      id: entity.id,
+    };
+  }
 
-    toResponses(entities: TEntity[]): TResponse[] {
-        return entities.map((entity) => this.toResponse(entity));
-    }
+  abstract toDetailResponse(entity: TEntity): TDetailResponse;
 
-    toCreatedResponse(entity: TEntity): CreatedResponseDto {
-        return {
-            id: entity.id,
-        };
-    }
+  toListResponse(entities: TEntity[]): TListResponse[] {
+    return entities.map((entity) => this.toListItemResponse(entity));
+  }
 
-    toUpdatedResponse(entity: TEntity): UpdatedResponseDto {
-        return {
-            id: entity.id,
-        };
-    }
+  protected abstract toListItemResponse(
+    entity: TEntity,
+  ): TListResponse;
 }

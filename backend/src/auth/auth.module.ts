@@ -9,13 +9,14 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RolesGuard } from './guards/roles.guard';
-import { OptionalJwtAuthGuard } from './guards/optional-jwt-guard';
+import { EmailModule } from '@/email/email.module';
 
 @Module({
   imports: [
     ConfigModule,
     PrismaModule,
     UsersModule,
+    EmailModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -27,7 +28,7 @@ import { OptionalJwtAuthGuard } from './guards/optional-jwt-guard';
     })
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy,RolesGuard, OptionalJwtAuthGuard],
+  providers: [AuthService, JwtStrategy,RolesGuard],
   exports: [AuthService],
 })
 export class AuthModule { }

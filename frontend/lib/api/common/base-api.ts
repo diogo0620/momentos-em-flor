@@ -1,6 +1,5 @@
 import { apiFetch } from "./client";
 import { CreatedResponse } from "./created-response";
-import { UpdatedResponse } from "./updated-response";
 
 export type PaginationParams = {
     page?: number;
@@ -8,18 +7,24 @@ export type PaginationParams = {
     search?: string;
     sort?: string;
     order?: "asc" | "desc";
+    categoryId?: number;
+    minPrice?: number;
+    maxPrice?: number;
+    type?: "SALE" | "RENTAL";
+    active?: boolean;
+    featured?: boolean;
+    acceptingOrders?:boolean;
+    addressDistrict?: boolean;
+    status?: string;
+    role?: string;
 };
 
-export type Pagination = {
+export type PaginatedResponse<T> = {
+    items: T[];
     page: number;
     pageSize: number;
     total: number;
     pages: number;
-};
-
-export type PaginatedResponse<T> = {
-    data: T[];
-    pagination: Pagination;
 };
 
 export type ApiResponse<T> = {
@@ -27,17 +32,18 @@ export type ApiResponse<T> = {
 }
 
 export abstract class BaseApi<
-    TResponse,
+    TDetailResponse,
+    TListResponse,
     TCreateDto = never,
     TUpdateDto = never,
 > {
     protected constructor(
         protected readonly endpoint: string,
-    ) {}
+    ) { }
 
     async getAll(
         params: PaginationParams = {},
-    ): Promise<PaginatedResponse<TResponse>> {
+    ): Promise<PaginatedResponse<TListResponse>> {
         const searchParams =
             new URLSearchParams();
 
@@ -69,21 +75,62 @@ export abstract class BaseApi<
             );
         }
 
+        if (params.search) {
+            searchParams.set("search", params.search);
+        }
+
+        if (params.categoryId !== undefined) {
+            searchParams.set("categoryId", String(params.categoryId));
+        }
+
+        if (params.minPrice !== undefined) {
+            searchParams.set("minPrice", String(params.minPrice));
+        }
+
+        if (params.maxPrice !== undefined) {
+            searchParams.set("maxPrice", String(params.maxPrice));
+        }
+
+        if (params.type !== undefined) {
+            searchParams.set("type", params.type);
+        }
+
+        if (params.featured !== undefined) {
+            searchParams.set("featured", String(params.featured));
+        }
+
+        if (params.status !== undefined) {
+            searchParams.set("status", String(params.status));
+        }
+
+        if (params.addressDistrict !== undefined) {
+            searchParams.set("addressDistrict", String(params.addressDistrict));
+        }
+
+        if (params.acceptingOrders !== undefined) {
+            searchParams.set("acceptingOrders", String(params.acceptingOrders));
+        }
+
+        if(params.role !== undefined){
+            searchParams.set("role", String(params.role));
+        }
+
+
+
         const query =
             searchParams.toString();
 
         return apiFetch<
-            PaginatedResponse<TResponse>
+            PaginatedResponse<TListResponse>
         >(
-            `${this.endpoint}${
-                query ? `?${query}` : ""
+            `${this.endpoint}${query ? `?${query}` : ""
             }`,
         )
     }
 
     async getById(
         id: number,
-    ): Promise<ApiResponse<TResponse>> {
+    ): Promise<TDetailResponse> {
         return apiFetch(
             `${this.endpoint}/${id}`,
         );
@@ -104,8 +151,8 @@ export abstract class BaseApi<
     async update(
         id: number,
         data: TUpdateDto,
-    ): Promise<UpdatedResponse> {
-        return apiFetch<UpdatedResponse>(
+    ): Promise<void> {
+        return apiFetch<void>(
             `${this.endpoint}/${id}`,
             {
                 method: "PATCH",

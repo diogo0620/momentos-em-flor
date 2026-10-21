@@ -1,11 +1,23 @@
 import { Module } from '@nestjs/common';
 
-import { StoreSettingsController } from './store-settings.controller';
-import { StoreSettingsService } from './store-settings.service';
+import { PrismaModule } from '@/prisma/prisma.module';
+import { AdminStoreSettingsController } from './admin/admin-store-settings.controller';
+import { AdminStoreSettingsService } from './admin/admin-store-settings.service';
+import { AdminStoreSettingsMapper } from './admin/mapper/admin-store-settings.mapper';
+
+
 
 @Module({
-    controllers: [StoreSettingsController],
-    providers: [StoreSettingsService],
-    exports: [StoreSettingsService],
+  imports: [
+    PrismaModule,
+  ],
+  controllers: [
+    AdminStoreSettingsController,
+  ],
+  providers: [
+    AdminStoreSettingsService,
+    AdminStoreSettingsMapper
+  ],
+  exports: [AdminStoreSettingsService,AdminStoreSettingsMapper]
 })
 export class StoreSettingsModule {}

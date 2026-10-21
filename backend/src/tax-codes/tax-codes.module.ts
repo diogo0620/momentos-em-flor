@@ -1,31 +1,22 @@
-import {
-    Module,
-} from '@nestjs/common';
+import { Module } from '@nestjs/common';
 
-import {
-    TaxCodesController,
-} from './tax-codes.controller';
+import { PrismaModule } from '@/prisma/prisma.module';
+import { AdminTaxCodesController } from './admin/admin-tax-codes.controller';
+import { AdminTaxCodesMapper } from './admin/mappers/admin-tax-codes.mapper';
+import { AdminTaxCodesService } from './admin/admin-tax-codes.service'
 
-import {
-    TaxCodesService,
-} from './tax-codes.service';
 
-import {
-    TaxCodeMapper,
-} from './mappers/tax-code.mapper';
 
 @Module({
-    controllers: [
-        TaxCodesController,
-    ],
-
-    providers: [
-        TaxCodesService,
-        TaxCodeMapper,
-    ],
-
-    exports: [
-        TaxCodesService,
-    ],
+  imports: [
+    PrismaModule,
+  ],
+  controllers: [
+    AdminTaxCodesController
+  ],
+  providers: [
+    AdminTaxCodesService,
+    AdminTaxCodesMapper
+  ]
 })
 export class TaxCodesModule {}

@@ -1,24 +1,28 @@
 import { Module } from '@nestjs/common';
 
 import { PrismaModule } from '@/prisma/prisma.module';
+import { AdminCategoriesController } from './admin/admin-categories.controller';
+import { AdminCategoriesMapper } from './admin/mappers/admin-categories.mapper';
+import { AdminCategoriesService } from './admin/admin-categories.service';
+import { PublicCategoriesController } from './public/public-categories.controller';
+import { PublicCategoriesService } from './public/public-categories.service';
+import { PublicCategoriesMapper } from './public/mappers/public-categories.mapper';
 
-import { CategoriesController } from './categories.controller';
-import { CategoriesService } from './categories.service';
-import { CategoryMapper } from './mappers/category.mapper';
+
 
 @Module({
   imports: [
     PrismaModule,
   ],
   controllers: [
-    CategoriesController,
+    AdminCategoriesController,
+    PublicCategoriesController
   ],
   providers: [
-    CategoriesService,
-    CategoryMapper,
-  ],
-  exports: [
-    CategoriesService,
-  ],
+    AdminCategoriesService,
+    AdminCategoriesMapper,
+    PublicCategoriesService,
+    PublicCategoriesMapper
+  ]
 })
 export class CategoriesModule {}

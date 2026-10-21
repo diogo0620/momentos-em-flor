@@ -24,14 +24,14 @@ export default function RootLayout({
     return (
         <html lang="pt">
             <body className={inter.className}>
-                <AuthProvider>
-    <CartProvider>
-        <WishlistProvider>
-            {children}
-        </WishlistProvider>
-    </CartProvider>
-</AuthProvider>
-            </body>
+    <AuthProvider>
+        <CartProvider>
+            <WishlistProvider>
+                {children}
+            </WishlistProvider>
+        </CartProvider>
+    </AuthProvider>
+</body>
         </html>
     );
 }

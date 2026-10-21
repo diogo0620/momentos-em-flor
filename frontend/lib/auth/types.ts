@@ -8,7 +8,7 @@ export interface AuthenticatedUser {
     firstName: string;
     lastName: string;
     email: string;
-    phone: string | null;
+    phone: string;
     role: UserRole;
 }
 

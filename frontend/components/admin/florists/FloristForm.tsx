@@ -1,259 +1,157 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { createFlorist, updateFlorist } from "@/lib/api/florists";
-import type { Florist } from "@/types/florist";
-import FloristAdminsManager from "@/components/admin/florists/FloristAdminsManager";
+import {
+    ArrowLeft,
+    MapPin,
+    Save,
+    Store,
+} from "lucide-react";
 
-type Props = {
-    florist?: Florist;
+import { adminFloristsApi } from "@/lib/api/florists/admin-florists";
+
+import type { AdminFloristDetail } from "@/types/florists/admin/admin-florist-detail";
+import type { AdminCreateFlorist } from "@/types/florists/admin/admin-create-florist";
+import type { AdminUpdateFlorist } from "@/types/florists/admin/admin-update-florist";
+
+type FloristFormProps = {
+    florist?: AdminFloristDetail;
+    children?: ReactNode;
 };
 
-export default function FloristForm({
-    florist,
-}: Props) {
+const inputClassName =
+    "w-full rounded-xl border border-[#E2E6DD] bg-white px-4 py-3 text-sm text-[#2F3B2A] outline-none transition placeholder:text-[#A0A89A] focus:border-[#55624A] focus:ring-4 focus:ring-[#55624A]/10 disabled:cursor-not-allowed disabled:bg-[#F3F5EE]";
+
+const labelClassName = "mb-2 block text-sm font-medium text-[#374132]";
+
+function formatDate(value: Date | string): string {
+    const date = value instanceof Date ? value : new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return "—";
+    }
+
+    return new Intl.DateTimeFormat("pt-PT", {
+        dateStyle: "short",
+        timeStyle: "short",
+    }).format(date);
+}
+
+function normalizeOptional(value: string): string | undefined {
+    const normalized = value.trim();
+    return normalized || undefined;
+}
+
+export default function FloristForm({ florist, children }: FloristFormProps) {
     const router = useRouter();
+    const isEditing = Boolean(florist);
 
-    const isEditing = !!florist;
+    const [name, setName] = useState(florist?.name ?? "");
+    const [legalName, setLegalName] = useState(florist?.legalName ?? "");
+    const [taxNumber, setTaxNumber] = useState(florist?.taxNumber ?? "");
+    const [email, setEmail] = useState(florist?.email ?? "");
+    const [phone, setPhone] = useState(florist?.phone ?? "");
+    const [website, setWebsite] = useState(florist?.website ?? "");
+    const [description, setDescription] = useState(florist?.description ?? "");
 
-    const [name, setName] =
-        useState(florist?.name ?? "");
+    const [addressStreet, setAddressStreet] = useState(florist?.addressStreet ?? "");
+    const [addressStreetNumber, setAddressStreetNumber] = useState(
+        florist?.addressStreetNumber ?? "",
+    );
+    const [addressStreet2, setAddressStreet2] = useState(florist?.addressStreet2 ?? "");
+    const [addressPostalCode, setAddressPostalCode] = useState(
+        florist?.addressPostalCode ?? "",
+    );
+    const [addressCity, setAddressCity] = useState(florist?.addressCity ?? "");
+    const [addressDistrict, setAddressDistrict] = useState(
+        florist?.addressDistrict ?? "",
+    );
 
-    const [legalName, setLegalName] =
-        useState(florist?.legalName ?? "");
+    const [deliveryRadiusKm, setDeliveryRadiusKm] = useState(
+        florist?.deliveryRadiusKm?.toString() ?? "10",
+    );
+    const [acceptingOrders, setAcceptingOrders] = useState(
+        florist?.acceptingOrders ?? true,
+    );
+    const [active, setActive] = useState(florist?.active ?? true);
 
-    const [taxNumber, setTaxNumber] =
-        useState(florist?.taxNumber ?? "");
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const [email, setEmail] =
-        useState(florist?.email ?? "");
-
-    const [phone, setPhone] =
-        useState(florist?.phone ?? "");
-
-    const [website, setWebsite] =
-        useState(florist?.website ?? "");
-
-    const [description, setDescription] =
-        useState(florist?.description ?? "");
-
-    const [deliveryRadiusKm, setDeliveryRadiusKm] =
-        useState(
-            florist?.deliveryRadiusKm?.toString() ?? "",
-        );
-
-    const [street, setStreet] =
-        useState(
-            florist?.address.street ?? "",
-        );
-
-    const [street2, setStreet2] =
-        useState(
-            florist?.address.street2 ?? "",
-        );
-
-    const [postalCode, setPostalCode] =
-        useState(
-            florist?.address.postalCode ?? "",
-        );
-
-    const [city, setCity] =
-        useState(
-            florist?.address.city ?? "",
-        );
-
-    const [district, setDistrict] =
-        useState(
-            florist?.address.district ?? "",
-        );
-
-    const [countryCode, setCountryCode] =
-        useState(
-            florist?.address.countryCode ?? "PT",
-        );
-
-    const [notes, setNotes] =
-        useState(
-            florist?.address.notes ?? "",
-        );
-
-    const [active, setActive] =
-        useState(
-            florist?.active ?? true,
-        );
-
-    const [acceptingOrders, setAcceptingOrders] =
-        useState(
-            florist?.acceptingOrders ?? true,
-        );
-
-    const [isSubmitting, setIsSubmitting] =
-        useState(false);
-
-    const [error, setError] =
-        useState<string | null>(null);
-
-    async function handleSubmit(
-        event: React.FormEvent<HTMLFormElement>,
-    ) {
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-
         setError(null);
 
-        if (!name.trim()) {
-            setError(
-                "O nome da florista é obrigatório.",
-            );
+        if (
+            !name.trim() ||
+            !legalName.trim() ||
+            !taxNumber.trim() ||
+            !email.trim() ||
+            !phone.trim()
+        ) {
+            setError("Preenche todos os campos obrigatórios da florista.");
             return;
         }
-
-        if (!taxNumber.trim()) {
-            setError(
-                "O NIF é obrigatório.",
-            );
-            return;
-        }
-
-        if (!email.trim()) {
-            setError(
-                "O email é obrigatório.",
-            );
-            return;
-        }
-
-        if (!phone.trim()) {
-            setError(
-                "O telefone é obrigatório.",
-            );
-            return;
-        }
-
-        if (!street.trim()) {
-            setError(
-                "A morada é obrigatória.",
-            );
-            return;
-        }
-
-        if (!postalCode.trim()) {
-            setError(
-                "O código postal é obrigatório.",
-            );
-            return;
-        }
-
-        if (!city.trim()) {
-            setError(
-                "A cidade é obrigatória.",
-            );
-            return;
-        }
-
-        if (!district.trim()) {
-            setError(
-                "O distrito é obrigatório.",
-            );
-            return;
-        }
-
-        if (!countryCode.trim()) {
-            setError(
-                "O país é obrigatório.",
-            );
-            return;
-        }
-
-        const radius =
-            Number(deliveryRadiusKm);
 
         if (
-            Number.isNaN(radius) ||
-            radius < 0
+            !addressStreet.trim() ||
+            !addressStreetNumber.trim() ||
+            !addressPostalCode.trim() ||
+            !addressCity.trim() ||
+            !addressDistrict.trim()
         ) {
-            setError(
-                "O raio de entrega é inválido.",
-            );
+            setError("Preenche todos os campos obrigatórios da morada.");
             return;
         }
 
-        const data = {
+        const radius = Number(deliveryRadiusKm);
+
+        if (!deliveryRadiusKm.trim() || !Number.isFinite(radius) || radius <= 0) {
+            setError("O raio de entrega deve ser um número superior a zero.");
+            return;
+        }
+
+        if (website.trim()) {
+            try {
+                new URL(website.trim());
+            } catch {
+                setError("Introduz um URL válido para o website, incluindo https://.");
+                return;
+            }
+        }
+
+        const payload = {
             name: name.trim(),
-
-            legalName:
-                legalName.trim() ||
-                undefined,
-
-            taxNumber:
-                taxNumber.trim(),
-
-            email:
-                email.trim(),
-
-            phone:
-                phone.trim(),
-
-            website:
-                website.trim() ||
-                undefined,
-
-            description:
-                description.trim() ||
-                undefined,
-
-            deliveryRadiusKm:
-                radius,
-
-            address: {
-                street:
-                    street.trim(),
-
-                street2:
-                    street2.trim() ||
-                    undefined,
-
-                postalCode:
-                    postalCode.trim(),
-
-                city:
-                    city.trim(),
-
-                district:
-                    district.trim(),
-
-                countryCode:
-                    countryCode
-                        .trim()
-                        .toUpperCase(),
-
-                notes:
-                    notes.trim() ||
-                    undefined,
-            },
+            legalName: legalName.trim(),
+            taxNumber: taxNumber.trim(),
+            email: email.trim(),
+            phone: phone.trim(),
+            website: normalizeOptional(website),
+            description: normalizeOptional(description),
+            addressStreet: addressStreet.trim(),
+            addressStreetNumber: addressStreetNumber.trim(),
+            addressStreet2: normalizeOptional(addressStreet2),
+            addressPostalCode: addressPostalCode.trim(),
+            addressCity: addressCity.trim(),
+            addressDistrict: addressDistrict.trim(),
+            addressCountryCode: "PT",
+            deliveryRadiusKm: radius,
+            acceptingOrders,
+            active,
         };
 
+        setSaving(true);
+
         try {
-            setIsSubmitting(true);
-
-            if (isEditing) {
-                await updateFlorist(
-                    florist.id,
-                    {
-                        ...data,
-                        active,
-                        acceptingOrders,
-                    },
-                );
-
-                router.push(
-                    `/admin/florists/${florist.id}`,
-                );
+            if (florist) {
+                const data: AdminUpdateFlorist = payload;
+                await adminFloristsApi.update(florist.id, data);
+                router.push(`/admin/florists/${florist.id}/edit`);
             } else {
-                await createFlorist(data);
-
-                router.push(
-                    "/admin/florists",
-                );
+                const data: AdminCreateFlorist = payload;
+                await adminFloristsApi.create(data);
+                router.push("/admin/florists");
             }
 
             router.refresh();
@@ -261,442 +159,405 @@ export default function FloristForm({
             setError(
                 err instanceof Error
                     ? err.message
-                    : isEditing
-                      ? "Não foi possível atualizar a florista."
-                      : "Não foi possível criar a florista.",
+                    : "Não foi possível guardar a florista. Tenta novamente.",
             );
         } finally {
-            setIsSubmitting(false);
+            setSaving(false);
         }
     }
 
     return (
-        <form
-            onSubmit={handleSubmit}
-            className="space-y-8"
-        >
+        <form onSubmit={handleSubmit} className="space-y-6">
+            <section className="rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-sm sm:p-8">
+                <div className="mb-7 flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]">
+                        <Store size={20} />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-semibold text-[#2F3B2A]">
+                            Informação da florista
+                        </h2>
+                        <p className="mt-1 text-sm text-[#7A8474]">
+                            Dados comerciais e contactos da florista.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                    <div>
+                        <label htmlFor="name" className={labelClassName}>
+                            Nome comercial <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            id="name"
+                            value={name}
+                            onChange={(event) => setName(event.target.value)}
+                            className={inputClassName}
+                            placeholder="Ex.: Flores da Ana"
+                            maxLength={150}
+                            required
+                            disabled={saving}
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="legalName" className={labelClassName}>
+                            Nome legal <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            id="legalName"
+                            value={legalName}
+                            onChange={(event) => setLegalName(event.target.value)}
+                            className={inputClassName}
+                            placeholder="Nome fiscal da empresa"
+                            maxLength={200}
+                            required
+                            disabled={saving}
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="taxNumber" className={labelClassName}>
+                            NIF <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            id="taxNumber"
+                            value={taxNumber}
+                            onChange={(event) => setTaxNumber(event.target.value)}
+                            className={inputClassName}
+                            placeholder="Número de identificação fiscal"
+                            inputMode="numeric"
+                            maxLength={20}
+                            required
+                            disabled={saving}
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="email" className={labelClassName}>
+                            Email <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            id="email"
+                            type="email"
+                            value={email}
+                            onChange={(event) => setEmail(event.target.value)}
+                            className={inputClassName}
+                            placeholder="geral@florista.pt"
+                            maxLength={254}
+                            required
+                            disabled={saving}
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="phone" className={labelClassName}>
+                            Telefone <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            id="phone"
+                            type="tel"
+                            value={phone}
+                            onChange={(event) => setPhone(event.target.value)}
+                            className={inputClassName}
+                            placeholder="+351 912 345 678"
+                            maxLength={30}
+                            required
+                            disabled={saving}
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="website" className={labelClassName}>
+                            Website
+                        </label>
+                        <input
+                            id="website"
+                            type="url"
+                            value={website}
+                            onChange={(event) => setWebsite(event.target.value)}
+                            className={inputClassName}
+                            placeholder="https://www.florista.pt"
+                            maxLength={255}
+                            disabled={saving}
+                        />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                        <label htmlFor="description" className={labelClassName}>
+                            Descrição
+                        </label>
+                        <textarea
+                            id="description"
+                            value={description}
+                            onChange={(event) => setDescription(event.target.value)}
+                            className={`${inputClassName} min-h-28 resize-y`}
+                            placeholder="Uma breve apresentação da florista..."
+                            rows={4}
+                            disabled={saving}
+                        />
+                    </div>
+                </div>
+            </section>
+
+            <section className="rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-sm sm:p-8">
+                <div className="mb-7 flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]">
+                        <MapPin size={20} />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-semibold text-[#2F3B2A]">
+                            Morada
+                        </h2>
+                        <p className="mt-1 text-sm text-[#7A8474]">
+                            Endereço utilizado para determinar a área de entrega.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                        <label htmlFor="addressStreet" className={labelClassName}>
+                            Rua / Avenida <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            id="addressStreet"
+                            value={addressStreet}
+                            onChange={(event) => setAddressStreet(event.target.value)}
+                            className={inputClassName}
+                            placeholder="Nome da rua ou avenida"
+                            maxLength={200}
+                            required
+                            disabled={saving}
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="addressStreetNumber" className={labelClassName}>
+                            Número da porta <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            id="addressStreetNumber"
+                            value={addressStreetNumber}
+                            onChange={(event) => setAddressStreetNumber(event.target.value)}
+                            className={inputClassName}
+                            placeholder="Ex.: 12 ou 12A"
+                            maxLength={20}
+                            required
+                            disabled={saving}
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="addressStreet2" className={labelClassName}>
+                            Complemento
+                        </label>
+                        <input
+                            id="addressStreet2"
+                            value={addressStreet2}
+                            onChange={(event) => setAddressStreet2(event.target.value)}
+                            className={inputClassName}
+                            placeholder="Andar, fração, bloco..."
+                            maxLength={200}
+                            disabled={saving}
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="addressPostalCode" className={labelClassName}>
+                            Código postal <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            id="addressPostalCode"
+                            value={addressPostalCode}
+                            onChange={(event) => setAddressPostalCode(event.target.value)}
+                            className={inputClassName}
+                            placeholder="4000-000"
+                            maxLength={20}
+                            required
+                            disabled={saving}
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="addressCity" className={labelClassName}>
+                            Localidade <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            id="addressCity"
+                            value={addressCity}
+                            onChange={(event) => setAddressCity(event.target.value)}
+                            className={inputClassName}
+                            placeholder="Ex.: Porto"
+                            maxLength={100}
+                            required
+                            disabled={saving}
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="addressDistrict" className={labelClassName}>
+                            Distrito <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            id="addressDistrict"
+                            value={addressDistrict}
+                            onChange={(event) => setAddressDistrict(event.target.value)}
+                            className={inputClassName}
+                            placeholder="Ex.: Porto"
+                            maxLength={100}
+                            required
+                            disabled={saving}
+                        />
+                    </div>
+
+                    <div>
+                        <label className={labelClassName}>País</label>
+                        <div className={`${inputClassName} flex items-center justify-between`}>
+                            <span>Portugal</span>
+                            <span className="rounded-lg bg-[#F3F5EE] px-2 py-1 text-xs font-semibold text-[#55624A]">
+                                PT
+                            </span>
+                        </div>
+                        <p className="mt-2 text-xs text-[#8A9383]">
+                            O país está fixo em Portugal.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section className="rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-sm sm:p-8">
+                <div className="mb-7">
+                    <h2 className="text-lg font-semibold text-[#2F3B2A]">
+                        Entregas e estado
+                    </h2>
+                    <p className="mt-1 text-sm text-[#7A8474]">
+                        Define a área de entrega e a disponibilidade da florista.
+                    </p>
+                </div>
+
+                <div>
+                    <label htmlFor="deliveryRadiusKm" className={labelClassName}>
+                        Raio de entrega (km) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        id="deliveryRadiusKm"
+                        type="number"
+                        min="0.1"
+                        max="9999"
+                        step="0.1"
+                        value={deliveryRadiusKm}
+                        onChange={(event) => setDeliveryRadiusKm(event.target.value)}
+                        className={inputClassName}
+                        placeholder="Ex.: 15"
+                        required
+                        disabled={saving}
+                    />
+                    <p className="mt-2 text-xs text-[#8A9383]">
+                        Distância máxima a partir da morada da florista.
+                    </p>
+                </div>
+
+                <div className="mt-6 space-y-5 border-t border-[#EEF0EA] pt-6">
+                    <label className="flex cursor-pointer items-start gap-3">
+                        <input
+                            type="checkbox"
+                            checked={acceptingOrders}
+                            onChange={(event) => setAcceptingOrders(event.target.checked)}
+                            disabled={saving}
+                            className="mt-1 h-4 w-4 rounded border-[#C8D0C1] accent-[#55624A]"
+                        />
+                        <span>
+                            <span className="block text-sm font-medium text-[#374132]">
+                                Aceita encomendas
+                            </span>
+                            <span className="mt-1 block text-sm leading-6 text-[#7A8474]">
+                                Permite que a florista receba propostas de encomendas.
+                            </span>
+                        </span>
+                    </label>
+
+                    <label className="flex cursor-pointer items-start gap-3">
+                        <input
+                            type="checkbox"
+                            checked={active}
+                            onChange={(event) => setActive(event.target.checked)}
+                            disabled={saving}
+                            className="mt-1 h-4 w-4 rounded border-[#C8D0C1] accent-[#55624A]"
+                        />
+                        <span>
+                            <span className="block text-sm font-medium text-[#374132]">
+                                Florista ativa
+                            </span>
+                            <span className="mt-1 block text-sm leading-6 text-[#7A8474]">
+                                Uma florista inativa não deverá estar disponível na plataforma.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+            </section>
+
+            {children}
+
+            {isEditing && florist && (
+                <section className="rounded-3xl border border-[#E8EBE4] bg-[#F8F9F5] p-6 sm:p-8">
+                    <h2 className="text-lg font-semibold text-[#2F3B2A]">
+                        Informação do registo
+                    </h2>
+                    <p className="mt-1 text-sm text-[#7A8474]">
+                        Datas de criação e atualização da florista.
+                    </p>
+
+                    <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                        <div>
+                            <p className="text-sm text-[#7A8474]">Criado em</p>
+                            <p className="mt-1 text-sm font-medium text-[#2F3B2A]">
+                                {formatDate(florist.createdAt)}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-[#7A8474]">Última atualização</p>
+                            <p className="mt-1 text-sm font-medium text-[#2F3B2A]">
+                                {formatDate(florist.updatedAt)}
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            )}
+
             {error && (
-                <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-sm text-red-600">
+                <div
+                    role="alert"
+                    className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                >
                     {error}
                 </div>
             )}
 
-            {/* EMPRESA */}
-
-            <div className="rounded-3xl bg-white p-8 shadow-sm">
-                <h2 className="text-xl font-bold text-[#2F3B2A]">
-                    Dados da empresa
-                </h2>
-
-                <div className="mt-8 grid gap-6 md:grid-cols-2">
-                    <Field
-                        label="Nome comercial"
-                        value={name}
-                        onChange={setName}
-                        required
-                    />
-
-                    <Field
-                        label="Nome legal"
-                        value={legalName}
-                        onChange={setLegalName}
-                    />
-
-                    <Field
-                        label="NIF"
-                        value={taxNumber}
-                        onChange={setTaxNumber}
-                        required
-                    />
-                </div>
-            </div>
-
-            {/* CONTACTOS */}
-
-            <div className="rounded-3xl bg-white p-8 shadow-sm">
-                <h2 className="text-xl font-bold text-[#2F3B2A]">
-                    Contactos
-                </h2>
-
-                <div className="mt-8 grid gap-6 md:grid-cols-2">
-                    <Field
-                        label="Email"
-                        type="email"
-                        value={email}
-                        onChange={setEmail}
-                        required
-                    />
-
-                    <Field
-                        label="Telefone"
-                        value={phone}
-                        onChange={setPhone}
-                        required
-                    />
-
-                    <Field
-                        label="Website"
-                        value={website}
-                        onChange={setWebsite}
-                    />
-                </div>
-            </div>
-
-            {/* DESCRIÇÃO */}
-
-            <div className="rounded-3xl bg-white p-8 shadow-sm">
-                <h2 className="text-xl font-bold text-[#2F3B2A]">
-                    Descrição
-                </h2>
-
-                <textarea
-                    value={description}
-                    onChange={(event) =>
-                        setDescription(
-                            event.target.value,
-                        )
-                    }
-                    rows={5}
-                    maxLength={500}
-                    className="
-                        mt-6
-                        w-full
-                        resize-none
-                        rounded-2xl
-                        border
-                        border-gray-200
-                        px-4
-                        py-3
-                        outline-none
-                        focus:border-[#55624A]
-                    "
-                />
-            </div>
-
-            {/* ENTREGA */}
-
-            <div className="rounded-3xl bg-white p-8 shadow-sm">
-                <h2 className="text-xl font-bold text-[#2F3B2A]">
-                    Entrega
-                </h2>
-
-                <div className="mt-8 max-w-sm">
-                    <Field
-                        label="Raio de entrega (km)"
-                        type="number"
-                        value={deliveryRadiusKm}
-                        onChange={
-                            setDeliveryRadiusKm
-                        }
-                        required
-                        min="0"
-                        step="0.01"
-                    />
-                </div>
-            </div>
-
-            {/* MORADA */}
-
-            <div className="rounded-3xl bg-white p-8 shadow-sm">
-                <h2 className="text-xl font-bold text-[#2F3B2A]">
-                    Morada
-                </h2>
-
-                <p className="mt-1 text-sm text-gray-500">
-                    As coordenadas são calculadas
-                    automaticamente.
-                </p>
-
-                <div className="mt-8 grid gap-6 md:grid-cols-2">
-                    <Field
-                        label="Morada"
-                        value={street}
-                        onChange={setStreet}
-                        required
-                    />
-
-                    <Field
-                        label="Morada adicional"
-                        value={street2}
-                        onChange={setStreet2}
-                    />
-
-                    <Field
-                        label="Código postal"
-                        value={postalCode}
-                        onChange={setPostalCode}
-                        required
-                    />
-
-                    <Field
-                        label="Cidade"
-                        value={city}
-                        onChange={setCity}
-                        required
-                    />
-
-                    <Field
-                        label="Distrito"
-                        value={district}
-                        onChange={setDistrict}
-                        required
-                    />
-
-                    <Field
-                        label="Código do país"
-                        value={countryCode}
-                        onChange={setCountryCode}
-                        required
-                        maxLength={2}
-                    />
-                </div>
-            </div>
-
-            {/* NOTAS */}
-
-            <div className="rounded-3xl bg-white p-8 shadow-sm">
-                <h2 className="text-xl font-bold text-[#2F3B2A]">
-                    Notas da morada
-                </h2>
-
-                <textarea
-                    value={notes}
-                    onChange={(event) =>
-                        setNotes(
-                            event.target.value,
-                        )
-                    }
-                    rows={4}
-                    className="
-                        mt-6
-                        w-full
-                        resize-none
-                        rounded-2xl
-                        border
-                        border-gray-200
-                        px-4
-                        py-3
-                        outline-none
-                        focus:border-[#55624A]
-                    "
-                />
-            </div>
-
-            {/* ESTADO */}
-
-            {isEditing && (
-                <div className="rounded-3xl bg-white p-8 shadow-sm">
-                    <h2 className="text-xl font-bold text-[#2F3B2A]">
-                        Estado operacional
-                    </h2>
-
-                    <div className="mt-6 space-y-5">
-                        <Toggle
-                            label="Florista ativa"
-                            description="A florista está ativa na plataforma."
-                            value={active}
-                            onChange={setActive}
-                        />
-
-                        <Toggle
-                            label="Aceita encomendas"
-                            description="A florista pode receber novas propostas."
-                            value={acceptingOrders}
-                            onChange={
-                                setAcceptingOrders
-                            }
-                        />
-                    </div>
-                </div>
-            )}
-
-            {/* ================================================================ */}
-            {/* ADMINISTRADORES                                                 */}
-            {/* ================================================================ */}
-
-            {isEditing && (
-                <FloristAdminsManager
-                    floristId={florist.id}
-                    admins={florist.admins ?? []}
-                />
-            )}
-
-            {/* AÇÕES */}
-
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
                 <button
                     type="button"
-                    onClick={() =>
-                        router.back()
-                    }
-                    disabled={isSubmitting}
-                    className="
-                        rounded-2xl
-                        border
-                        border-gray-200
-                        px-6
-                        py-3
-                        font-medium
-                        text-gray-600
-                        hover:bg-gray-50
-                    "
+                    onClick={() => router.push("/admin/florists")}
+                    disabled={saving}
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-[#DDE2D7] px-5 py-3 text-sm font-medium text-[#55624A] transition hover:bg-[#F3F5EE] disabled:opacity-50"
                 >
+                    <ArrowLeft size={16} />
                     Cancelar
                 </button>
 
                 <button
                     type="submit"
-                    disabled={isSubmitting}
-                    className="
-                        rounded-2xl
-                        bg-[#55624A]
-                        px-6
-                        py-3
-                        font-medium
-                        text-white
-                        hover:opacity-90
-                        disabled:opacity-50
-                    "
+                    disabled={saving}
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-[#55624A] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#435039] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                    {isSubmitting
+                    <Save size={16} />
+                    {saving
                         ? "A guardar..."
-                        : "Guardar alterações"}
+                        : isEditing
+                          ? "Guardar alterações"
+                          : "Criar florista"}
                 </button>
             </div>
         </form>
-    );
-}
-
-/* ========================================================================== */
-/* FIELD                                                                      */
-/* ========================================================================== */
-
-type FieldProps = {
-    label: string;
-    value: string;
-    onChange: (value: string) => void;
-    type?: string;
-    required?: boolean;
-    min?: string;
-    maxLength?: number;
-    step?: string;
-};
-
-function Field({
-    label,
-    value,
-    onChange,
-    type = "text",
-    required = false,
-    min,
-    maxLength,
-    step,
-}: FieldProps) {
-    return (
-        <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-                {label}
-
-                {required && (
-                    <span className="ml-1 text-red-500">
-                        *
-                    </span>
-                )}
-            </label>
-
-            <input
-                type={type}
-                value={value}
-                onChange={(event) =>
-                    onChange(
-                        event.target.value,
-                    )
-                }
-                required={required}
-                min={min}
-                maxLength={maxLength}
-                step={step}
-                className="
-                    w-full
-                    rounded-2xl
-                    border
-                    border-gray-200
-                    px-4
-                    py-3
-                    outline-none
-                    focus:border-[#55624A]
-                "
-            />
-        </div>
-    );
-}
-
-/* ========================================================================== */
-/* TOGGLE                                                                     */
-/* ========================================================================== */
-
-type ToggleProps = {
-    label: string;
-    description: string;
-    value: boolean;
-    onChange: (value: boolean) => void;
-};
-
-function Toggle({
-    label,
-    description,
-    value,
-    onChange,
-}: ToggleProps) {
-    return (
-        <div className="flex items-center justify-between gap-6">
-            <div>
-                <p className="font-medium text-[#2F3B2A]">
-                    {label}
-                </p>
-
-                <p className="mt-1 text-sm text-gray-500">
-                    {description}
-                </p>
-            </div>
-
-            <button
-                type="button"
-                onClick={() =>
-                    onChange(!value)
-                }
-                className={`
-                    relative
-                    h-7
-                    w-12
-                    shrink-0
-                    rounded-full
-                    transition
-                    ${
-                        value
-                            ? "bg-[#55624A]"
-                            : "bg-gray-300"
-                    }
-                `}
-            >
-                <span
-                    className={`
-                        absolute
-                        top-1
-                        h-5
-                        w-5
-                        rounded-full
-                        bg-white
-                        shadow
-                        transition
-                        ${
-                            value
-                                ? "left-6"
-                                : "left-1"
-                        }
-                    `}
-                />
-            </button>
-        </div>
     );
 }

@@ -52,11 +52,11 @@ export class PaginationQueryDto {
   search?: string;
 
   @ApiPropertyOptional({
-    default: 'name',
+    default: 'id',
   })
   @IsOptional()
   @IsString()
-  sort: string = 'name';
+  sort: string = 'id';
 
   @ApiPropertyOptional({
     enum: SortOrder,

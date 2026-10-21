@@ -6,24 +6,26 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 
+import { ERROR_MESSAGES, ErrorDefinition } from '@/common/errors/error-messages';
+
 export class Exceptions {
-  static notFound(message: string): never {
-    throw new NotFoundException(message);
+  static notFound(error: ErrorDefinition): never {
+    throw new NotFoundException(error);
   }
 
-  static conflict(message: string): never {
-    throw new ConflictException(message);
+  static conflict(error: ErrorDefinition): never {
+    throw new ConflictException(error);
   }
 
-  static badRequest(message: string): never {
-    throw new BadRequestException(message);
+  static badRequest(error: ErrorDefinition): never {
+    throw new BadRequestException(error);
   }
 
-  static unauthorized(message: string): never {
-    throw new UnauthorizedException(message);
+  static unauthorized(): never {
+    throw new UnauthorizedException(ERROR_MESSAGES.UNAUTHORIZED);
   }
 
-  static forbidden(message: string): never {
-    throw new ForbiddenException(message);
+  static forbidden(): never {
+    throw new ForbiddenException(ERROR_MESSAGES.FORBIDDEN);
   }
 }

@@ -43,8 +43,8 @@ const links = [
         icon: Flower2,
     },
     {
-        href: "/admin/customers",
-        label: "Clientes",
+        href: "/admin/users",
+        label: "Utilizadores",
         icon: Users,
     },
     {

@@ -3,23 +3,17 @@ import { ConfigModule } from '@nestjs/config';
 
 import { PrismaModule } from './prisma/prisma.module';
 import { CategoriesModule } from './categories/categories.module';
-import { LoggerModule } from './common/logger/logger.module';
-import { HealthModule } from './health/health.module';
-import { UploadsModule } from './uploads/uploads.module';
-import { UsersModule } from './users/users.module';
-import { AuthModule } from './auth/auth.module';
-import { ProductsModule } from './products/products.module';
-import { FloristsModule } from './florists/florists.module';
+import { LoggerModule } from './common/logger/logger.module'
 import appConfig from '@/config/app.config';
-import { OrdersModule } from './orders/orders.module';
-import { OrderOffersModule } from './order-offers/order-offers.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ReviewsModule } from './reviews/reviews.module';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 import { TaxCodesModule } from './tax-codes/tax-codes.module';
+import { FloristsModule } from './florists/florists.module';
 import { StoreSettingsModule } from './store-settings/store-settings.module';
-import { GeocodingModule } from './geocoding/geocoding.module';
-import { PaymentsModule } from './payments/payments.module';
+import { ProductsModule } from './products/products.module';
+import { OrdersModule } from './orders/orders.module';
 
 @Module({
   imports: [
@@ -30,21 +24,15 @@ import { PaymentsModule } from './payments/payments.module';
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
     PrismaModule,
-    CategoriesModule,
-    LoggerModule,
-    HealthModule,
-    UploadsModule,
-    UsersModule,
     AuthModule,
-    ProductsModule,
-    FloristsModule,
-    OrdersModule,
-    OrderOffersModule,
-    ReviewsModule,
-    TaxCodesModule,
     StoreSettingsModule,
-    GeocodingModule,
-    PaymentsModule
+    UsersModule,
+    CategoriesModule,
+    TaxCodesModule,
+    FloristsModule,
+    ProductsModule,
+    OrdersModule,
+    LoggerModule
   ],
 })
 export class AppModule { }
