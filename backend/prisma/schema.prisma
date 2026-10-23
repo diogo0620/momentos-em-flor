@@ -607,6 +607,7 @@ model OrderItem {
 
   name        String
   description String?
+  imagePath String?
 
   //
   // Selected variant snapshot

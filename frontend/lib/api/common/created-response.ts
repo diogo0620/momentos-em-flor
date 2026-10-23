@@ -1,3 +1,5 @@
 export interface CreatedResponse {
-  id: number
+  id: number,
+  slug?: string;
+  orderNumber?: string
 }

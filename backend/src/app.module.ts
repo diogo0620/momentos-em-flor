@@ -14,6 +14,8 @@ import { FloristsModule } from './florists/florists.module';
 import { StoreSettingsModule } from './store-settings/store-settings.module';
 import { ProductsModule } from './products/products.module';
 import { OrdersModule } from './orders/orders.module';
+import { PaymentsModule } from './payments/payments.module';
+import { OrderOffersModule } from './order-offers/order-offers.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { OrdersModule } from './orders/orders.module';
     FloristsModule,
     ProductsModule,
     OrdersModule,
+    OrderOffersModule,
+    PaymentsModule,
     LoggerModule
   ],
 })

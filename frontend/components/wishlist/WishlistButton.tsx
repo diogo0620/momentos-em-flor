@@ -3,10 +3,10 @@
 import { Heart } from "lucide-react";
 
 import { useWishlist } from "@/contexts/WishlistContext";
-import type { ProductListItem } from "@/types/product";
+import { PublicProductList } from "@/types/products/public/public-product-list";
 
 type Props = {
-    product: Pick<ProductListItem, "id" | "name" | "image">;
+    product: Pick<PublicProductList, "id" | "slug" | "name" | "image">;
 };
 
 export default function WishlistButton({
@@ -26,8 +26,9 @@ export default function WishlistButton({
 
                 toggleWishlist({
                     id: product.id,
+                    slug: product.slug,
                     name: product.name,
-                    image: product.image?.url ?? "",
+                    image: product.image ?? "",
                 });
             }}
             aria-label={

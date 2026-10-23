@@ -9,6 +9,7 @@ export type PublicProductDetail = {
     components?: PublicProductComponent[];
     variants?: PublicProductVariant[];
     type: ProductType;
+    featured: boolean;
     rentalDeposit?: number | null;
 }
 

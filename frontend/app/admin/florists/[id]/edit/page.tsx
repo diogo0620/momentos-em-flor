@@ -278,26 +278,17 @@ export default function EditFloristPage() {
                     <>
                         <FloristForm florist={florist}>
                             <section className="rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-sm sm:p-8">
-                                <div className="mb-7">
-                                    <h2 className="text-lg font-semibold text-[#2F3B2A]">
-                                        Administradores
-                                    </h2>
-                                    <p className="mt-1 text-sm text-[#7A8474]">
-                                        Gere os utilizadores que têm acesso ao portal de{" "}
-                                        {florist.name}.
-                                    </p>
-                                </div>
+                                
 
                                 <div>
                                     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                                         <div>
                                             <h3 className="text-lg font-semibold text-[#2F3B2A]">
-                                                Utilizadores associados
+                                                Administradores
                                             </h3>
                                             <p className="mt-1 text-sm text-[#7A8474]">
-                                                {florist.admins.length === 1
-                                                    ? "1 administrador associado"
-                                                    : `${florist.admins.length} administradores associados`}
+                                                Gere os utilizadores que têm acesso ao portal de{" "}
+                                        {florist.name}.
                                             </p>
                                         </div>
 

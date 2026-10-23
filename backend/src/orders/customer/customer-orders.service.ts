@@ -5,7 +5,7 @@ import { CustomerOrderQueryDto } from './dtos/customer-order-query.dto';
 import { PrismaService } from '@/prisma/prisma.service';
 import { Exceptions } from '@/common/exceptions/exceptions';
 import { ERROR_MESSAGES } from '@/common/errors/error-messages';
-import { OrderItemType, Prisma, StoreSettings } from '@prisma/client';
+import { OrderItemType, OrderStatus, Prisma, StoreSettings } from '@prisma/client';
 import { CustomerOrderResponseDto } from './dtos/customer-order-response.dto';
 import { ApiResponse } from '@/common/responses/api-response';
 import { CustomerOrdersMapper } from './mappers/customer-orders.mapper';
@@ -105,6 +105,14 @@ export class CustomerOrdersService {
                 taxCode: true,
                 variants: true,
                 components: true,
+                images: {
+                    select: {
+                        path: true
+                    },
+                    where: {
+                        isPrimary: true
+                    }
+                }
             },
         });
 
@@ -134,6 +142,11 @@ export class CustomerOrdersService {
                     (variant) => variant.id === requestedItem.variantId,
                 )
                 : undefined;
+
+            const imagePath =
+                selectedVariant?.imagePath ??
+                product.images[0].path ??
+                null;
 
             const selectedComponents = requestedItem.components ?? [];
 
@@ -244,6 +257,7 @@ export class CustomerOrdersService {
 
                 name: product.name,
                 description: product.description,
+                imagePath,
 
                 ...(selectedVariant && {
                     variantId: selectedVariant.id,
@@ -480,6 +494,8 @@ export class CustomerOrdersService {
                     deliveryFee,
                     discount,
                     total,
+
+                    status: OrderStatus.PENDING_PAYMENT,
 
                     items: {
                         create: itemsToCreate,

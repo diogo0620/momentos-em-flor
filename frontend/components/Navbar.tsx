@@ -17,6 +17,7 @@ import {
 import { useState } from "react";
 
 import { useCart } from "@/contexts/CartContext";
+import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 const menuItems = [
@@ -29,6 +30,7 @@ const menuItems = [
 
 export default function Navbar() {
     const { items } = useCart();
+    const { items: wishlistItems } = useWishlist();
 
     const {
         user,
@@ -209,8 +211,9 @@ export default function Navbar() {
 
                             <Link
                                 href="/favorites"
-                                aria-label="Favoritos"
+                                aria-label={`Favoritos${wishlistItems.length > 0 ? ` (${wishlistItems.length})` : ""}`}
                                 className="
+                                    relative
                                     flex
                                     h-10
                                     w-10
@@ -228,6 +231,31 @@ export default function Navbar() {
                                     size={19}
                                     strokeWidth={1.8}
                                 />
+
+                                {wishlistItems.length > 0 && (
+                                    <span
+                                        className="
+                                            absolute
+                                            right-0
+                                            top-0
+                                            flex
+                                            h-[17px]
+                                            min-w-[17px]
+                                            items-center
+                                            justify-center
+                                            rounded-full
+                                            bg-[#55624A]
+                                            px-1
+                                            text-[9px]
+                                            font-semibold
+                                            text-white
+                                            ring-2
+                                            ring-white
+                                        "
+                                    >
+                                        {wishlistItems.length}
+                                    </span>
+                                )}
                             </Link>
 
                             {/* CART */}
@@ -794,6 +822,12 @@ export default function Navbar() {
                                     />
 
                                     Favoritos
+
+                                    {wishlistItems.length > 0 && (
+                                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#D6DEC8] px-1 text-[10px] font-semibold text-[#35412F]">
+                                            {wishlistItems.length}
+                                        </span>
+                                    )}
                                 </Link>
 
                                 <Link

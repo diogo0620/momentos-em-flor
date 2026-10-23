@@ -55,9 +55,6 @@ export class CustomerUsersService {
                     ...(dto.lastName !== undefined && {
                         lastName: dto.lastName,
                     }),
-                    ...(dto.email !== undefined && {
-                        email: dto.email,
-                    }),
                     ...(dto.phone !== undefined && {
                         phone: dto.phone,
                     })

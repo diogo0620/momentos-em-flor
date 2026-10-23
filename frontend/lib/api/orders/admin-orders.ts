@@ -2,13 +2,14 @@
 
 import { AdminOrderList } from "@/types/orders/admin/admin-order-list";
 import { BaseApi } from "../common/base-api";
+import { AdminOrderDetail } from "@/types/orders/admin/admin-order-detail";
 
 
 
 
 
 class AdminOrdersApi extends BaseApi<
-    null,
+    AdminOrderDetail,
     AdminOrderList,
     null,
     null

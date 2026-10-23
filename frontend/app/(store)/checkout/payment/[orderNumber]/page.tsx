@@ -2,58 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-
-import { ordersApi } from "@/lib/api/orders";
-import { paymentsApi } from "@/lib/api/payments";
 import StripePaymentForm from "@/components/StripePaymentForm";
+import { CustomerOrderDetail } from "@/types/orders/customer/customer-order-detail";
+import { customerOrdersApi } from "@/lib/api/orders/customer-orders";
+import { paymentsApi } from "@/lib/api/payments/payments";
 
 const stripePromise = loadStripe(
     process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
 );
-
-type CustomerOrderItem = {
-    id: number;
-    name: string;
-    description?: string;
-    imageUrl?: string;
-    quantity: number;
-    variantType?: string;
-    variantName?: string;
-    customerPrice: number;
-    netAmount: number;
-    taxAmount: number;
-    grossAmount: number;
-};
-
-type CustomerOrder = {
-    id: number;
-    orderNumber: string;
-    status: string;
-    createdAt: string;
-    deliveryDate: string;
-    deliveryTimeSlot: string;
-    recipientFirstName: string;
-    recipientLastName?: string;
-    recipientPhone?: string;
-    deliveryStreet: string;
-    deliveryStreet2?: string;
-    deliveryPostalCode: string;
-    deliveryCity: string;
-    deliveryDistrict: string;
-    deliveryCountryCode: string;
-    cardMessage: string;
-    deliveryInstructions?: string;
-    subtotal: number;
-    taxAmount: number;
-    deliveryFee: number;
-    discount: number;
-    total: number;
-    items: CustomerOrderItem[];
-};
 
 function formatCurrency(value: number) {
     return new Intl.NumberFormat("pt-PT", {
@@ -84,18 +45,17 @@ function formatTimeSlot(value: string) {
 }
 
 export default function CheckoutPaymentPage() {
-    const params = useParams<{ id: string }>();
+    const params = useParams<{ orderNumber: string }>();
     const router = useRouter();
+    const orderNumber = params.orderNumber;
 
-    const orderId = Number(params.id);
-
-    const [order, setOrder] = useState<CustomerOrder | null>(null);
+    const [order, setOrder] = useState<CustomerOrderDetail | null>(null);
     const [clientSecret, setClientSecret] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!Number.isFinite(orderId) || orderId <= 0) {
+        if (!orderNumber) {
             setError("Encomenda inválida.");
             setLoading(false);
             return;
@@ -108,62 +68,54 @@ export default function CheckoutPaymentPage() {
                 setLoading(true);
                 setError(null);
 
-                const orderResponse =
-                    await ordersApi.getById(orderId);
-
-                const orderData =
-                    orderResponse.data as CustomerOrder;
+                const orderData = (await customerOrdersApi.getByOrderNumber(orderNumber));
 
                 if (cancelled) return;
 
+                if (!orderData || orderData.orderNumber !== orderNumber) {
+                    throw new Error("Não foi possível encontrar esta encomenda.");
+                }
+
                 setOrder(orderData);
 
+    
                 if (orderData.status !== "PENDING_PAYMENT") {
-                    router.replace(`/account/orders/${orderId}`);
+                    router.replace(`/account/orders/${orderNumber}`);
                     return;
                 }
 
                 const paymentResponse =
-                    await paymentsApi.createPaymentIntent(orderId);
+                    await paymentsApi.createPaymentIntent(orderNumber);
 
                 if (cancelled) return;
 
-                const secret =
-                    paymentResponse.data?.clientSecret;
+                const secret = paymentResponse.clientSecret;
 
                 if (!secret) {
-                    throw new Error(
-                        "Não foi possível preparar o pagamento.",
-                    );
+                    throw new Error("Não foi possível preparar o pagamento.");
                 }
 
                 setClientSecret(secret);
             } catch (err) {
                 if (cancelled) return;
 
-                console.error(
-                    "Erro ao preparar pagamento:",
-                    err,
-                );
-
+                console.error("Erro ao preparar pagamento:", err);
                 setError(
                     err instanceof Error
                         ? err.message
                         : "Não foi possível preparar o pagamento.",
                 );
             } finally {
-                if (!cancelled) {
-                    setLoading(false);
-                }
+                if (!cancelled) setLoading(false);
             }
         }
 
-        loadPayment();
+        void loadPayment();
 
         return () => {
             cancelled = true;
         };
-    }, [orderId, router]);
+    }, [orderNumber, router]);
 
     const appearance = useMemo(
         () => ({
@@ -182,7 +134,7 @@ export default function CheckoutPaymentPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#F7F8F4] px-4 py-16">
+            <main className="min-h-screen bg-[#F7F8F4] px-4 py-16">
                 <div className="mx-auto flex max-w-6xl items-center justify-center">
                     <div className="rounded-[2rem] bg-white px-10 py-12 text-center shadow-sm">
                         <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#D6DEC8] border-t-[#55624A]" />
@@ -191,15 +143,15 @@ export default function CheckoutPaymentPage() {
                         </p>
                     </div>
                 </div>
-            </div>
+            </main>
         );
     }
 
     if (error || !order || !clientSecret) {
         return (
-            <div className="min-h-screen bg-[#F7F8F4] px-4 py-16">
+            <main className="min-h-screen bg-[#F7F8F4] px-4 py-16">
                 <div className="mx-auto max-w-xl rounded-[2rem] bg-white p-10 text-center shadow-sm">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FBEAEA] text-[#A34B4B]">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FBEAEA] text-xl font-semibold text-[#A34B4B]">
                         !
                     </div>
 
@@ -212,18 +164,18 @@ export default function CheckoutPaymentPage() {
                     </p>
 
                     <Link
-                        href={order ? `/account/orders/${order.id}` : "/account/orders"}
+                        href={order ? `/account/orders/${order.orderNumber}` : "/account/orders"}
                         className="mt-8 inline-flex rounded-full bg-[#55624A] px-7 py-3 text-sm font-semibold text-white transition hover:bg-[#46523D]"
                     >
                         Voltar à encomenda
                     </Link>
                 </div>
-            </div>
+            </main>
         );
     }
 
     return (
-        <div className="min-h-screen bg-[#F7F8F4]">
+        <main className="min-h-screen bg-[#F7F8F4]">
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
                 <div className="mb-8">
                     <Link
@@ -263,9 +215,7 @@ export default function CheckoutPaymentPage() {
                             </div>
 
                             <div className="rounded-2xl bg-[#F8F9F5] px-4 py-3 text-right">
-                                <p className="text-xs text-gray-400">
-                                    Total
-                                </p>
+                                <p className="text-xs text-gray-400">Total</p>
                                 <p className="mt-1 text-lg font-bold text-[#2F3B2A]">
                                     {formatCurrency(order.total)}
                                 </p>
@@ -274,17 +224,10 @@ export default function CheckoutPaymentPage() {
 
                         <Elements
                             stripe={stripePromise}
-                            options={{
-                                clientSecret,
-                                appearance,
-                            }}
+                            options={{ clientSecret, appearance }}
                         >
                             <StripePaymentForm
-                                onSuccess={() => {
-                                    router.push(
-                                        "/checkout/success",
-                                    );
-                                }}
+                                onSuccess={() => router.push("/checkout/success")}
                             />
                         </Elements>
                     </section>
@@ -294,6 +237,7 @@ export default function CheckoutPaymentPage() {
                             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
                                 A sua encomenda
                             </p>
+
                             <div className="mt-2 flex items-center justify-between gap-4">
                                 <h2 className="text-xl font-bold text-[#2F3B2A]">
                                     {order.orderNumber}
@@ -307,16 +251,15 @@ export default function CheckoutPaymentPage() {
 
                             <div className="space-y-4">
                                 {order.items.map((item) => (
-                                    <div
-                                        key={item.id}
-                                        className="flex gap-3"
-                                    >
-                                        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-[#F1F3EC]">
-                                            {item.imageUrl ? (
-                                                <img
-                                                    src={item.imageUrl}
-                                                    alt={item.name}
-                                                    className="h-full w-full object-cover"
+                                    <div key={item.id} className="flex gap-3">
+                                        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-[#F1F3EC]">
+                                            {item.image ? (
+                                                <Image
+                                                    src={item.image}
+                                                    alt={item.productName}
+                                                    fill
+                                                    sizes="64px"
+                                                    className="object-cover"
                                                 />
                                             ) : (
                                                 <div className="flex h-full items-center justify-center text-xs text-gray-400">
@@ -327,18 +270,19 @@ export default function CheckoutPaymentPage() {
 
                                         <div className="min-w-0 flex-1">
                                             <div className="flex justify-between gap-3">
-                                                <div>
+                                                <div className="min-w-0">
                                                     <p className="text-sm font-semibold text-[#2F3B2A]">
-                                                        {item.name}
+                                                        {item.productName}
                                                     </p>
-                                                    <p className="mt-0.5 text-xs text-gray-500">
-                                                        {item.quantity} × {formatCurrency(item.customerPrice)}
-                                                    </p>
-                                                    {item.variantName && (
-                                                        <p className="mt-0.5 text-xs text-gray-400">
-                                                            {item.variantName}
+                                                    {item.description && (
+                                                        <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">
+                                                            {item.description}
                                                         </p>
                                                     )}
+                                                    <p className="mt-0.5 text-xs text-gray-500">
+                                                        {item.quantity} × {formatCurrency(item.unitPrice)}
+                                                    </p>
+                                    
                                                 </div>
 
                                                 <p className="shrink-0 text-sm font-semibold text-[#2F3B2A]">
@@ -354,18 +298,14 @@ export default function CheckoutPaymentPage() {
 
                             <div className="space-y-3 text-sm">
                                 <div className="flex justify-between gap-4">
-                                    <span className="text-gray-500">
-                                        Produtos
-                                    </span>
+                                    <span className="text-gray-500">Subtotal</span>
                                     <span className="font-medium text-[#2F3B2A]">
                                         {formatCurrency(order.subtotal)}
                                     </span>
                                 </div>
 
                                 <div className="flex justify-between gap-4">
-                                    <span className="text-gray-500">
-                                        Entrega
-                                    </span>
+                                    <span className="text-gray-500">Entrega</span>
                                     <span className="font-medium text-[#2F3B2A]">
                                         {order.deliveryFee > 0
                                             ? formatCurrency(order.deliveryFee)
@@ -383,9 +323,7 @@ export default function CheckoutPaymentPage() {
                                 )}
 
                                 <div className="flex justify-between gap-4 border-t border-[#E5E9E1] pt-4">
-                                    <span className="font-semibold text-[#2F3B2A]">
-                                        Total
-                                    </span>
+                                    <span className="font-semibold text-[#2F3B2A]">Total</span>
                                     <span className="text-lg font-bold text-[#2F3B2A]">
                                         {formatCurrency(order.total)}
                                     </span>
@@ -414,6 +352,9 @@ export default function CheckoutPaymentPage() {
                                     </p>
                                     <p className="mt-1 leading-6 text-gray-500">
                                         {order.deliveryStreet}
+                                        {order.deliveryStreetNumber
+                                            ? `, ${order.deliveryStreetNumber}`
+                                            : ""}
                                         {order.deliveryStreet2
                                             ? `, ${order.deliveryStreet2}`
                                             : ""}
@@ -422,6 +363,11 @@ export default function CheckoutPaymentPage() {
                                         <br />
                                         {order.deliveryDistrict}
                                     </p>
+                                    {order.deliveryInstructions && (
+                                        <p className="mt-3 text-xs leading-5 text-gray-500">
+                                            Instruções: {order.deliveryInstructions}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </section>
@@ -431,12 +377,12 @@ export default function CheckoutPaymentPage() {
                                 Pagamento seguro
                             </p>
                             <p className="mt-1 text-xs leading-5 text-gray-500">
-                                Os dados do cartão são processados diretamente pelo Stripe e não são armazenados pela Bloomery.
+                                Os dados do cartão são processados diretamente pelo Stripe e não são armazenados pela Momentos em Flor.
                             </p>
                         </div>
                     </aside>
                 </div>
             </div>
-        </div>
+        </main>
     );
 }

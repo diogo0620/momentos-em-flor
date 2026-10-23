@@ -24,13 +24,13 @@ import {
     X,
 } from "lucide-react";
 
-import ProductCard from "@/components/ProductCard";
-import type { Pagination, ProductListItem, ProductType } from "@/types/product";
+import ProductCard from "@/components/store/products/ProductCard";
 import { publicProductsApi } from "@/lib/api/products/public-products";
 import { PaginationParams } from "@/lib/api/common/base-api";
 import { publicCategoriesApi } from "@/lib/api/categories/public-categories";
 import { PublicCategoryList } from "@/types/categories/public/public-category-list";
 import { PublicProductList } from "@/types/products/public/public-product-list";
+import { ProductType } from "@/types/products/admin/admin-create-product";
 
 type Filters = {
     categoryId: string;
@@ -61,19 +61,15 @@ const SORT_OPTIONS = [
 export default function ProductsPage() {
     const [products, setProducts] = useState<PublicProductList[]>([]);
     const [categories, setCategories] = useState<PublicCategoryList[]>([]);
-    const [pagination, setPagination] = useState<Pagination>({
-        page: 1,
-        pageSize: PAGE_SIZE,
-        total: 0,
-        pages: 0,
-    });
+    const [page, setPage] = useState(1);
+    const [pages, setPages] = useState(0);
+    const [total, setTotal] = useState(0);
 
     const [searchInput, setSearchInput] = useState("");
     const [search, setSearch] = useState("");
     const [draftFilters, setDraftFilters] = useState<Filters>(DEFAULT_FILTERS);
     const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
     const [sortValue, setSortValue] = useState("featured");
-    const [page, setPage] = useState(1);
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingCategories, setIsLoadingCategories] = useState(true);
@@ -90,65 +86,62 @@ export default function ProductsPage() {
         return count;
     }, [filters]);
 
-    
-const loadProducts = useCallback(async (requestedPage: number) => {
-    try {
-        setIsLoading(true);
-        setError(null);
 
-        const params: PaginationParams & {
-            categoryId?: number;
-            minPrice?: number;
-            maxPrice?: number;
-            type?: ProductType;
-            featured?: boolean;
-        } = {
-            page: requestedPage,
-            pageSize: PAGE_SIZE,
-            search,
-            sort: selectedSort.sort,
-            order: selectedSort.order,
-        };
+    const loadProducts = useCallback(async (requestedPage: number) => {
+        try {
+            setIsLoading(true);
+            setError(null);
 
-        if (filters.categoryId) {
-            params.categoryId = Number(filters.categoryId);
+            const params: PaginationParams & {
+                categoryId?: number;
+                minPrice?: number;
+                maxPrice?: number;
+                type?: ProductType;
+                featured?: boolean;
+            } = {
+                page: requestedPage,
+                pageSize: PAGE_SIZE,
+                search,
+                sort: selectedSort.sort,
+                order: selectedSort.order,
+            };
+
+            if (filters.categoryId) {
+                params.categoryId = Number(filters.categoryId);
+            }
+
+            if (filters.minPrice !== "") {
+                params.minPrice = Number(filters.minPrice);
+            }
+
+            if (filters.maxPrice !== "") {
+                params.maxPrice = Number(filters.maxPrice);
+            }
+
+            if (filters.type !== "ALL") {
+                params.type = filters.type;
+            }
+
+            if (filters.featured) {
+                params.featured = true;
+            }
+
+            const response = await publicProductsApi.getAll(params);
+
+            setProducts(response.items);
+            setPage(response.page);
+            setPages(response.pages);
+            setTotal(response.total);
+        } catch (err) {
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Não foi possível carregar os produtos.",
+            );
+        } finally {
+            setIsLoading(false);
         }
-
-        if (filters.minPrice !== "") {
-            params.minPrice = Number(filters.minPrice);
-        }
-
-        if (filters.maxPrice !== "") {
-            params.maxPrice = Number(filters.maxPrice);
-        }
-
-        if (filters.type !== "ALL") {
-            params.type = filters.type;
-        }
-
-        if (filters.featured) {
-            params.featured = true;
-        }
-
-        const response = await publicProductsApi.getAll(params);
-
-        setProducts(response.items);
-        setPagination({
-            page: response.page,
-            pageSize: response.pageSize,
-            total: response.total,
-            pages: response.pages,
-        });
-    } catch (err) {
-        setError(
-            err instanceof Error
-                ? err.message
-                : "Não foi possível carregar os produtos.",
-        );
-    } finally {
-        setIsLoading(false);
-    }
-}, [filters, search, selectedSort]);
+    }, [filters, search, selectedSort]);
 
 
     useEffect(() => {
@@ -217,19 +210,25 @@ const loadProducts = useCallback(async (requestedPage: number) => {
     }
 
     function goToPage(nextPage: number) {
-        if (nextPage < 1 || nextPage > pagination.pages || nextPage === page) return;
+        if (nextPage < 1 || nextPage > pages || nextPage === page) return;
+
         setPage(nextPage);
-        if (typeof window !== "undefined") {
-            document.getElementById("catalog-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
+
+        document.getElementById("catalog-results")?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+        });
     }
 
     const pageNumbers = useMemo(() => {
-        const total = pagination.pages;
-        if (total <= 5) return Array.from({ length: total }, (_, index) => index + 1);
-        const start = Math.max(1, Math.min(page - 2, total - 4));
+        if (pages <= 5) {
+            return Array.from({ length: pages }, (_, index) => index + 1);
+        }
+
+        const start = Math.max(1, Math.min(page - 2, pages - 4));
+
         return Array.from({ length: 5 }, (_, index) => start + index);
-    }, [page, pagination.pages]);
+    }, [page, pages]);
 
     const categoryName = categories.find((category) => String(category.id) === filters.categoryId)?.name;
 
@@ -262,8 +261,8 @@ const loadProducts = useCallback(async (requestedPage: number) => {
                         <div className="flex items-center gap-3 rounded-2xl border border-[#E6EADF] bg-[#FAFBF8] px-4 py-3 lg:min-w-[180px]">
                             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E8EDDF] text-[#55624A]"><Sparkles size={18} /></span>
                             <div>
-                                <p className="text-lg font-semibold leading-5 text-[#2F3B2A]">{pagination.total}</p>
-                                <p className="mt-1 text-xs text-[#7B8574]">{pagination.total === 1 ? "produto disponível" : "produtos disponíveis"}</p>
+                                <p className="text-lg font-semibold leading-5 text-[#2F3B2A]">{total}</p>
+                                <p className="mt-1 text-xs text-[#7B8574]">{total === 1 ? "produto disponível" : "produtos disponíveis"}</p>
                             </div>
                         </div>
                     </div>
@@ -351,7 +350,7 @@ const loadProducts = useCallback(async (requestedPage: number) => {
                         <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                                 <h2 className="text-xl font-semibold tracking-[-0.025em] text-[#2F3B2A]">A nossa seleção</h2>
-                                <p className="mt-1 text-xs text-[#899382]">{isLoading ? "A atualizar catálogo…" : `${pagination.total} ${pagination.total === 1 ? "resultado encontrado" : "resultados encontrados"}`}</p>
+                                <p className="mt-1 text-xs text-[#899382]">{isLoading ? "A atualizar catálogo…" : `${total} ${total === 1 ? "resultado encontrado" : "resultados encontrados"}`}</p>
                             </div>
                             <label className="flex items-center gap-2 self-start text-xs font-medium text-[#899382] sm:self-auto">
                                 <ArrowDownWideNarrow size={16} />
@@ -398,14 +397,14 @@ const loadProducts = useCallback(async (requestedPage: number) => {
                                     {products.map((product) => <ProductCard key={product.id} product={product} />)}
                                 </div>
 
-                                {pagination.pages > 1 && <nav aria-label="Paginação de produtos" className="mt-9 flex flex-col gap-4 border-t border-[#E4E8DF] pt-6 sm:flex-row sm:items-center sm:justify-between">
-                                    <p className="text-xs text-[#899382]">A mostrar <span className="font-semibold text-[#55624A]">{(pagination.page - 1) * pagination.pageSize + 1}–{Math.min(pagination.page * pagination.pageSize, pagination.total)}</span> de <span className="font-semibold text-[#55624A]">{pagination.total}</span> produtos</p>
+                                {pages > 1 && <nav aria-label="Paginação de produtos" className="mt-9 flex flex-col gap-4 border-t border-[#E4E8DF] pt-6 sm:flex-row sm:items-center sm:justify-between">
+                                    <p className="text-xs text-[#899382]">A mostrar <span className="font-semibold text-[#55624A]">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)}</span> de <span className="font-semibold text-[#55624A]">{total}</span> produtos</p>
                                     <div className="flex items-center justify-between gap-1.5 sm:justify-end">
                                         <button type="button" onClick={() => goToPage(page - 1)} disabled={page <= 1} aria-label="Página anterior" className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E2E7DD] bg-white text-[#55624A] transition hover:border-[#B9C3AE] hover:bg-[#F3F5EE] disabled:cursor-not-allowed disabled:opacity-35"><ChevronLeft size={18} /></button>
                                         {pageNumbers[0] > 1 && <><button type="button" onClick={() => goToPage(1)} className="hidden h-10 min-w-10 items-center justify-center rounded-xl border border-[#E2E7DD] bg-white px-3 text-sm text-[#55624A] hover:bg-[#F3F5EE] sm:flex">1</button>{pageNumbers[0] > 2 && <span className="px-1 text-[#A0A797]">…</span>}</>}
                                         {pageNumbers.map((number) => <button key={number} type="button" onClick={() => goToPage(number)} aria-current={number === page ? "page" : undefined} className={`h-10 min-w-10 rounded-xl border px-3 text-sm font-semibold transition ${number === page ? "border-[#55624A] bg-[#55624A] text-white shadow-sm" : "border-[#E2E7DD] bg-white text-[#55624A] hover:bg-[#F3F5EE]"}`}>{number}</button>)}
-                                        {pageNumbers[pageNumbers.length - 1] < pagination.pages && <>{pageNumbers[pageNumbers.length - 1] < pagination.pages - 1 && <span className="px-1 text-[#A0A797]">…</span>}<button type="button" onClick={() => goToPage(pagination.pages)} className="hidden h-10 min-w-10 items-center justify-center rounded-xl border border-[#E2E7DD] bg-white px-3 text-sm text-[#55624A] hover:bg-[#F3F5EE] sm:flex">{pagination.pages}</button></>}
-                                        <button type="button" onClick={() => goToPage(page + 1)} disabled={page >= pagination.pages} aria-label="Página seguinte" className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E2E7DD] bg-white text-[#55624A] transition hover:border-[#B9C3AE] hover:bg-[#F3F5EE] disabled:cursor-not-allowed disabled:opacity-35"><ChevronRight size={18} /></button>
+                                        {pageNumbers[pageNumbers.length - 1] < pages && <>{pageNumbers[pageNumbers.length - 1] < pages - 1 && <span className="px-1 text-[#A0A797]">…</span>}<button type="button" onClick={() => goToPage(pages)} className="hidden h-10 min-w-10 items-center justify-center rounded-xl border border-[#E2E7DD] bg-white px-3 text-sm text-[#55624A] hover:bg-[#F3F5EE] sm:flex">{pages}</button></>}
+                                        <button type="button" onClick={() => goToPage(page + 1)} disabled={page >= pages} aria-label="Página seguinte" className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E2E7DD] bg-white text-[#55624A] transition hover:border-[#B9C3AE] hover:bg-[#F3F5EE] disabled:cursor-not-allowed disabled:opacity-35"><ChevronRight size={18} /></button>
                                     </div>
                                 </nav>}
                             </>

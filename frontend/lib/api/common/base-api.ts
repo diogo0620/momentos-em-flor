@@ -136,6 +136,14 @@ export abstract class BaseApi<
         );
     }
 
+    async getBySlug(
+        slug: string,
+    ): Promise<TDetailResponse> {
+        return apiFetch(
+            `${this.endpoint}/${slug}`,
+        );
+    }
+
     async create(
         data: TCreateDto,
     ): Promise<CreatedResponse> {

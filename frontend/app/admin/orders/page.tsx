@@ -331,7 +331,7 @@ export default function AdminOrdersPage() {
                                         <td className="px-5 py-5">
                                             <div className="flex items-center justify-end">
                                                 <Link
-                                                    href={`/admin/orders/${orderItem.id}`}
+                                                    href={`/admin/orders/${orderItem.id}/edit`}
                                                     title="Editar encomenda"
                                                     aria-label={`Editar encomenda ${orderItem.orderNumber}`}
                                                     className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition hover:bg-[#F3F5EE] hover:text-[#55624A]"

@@ -2,7 +2,9 @@
 
 import { BaseApi } from "../common/base-api";
 import { CustomerOrderList } from "@/types/orders/customer/customer-order-list";
-import { CustomerOrderDetail } from "../customer-account";
+import { CustomerCreateOrder } from "@/types/orders/customer/customer-create-order";
+import { CustomerOrderDetail } from "@/types/orders/customer/customer-order-detail";
+import { apiFetch } from "../common/client";
 
 
 
@@ -11,12 +13,20 @@ import { CustomerOrderDetail } from "../customer-account";
 class CustomerOrdersApi extends BaseApi<
     CustomerOrderDetail,
     CustomerOrderList,
-    null,
+    CustomerCreateOrder,
     null
 > {
     constructor() {
         super("/customer/orders");
     }
+
+    async getByOrderNumber(
+            orderNumber: string,
+        ): Promise<CustomerOrderDetail> {
+            return apiFetch(
+                `${this.endpoint}/${orderNumber}`,
+            );
+        }
 
 }
 

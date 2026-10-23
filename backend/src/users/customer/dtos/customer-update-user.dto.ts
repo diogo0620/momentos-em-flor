@@ -18,12 +18,6 @@ export class CustomerUpdateUserDto {
   @IsString()
   lastName!: string;
 
-  @ApiProperty({
-    example: 'admin@momentosemflor.pt',
-  })
-  @IsEmail()
-  email!: string;
-
   @ApiPropertyOptional({
     example: '+351912345678',
   })

@@ -5,13 +5,8 @@ const nextConfig: NextConfig = {
         remotePatterns: [
             {
                 protocol: "https",
-                hostname: "homeflora.pt",
-            },
-            {
-                protocol: "http",
-                hostname: "localhost",
-                port: "3001",
-                pathname: "/api/files/**",
+                hostname: "aiudndfwpejjftnjngii.supabase.co",
+                pathname: "/storage/v1/object/public/**",
             },
         ],
     },

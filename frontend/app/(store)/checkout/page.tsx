@@ -1,18 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 import { useRouter } from "next/navigation";
 
 import { useCart } from "@/contexts/CartContext";
 
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { CustomerCreateOrder } from "@/types/orders/customer/customer-create-order";
+import { customerOrdersApi } from "@/lib/api/orders/customer-orders";
 
-import { getStoreSettings } from "@/lib/api/store-settings";
-
-import { ordersApi } from "@/lib/api/orders";
-
-import type { CreateOrderData } from "@/types/order";
 
 const PORTUGAL_DISTRICTS = [
     "Aveiro",
@@ -35,14 +33,27 @@ const PORTUGAL_DISTRICTS = [
     "Viseu",
 ];
 
+const formatPrice = (value: number) =>
+    new Intl.NumberFormat("pt-PT", {
+        style: "currency",
+        currency: "EUR",
+    }).format(value);
+
+const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+};
 
 export default function CheckoutPage() {
 
     const router = useRouter();
 
+    
 
     const { items, clearCart } = useCart();
-
 
     const {
         user,
@@ -50,87 +61,66 @@ export default function CheckoutPage() {
         isLoading: authLoading,
     } = useAuth();
 
-
     const [customerTaxNumber, setCustomerTaxNumber] =
         useState("");
-
 
     const [recipientFirstName, setRecipientFirstName] =
         useState("");
 
-
     const [recipientLastName, setRecipientLastName] =
         useState("");
-
 
     const [recipientPhone, setRecipientPhone] =
         useState("");
 
-
     const [occasion, setOccasion] =
-        useState<CreateOrderData["occasion"]>();
-
+        useState<CustomerCreateOrder["occasion"]>();
 
     const [deliveryDate, setDeliveryDate] =
         useState("");
 
-
     const [deliveryTimeSlot, setDeliveryTimeSlot] =
-        useState<CreateOrderData["deliveryTimeSlot"]>(
+        useState<CustomerCreateOrder["deliveryTimeSlot"]>(
             "AFTERNOON",
         );
-
 
     const [deliveryInstructions, setDeliveryInstructions] =
         useState("");
 
-
     const [deliveryStreet, setDeliveryStreet] =
         useState("");
-
 
     const [deliveryStreetNumber, setDeliveryStreetNumber] =
         useState("");
 
-
     const [deliveryStreet2, setDeliveryStreet2] =
         useState("");
-
 
     const [deliveryPostalCode, setDeliveryPostalCode] =
         useState("");
 
-
     const [deliveryCity, setDeliveryCity] =
         useState("");
-
 
     const [deliveryDistrict, setDeliveryDistrict] =
         useState("");
 
-
     const deliveryCountryCode = "PT";
-
 
     const [cardMessage, setCardMessage] =
         useState("");
 
-
     const [deliveryFee, setDeliveryFee] =
         useState<number | null>(null);
-
 
     const [isLoadingDeliveryFee, setIsLoadingDeliveryFee] =
         useState(false);
 
-
     const [isSubmitting, setIsSubmitting] =
         useState(false);
 
-
     const [error, setError] =
         useState<string | null>(null);
-
 
     const total = items.reduce(
         (sum, item) =>
@@ -139,14 +129,12 @@ export default function CheckoutPage() {
         0,
     );
 
-
     const hasCompleteDeliveryAddress =
         deliveryStreet.trim() !== "" &&
         deliveryStreetNumber.trim() !== "" &&
         deliveryPostalCode.trim() !== "" &&
         deliveryCity.trim() !== "" &&
         deliveryDistrict.trim() !== "";
-
 
     useEffect(() => {
 
@@ -155,17 +143,13 @@ export default function CheckoutPage() {
             return;
         }
 
-
         async function loadDeliveryFee() {
 
             try {
 
                 setIsLoadingDeliveryFee(true);
 
-
-                const response =
-                    await getStoreSettings();
-
+                const response = {data:{deliveryFee: 0}}//await getStoreSettings();
 
                 setDeliveryFee(
                     response.data.deliveryFee,
@@ -183,23 +167,14 @@ export default function CheckoutPage() {
 
         }
 
-
         loadDeliveryFee();
 
-    }, [
-        hasCompleteDeliveryAddress,
-        deliveryStreet,
-        deliveryPostalCode,
-        deliveryCity,
-        deliveryDistrict,
-    ]);
-
+    }, [hasCompleteDeliveryAddress]);
 
     const grandTotal =
         deliveryFee !== null
             ? total + deliveryFee
             : null;
-
 
     async function handleSubmit(
         event: React.FormEvent<HTMLFormElement>,
@@ -213,7 +188,6 @@ export default function CheckoutPage() {
             return;
         }
 
-
         if (items.length === 0) {
 
             setError(
@@ -223,7 +197,6 @@ export default function CheckoutPage() {
             return;
 
         }
-
 
         if (
             !hasCompleteDeliveryAddress ||
@@ -237,7 +210,6 @@ export default function CheckoutPage() {
             return;
 
         }
-
 
         if (
             customerTaxNumber.trim() !== "" &&
@@ -254,15 +226,13 @@ export default function CheckoutPage() {
 
         }
 
-
         try {
 
             setIsSubmitting(true);
 
             setError(null);
 
-
-            const data: CreateOrderData = {
+            const data: CustomerCreateOrder = {
 
                 items: items.map(
                     (item) => ({
@@ -300,23 +270,7 @@ export default function CheckoutPage() {
                     }),
                 ),
 
-
                 // CUSTOMER
-
-                customerFirstName:
-                    user.firstName,
-
-                customerLastName:
-                    user.lastName ||
-                    undefined,
-
-                customerEmail:
-                    user.email,
-
-                customerPhone:
-                    user.phone ||
-                    undefined,
-
 
                 // CUSTOMER TAX NUMBER
 
@@ -326,7 +280,6 @@ export default function CheckoutPage() {
                             customerTaxNumber.trim(),
                     }
                     : {}),
-
 
                 // RECIPIENT
 
@@ -341,7 +294,6 @@ export default function CheckoutPage() {
                     undefined,
 
                 occasion,
-
 
                 // DELIVERY
 
@@ -369,7 +321,6 @@ export default function CheckoutPage() {
 
                 deliveryCountryCode,
 
-
                 // CARD
 
                 cardMessage:
@@ -378,7 +329,6 @@ export default function CheckoutPage() {
 
             };
 
-
             /*
              * 1. Create order
              *
@@ -386,7 +336,7 @@ export default function CheckoutPage() {
              * /checkout/payment page.
              */
             const response =
-                await ordersApi.create(data);
+                await customerOrdersApi.create(data);
 
             /*
              * The order now exists independently from
@@ -395,15 +345,15 @@ export default function CheckoutPage() {
              */
             clearCart();
 
+            
             /*
              * 2. Go to the shared payment page.
              *
              * The customer can later use the order payment page
              * to retry a pending payment.
              */
-            router.push(
-                `/checkout/payment/${response.data.id}`,
-            );
+            router.push(`/checkout/payment/${response.orderNumber}`);
+            
 
         } catch (err) {
 
@@ -411,7 +361,6 @@ export default function CheckoutPage() {
                 "Erro ao criar encomenda:",
                 err,
             );
-
 
             setError(
                 err instanceof Error
@@ -426,7 +375,6 @@ export default function CheckoutPage() {
         }
 
     }
-
 
     if (authLoading) {
 
@@ -453,7 +401,6 @@ export default function CheckoutPage() {
         );
 
     }
-
 
     if (!isAuthenticated || !user) {
 
@@ -495,7 +442,6 @@ export default function CheckoutPage() {
 
     }
 
-
     if (items.length === 0) {
 
         return (
@@ -536,18 +482,14 @@ export default function CheckoutPage() {
 
     }
 
-
     const fieldClass =
         "w-full rounded-xl border border-[#E3E7DE] bg-white px-4 py-3 text-sm text-[#2F3B2A] outline-none transition placeholder:text-gray-400 focus:border-[#8C997E] focus:ring-4 focus:ring-[#D6DEC8]/50";
-
 
     const labelClass =
         "mb-2 block text-xs font-semibold uppercase tracking-wide text-[#596151]";
 
-
     const sectionClass =
         "rounded-[1.75rem] border border-[#E9ECE5] bg-white p-6 shadow-[0_8px_30px_rgba(47,59,42,0.04)] sm:p-7";
-
 
     return (
 
@@ -577,7 +519,6 @@ export default function CheckoutPage() {
 
                     </div>
 
-
                     <div className="hidden rounded-2xl border border-[#E3E7DE] bg-white px-4 py-3 sm:block">
 
                         <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
@@ -595,14 +536,12 @@ export default function CheckoutPage() {
 
                 </div>
 
-
                 <form
                     onSubmit={handleSubmit}
                     className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_360px]"
                 >
 
                     <div className="space-y-6">
-
 
                         {/* COMPRADOR */}
 
@@ -629,7 +568,6 @@ export default function CheckoutPage() {
                                 </div>
 
                             </div>
-
 
                             <div className="mt-6 rounded-2xl border border-[#E7EBE2] bg-[#F8F9F6] p-5">
 
@@ -661,7 +599,6 @@ export default function CheckoutPage() {
                                 </div>
 
                             </div>
-
 
                             <div className="mt-5">
 
@@ -703,7 +640,6 @@ export default function CheckoutPage() {
 
                         </section>
 
-
                         {/* DESTINATÁRIO */}
 
                         <section className={sectionClass}>
@@ -730,7 +666,6 @@ export default function CheckoutPage() {
 
                             </div>
 
-
                             <div className="mt-6 grid gap-4 sm:grid-cols-2">
 
                                 <div>
@@ -753,7 +688,6 @@ export default function CheckoutPage() {
 
                                 </div>
 
-
                                 <div>
 
                                     <label className={labelClass}>
@@ -772,7 +706,6 @@ export default function CheckoutPage() {
                                     />
 
                                 </div>
-
 
                                 <div className="sm:col-span-2">
 
@@ -794,7 +727,6 @@ export default function CheckoutPage() {
 
                                 </div>
 
-
                                 <div className="sm:col-span-2">
 
                                     <label className={labelClass}>
@@ -809,7 +741,7 @@ export default function CheckoutPage() {
                                         onChange={(e) =>
                                             setOccasion(
                                                 e.target.value
-                                                    ? (e.target.value as CreateOrderData["occasion"])
+                                                    ? (e.target.value as CustomerCreateOrder["occasion"])
                                                     : undefined,
                                             )
                                         }
@@ -868,7 +800,6 @@ export default function CheckoutPage() {
 
                         </section>
 
-
                         {/* ENTREGA */}
 
                         <section className={sectionClass}>
@@ -895,7 +826,6 @@ export default function CheckoutPage() {
 
                             </div>
 
-
                             <div className="mt-6 grid gap-4 sm:grid-cols-2">
 
                                 <div>
@@ -907,6 +837,7 @@ export default function CheckoutPage() {
                                     <input
                                         required
                                         type="date"
+                                        min={getTodayDate()}
                                         value={deliveryDate}
                                         onChange={(e) =>
                                             setDeliveryDate(
@@ -917,7 +848,6 @@ export default function CheckoutPage() {
                                     />
 
                                 </div>
-
 
                                 <div>
 
@@ -930,7 +860,7 @@ export default function CheckoutPage() {
                                         value={deliveryTimeSlot}
                                         onChange={(e) =>
                                             setDeliveryTimeSlot(
-                                                e.target.value as CreateOrderData["deliveryTimeSlot"],
+                                                e.target.value as CustomerCreateOrder["deliveryTimeSlot"],
                                             )
                                         }
                                         className={fieldClass}
@@ -954,7 +884,6 @@ export default function CheckoutPage() {
 
                             </div>
 
-
                             <div className="mt-6 rounded-2xl border border-[#DDE5D5] bg-[#F7F9F4] p-5">
 
                                 <div className="flex items-center gap-3">
@@ -976,7 +905,6 @@ export default function CheckoutPage() {
                                     </div>
 
                                 </div>
-
 
                                 <div className="mt-5 grid gap-4">
 
@@ -1003,7 +931,6 @@ export default function CheckoutPage() {
 
                                         </div>
 
-
                                         <div>
 
                                             <label className={labelClass}>
@@ -1026,7 +953,6 @@ export default function CheckoutPage() {
 
                                     </div>
 
-
                                     <div>
 
                                         <label className={labelClass}>
@@ -1046,7 +972,6 @@ export default function CheckoutPage() {
                                         />
 
                                     </div>
-
 
                                     <div className="grid gap-4 sm:grid-cols-2">
 
@@ -1075,7 +1000,6 @@ export default function CheckoutPage() {
 
                                         </div>
 
-
                                         <div>
 
                                             <label className={labelClass}>
@@ -1098,7 +1022,6 @@ export default function CheckoutPage() {
                                         </div>
 
                                     </div>
-
 
                                     <div className="grid gap-4 sm:grid-cols-2">
 
@@ -1145,7 +1068,6 @@ export default function CheckoutPage() {
 
                                         </div>
 
-
                                         <div>
 
                                             <label className={labelClass}>
@@ -1172,7 +1094,6 @@ export default function CheckoutPage() {
 
                             </div>
 
-
                             <div className="mt-5">
 
                                 <label className={labelClass}>
@@ -1194,7 +1115,6 @@ export default function CheckoutPage() {
                             </div>
 
                         </section>
-
 
                         {/* CARTÃO */}
 
@@ -1222,7 +1142,6 @@ export default function CheckoutPage() {
 
                             </div>
 
-
                             <div className="mt-6 rounded-2xl bg-[#F8F5EF] p-5">
 
                                 <div className="mb-4 flex items-center gap-3 text-[#756C5D]">
@@ -1236,7 +1155,6 @@ export default function CheckoutPage() {
                                     </p>
 
                                 </div>
-
 
                                 <textarea
                                     value={cardMessage}
@@ -1259,7 +1177,6 @@ export default function CheckoutPage() {
 
                         </section>
 
-
                         {error && (
 
                             <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
@@ -1277,7 +1194,6 @@ export default function CheckoutPage() {
                         )}
 
                     </div>
-
 
                     {/* RESUMO */}
 
@@ -1297,7 +1213,6 @@ export default function CheckoutPage() {
 
                             </div>
 
-
                             <div className="p-6">
 
                                 <div className="space-y-4">
@@ -1307,49 +1222,33 @@ export default function CheckoutPage() {
                                         const cartItem =
                                             item as typeof item & {
                                                 image?: string;
-
-                                                variantName?: string;
-
-                                                components?: Array<{
-                                                    componentId: number;
-
-                                                    name?: string;
-
-                                                    quantity: number;
-                                                }>;
+                                                description?: string;
                                             };
 
-
-                                        const configuration =
-                                            cartItem.variantName ||
-                                            cartItem.components?.some(
-                                                (component) =>
-                                                    component.quantity >
-                                                    0,
-                                            );
-
+                                        const itemDescription =
+                                            typeof cartItem.description === "string"
+                                                ? cartItem.description.trim()
+                                                : "";
 
                                         return (
 
                                             <div
-                                                key={`${item.id}-${item.recipient}-${item.message}`}
+                                                key={`${item.id}-${"cartItemId" in item ? String(item.cartItemId) : ""}-${item.quantity}-${item.name}`}
                                                 className="overflow-hidden rounded-2xl border border-[#E7EBE2] bg-[#FBFCFA]"
                                             >
 
                                                 <div className="flex gap-4 p-4">
 
-                                                    <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-[#F0F3EC]">
+                                                    <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-[#F0F3EC]">
 
                                                         {cartItem.image ? (
 
-                                                            <img
-                                                                src={
-                                                                    cartItem.image
-                                                                }
-                                                                alt={
-                                                                    item.name
-                                                                }
-                                                                className="h-full w-full object-cover"
+                                                            <Image
+                                                                src={cartItem.image}
+                                                                alt={item.name}
+                                                                fill
+                                                                sizes="96px"
+                                                                className="object-cover"
                                                             />
 
                                                         ) : (
@@ -1361,7 +1260,6 @@ export default function CheckoutPage() {
                                                         )}
 
                                                     </div>
-
 
                                                     <div className="min-w-0 flex-1">
 
@@ -1375,6 +1273,15 @@ export default function CheckoutPage() {
                                                                     }
                                                                 </p>
 
+                                                                {itemDescription && (
+                                                                    <p
+                                                                        className="mt-1 truncate text-xs text-gray-500"
+                                                                        title={itemDescription}
+                                                                    >
+                                                                        {itemDescription}
+                                                                    </p>
+                                                                )}
+
                                                                 <p className="mt-1 text-xs text-gray-500">
                                                                     {
                                                                         item.quantity
@@ -1387,110 +1294,13 @@ export default function CheckoutPage() {
 
                                                             </div>
 
-
                                                             <p className="whitespace-nowrap text-sm font-bold text-[#2F3B2A]">
-                                                                {(
-                                                                    item.price *
-                                                                    item.quantity
-                                                                ).toFixed(
-                                                                    2,
-                                                                )}{" "}
-                                                                €
+                                                                {formatPrice(
+                                                                    item.price * item.quantity,
+                                                                )}
                                                             </p>
 
                                                         </div>
-
-
-                                                        {configuration && (
-
-                                                            <details className="mt-2.5 group">
-
-                                                                <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 rounded-full border border-[#DCE3D6] bg-[#F4F6F1] px-2.5 py-1 text-[11px] font-medium text-[#66705F] transition hover:border-[#C8D1C0] hover:bg-[#EDF1E9] hover:text-[#2F3B2A] [&::-webkit-details-marker]:hidden">
-
-                                                                    <span className="flex h-4 w-4 items-center justify-center rounded-full border border-current text-[9px] font-bold">
-                                                                        i
-                                                                    </span>
-
-                                                                    <span>
-                                                                        Configuração
-                                                                    </span>
-
-                                                                    <span className="ml-0.5 text-[10px] transition-transform duration-200 group-open:rotate-180">
-                                                                        ↓
-                                                                    </span>
-
-                                                                </summary>
-
-
-                                                                <div className="mt-2.5 w-full rounded-2xl border border-[#E1E6DE] bg-[#F8F9F6] px-3.5 py-3">
-
-                                                                    <div className="flex items-center justify-between gap-3">
-
-                                                                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#7A8373]">
-                                                                            Configuração
-                                                                        </p>
-
-                                                                    </div>
-
-
-                                                                    <div className="mt-2.5 space-y-2">
-
-                                                                        {cartItem.variantName && (
-
-                                                                            <div className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
-
-                                                                                <span className="text-xs text-gray-500">
-                                                                                    Variante
-                                                                                </span>
-
-                                                                                <span className="text-right text-xs font-semibold text-[#2F3B2A]">
-                                                                                    {
-                                                                                        cartItem.variantName
-                                                                                    }
-                                                                                </span>
-
-                                                                            </div>
-
-                                                                        )}
-
-
-                                                                        {cartItem.components?.map(
-                                                                            (
-                                                                                component,
-                                                                            ) =>
-                                                                                component.quantity >
-                                                                                0 ? (
-
-                                                                                    <div
-                                                                                        key={
-                                                                                            component.componentId
-                                                                                        }
-                                                                                        className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2"
-                                                                                    >
-
-                                                                                        <span className="min-w-0 text-xs text-gray-500">
-                                                                                            {component.name ||
-                                                                                                `Componente #${component.componentId}`}
-                                                                                        </span>
-
-                                                                                        <span className="shrink-0 rounded-full bg-[#EDF1E9] px-2 py-0.5 text-[10px] font-bold text-[#55624A]">
-                                                                                            {
-                                                                                                component.quantity
-                                                                                            }x
-                                                                                        </span>
-
-                                                                                    </div>
-
-                                                                                ) : null,
-                                                                        )}
-
-                                                                    </div>
-
-                                                                </div>
-
-                                                            </details>
-
-                                                        )}
 
                                                     </div>
 
@@ -1504,9 +1314,7 @@ export default function CheckoutPage() {
 
                                 </div>
 
-
                                 <div className="my-6 border-t border-dashed border-[#DDE2D8]" />
-
 
                                 <div className="space-y-3 text-sm">
 
@@ -1517,11 +1325,10 @@ export default function CheckoutPage() {
                                         </span>
 
                                         <span>
-                                            {total.toFixed(2)} €
+                                            {formatPrice(total)}
                                         </span>
 
                                     </div>
-
 
                                     <div className="flex justify-between text-gray-500">
 
@@ -1542,9 +1349,7 @@ export default function CheckoutPage() {
                                                     : deliveryFee !==
                                                         null
 
-                                                        ? `${deliveryFee.toFixed(
-                                                            2,
-                                                        )} €`
+                                                        ? formatPrice(deliveryFee)
 
                                                         : "Indisponível"}
 
@@ -1554,9 +1359,7 @@ export default function CheckoutPage() {
 
                                 </div>
 
-
                                 <div className="my-5 border-t border-[#E5E9E1]" />
-
 
                                 <div className="flex items-end justify-between gap-4">
 
@@ -1571,18 +1374,12 @@ export default function CheckoutPage() {
                                             {grandTotal !==
                                             null
 
-                                                ? `${grandTotal.toFixed(
-                                                    2,
-                                                )} €`
-
-                                                : `${total.toFixed(
-                                                    2,
-                                                )} €`}
+                                                ? formatPrice(grandTotal)
+                                                : formatPrice(total)}
 
                                         </p>
 
                                     </div>
-
 
                                     {grandTotal ===
                                         null && (
@@ -1595,7 +1392,6 @@ export default function CheckoutPage() {
 
                                 </div>
 
-
                                 <button
                                     type="submit"
                                     disabled={isSubmitting}
@@ -1607,7 +1403,6 @@ export default function CheckoutPage() {
                                         : "Continuar para pagamento"}
 
                                 </button>
-
 
                                 <p className="mt-4 text-center text-xs leading-5 text-gray-400">
                                     Ao continuar, a sua encomenda será criada e poderá efetuar o pagamento de forma segura.

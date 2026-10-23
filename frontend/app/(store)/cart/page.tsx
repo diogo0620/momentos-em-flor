@@ -1,9 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import {
     ArrowRight,
-    ChevronDown,
+    ChevronRight,
     Minus,
     Plus,
     ShoppingBag,
@@ -25,43 +26,71 @@ export default function CartPage() {
         0,
     );
 
+    const formatPrice = (value: number) =>
+        new Intl.NumberFormat("pt-PT", {
+            style: "currency",
+            currency: "EUR",
+        }).format(value);
+
     return (
         <div className="min-h-screen bg-[#F8F9F5]">
-            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-                {/* HEADER */}
-                <div className="mb-8 sm:mb-10">
-                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#7A8373]">
-                        <span>Bloomery</span>
-                        <span className="h-1 w-1 rounded-full bg-[#B7C0AE]" />
-                        <span>Carrinho</span>
-                    </div>
+            {/* HEADER — alinhado visualmente com a página de favoritos */}
+            <section className="border-b border-[#E8EBE4] bg-white">
+                <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-11 lg:px-8">
+                    <nav
+                        aria-label="Navegação estrutural"
+                        className="mb-7 flex items-center gap-2 text-xs font-medium text-[#8B9484]"
+                    >
+                        <Link href="/" className="transition-colors hover:text-[#55624A]">
+                            Início
+                        </Link>
+                        <ChevronRight size={13} aria-hidden="true" />
+                        <span className="text-[#55624A]">Carrinho</span>
+                    </nav>
 
-                    <div className="mt-3 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-                        <div>
-                            <h1 className="text-3xl font-bold tracking-tight text-[#2F3B2A] sm:text-4xl">
+                    <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                        <div className="max-w-2xl">
+                            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#F3F5EE] px-3 py-1.5 text-xs font-semibold tracking-wide text-[#55624A]">
+                                <ShoppingBag size={14} strokeWidth={1.8} />
+                                A sua seleção
+                            </div>
+                            <h1 className="text-3xl font-semibold tracking-[-0.04em] text-[#2F3B2A] sm:text-4xl lg:text-[42px]">
                                 O seu carrinho
                             </h1>
-                            {items.length > 0 && (
-                                <p className="mt-2 text-sm text-[#7A8373] sm:text-base">
-                                    {totalQuantity === 1
-                                        ? "1 artigo selecionado para a sua encomenda."
-                                        : `${totalQuantity} artigos selecionados para a sua encomenda.`}
-                                </p>
-                            )}
+                            <p className="mt-3 max-w-xl text-sm leading-6 text-[#747D6E] sm:text-base sm:leading-7">
+                                Reúna as suas flores favoritas e prepare uma encomenda especial, ao seu ritmo.
+                            </p>
                         </div>
 
                         {items.length > 0 && (
-                            <Link
-                                href="/products"
-                                className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-[#55624A] transition hover:text-[#2F3B2A]"
-                            >
-                                Continuar a comprar
-                                <ArrowRight size={15} />
-                            </Link>
+                            <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                                <div className="flex w-fit shrink-0 items-center gap-3 rounded-2xl border border-[#E5E9DF] bg-[#FAFBF8] px-4 py-3">
+                                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E8EDDF] text-[#55624A]">
+                                        <ShoppingBag size={18} strokeWidth={1.8} />
+                                    </span>
+                                    <div>
+                                        <p className="text-lg font-semibold leading-5 text-[#2F3B2A]">
+                                            {totalQuantity}
+                                        </p>
+                                        <p className="mt-1 text-xs text-[#7B8574]">
+                                            {totalQuantity === 1 ? "artigo no carrinho" : "artigos no carrinho"}
+                                        </p>
+                                    </div>
+                                </div>
+                                <Link
+                                    href="/products"
+                                    className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-[#55624A] transition-colors hover:text-[#2F3B2A]"
+                                >
+                                    Continuar a comprar
+                                    <ArrowRight size={16} />
+                                </Link>
+                            </div>
                         )}
                     </div>
                 </div>
+            </section>
 
+            <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-11 lg:px-8">
                 {/* EMPTY CART */}
                 {items.length === 0 ? (
                     <div className="overflow-hidden rounded-[32px] border border-[#E5E9E1] bg-white shadow-[0_8px_30px_rgba(47,59,42,0.05)]">
@@ -94,9 +123,12 @@ export default function CartPage() {
                         {/* ITEMS */}
                         <div className="space-y-3">
                             {items.map((item) => {
-                                const configuration =
-                                    Boolean(item.variantName) ||
-                                    Boolean(item.components?.some((component) => component.quantity > 0));
+                                // A descrição guarda a configuração criada na página de detalhe.
+                                // A verificação mantém compatibilidade com itens adicionados anteriormente.
+                                const itemDescription =
+                                    "description" in item && typeof item.description === "string"
+                                        ? item.description
+                                        : "";
 
                                 return (
                                     <article
@@ -107,10 +139,12 @@ export default function CartPage() {
                                             {/* IMAGE */}
                                             <div className="relative h-28 w-24 shrink-0 overflow-hidden rounded-[20px] bg-[#F1F3ED] sm:h-36 sm:w-32">
                                                 {item.image ? (
-                                                    <img
+                                                    <Image
                                                         src={item.image}
                                                         alt={item.name}
-                                                        className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                                                        fill
+                                                        sizes="(max-width: 639px) 96px, 128px"
+                                                        className="object-cover transition duration-500 group-hover:scale-[1.03]"
                                                     />
                                                 ) : (
                                                     <div className="flex h-full w-full items-center justify-center text-4xl">
@@ -144,47 +178,13 @@ export default function CartPage() {
                                                     </button>
                                                 </div>
 
-                                                {/* CONFIGURATION */}
-                                                {configuration && (
-                                                    <details className="mt-3 group/config">
-                                                        <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 rounded-full border border-[#DCE3D6] bg-[#F4F6F1] px-2.5 py-1.5 text-[11px] font-semibold text-[#66705F] transition hover:border-[#C8D1C0] hover:bg-[#EDF1E9] [&::-webkit-details-marker]:hidden">
-                                                            <span className="flex h-4 w-4 items-center justify-center rounded-full border border-current text-[9px] font-bold">
-                                                                i
-                                                            </span>
-                                                            <span>Configuração</span>
-                                                            <ChevronDown
-                                                                size={13}
-                                                                className="transition-transform group-open/config:rotate-180"
-                                                            />
-                                                        </summary>
-
-                                                        <div className="mt-2 rounded-2xl border border-[#E6EAE2] bg-[#FAFBF8] px-3 py-2.5">
-                                                            {item.variantName && (
-                                                                <div className="flex items-center justify-between gap-4 py-1 text-xs">
-                                                                    <span className="text-[#7A8373]">Variante</span>
-                                                                    <span className="text-right font-semibold text-[#3F4A38]">
-                                                                        {item.variantName}
-                                                                    </span>
-                                                                </div>
-                                                            )}
-
-                                                            {item.components?.map((component) =>
-                                                                component.quantity > 0 ? (
-                                                                    <div
-                                                                        key={component.componentId}
-                                                                        className="flex items-center justify-between gap-4 py-1 text-xs"
-                                                                    >
-                                                                        <span className="min-w-0 text-[#7A8373]">
-                                                                            {component.name || `Componente #${component.componentId}`}
-                                                                        </span>
-                                                                        <span className="shrink-0 font-semibold text-[#3F4A38]">
-                                                                            {component.quantity}x
-                                                                        </span>
-                                                                    </div>
-                                                                ) : null,
-                                                            )}
-                                                        </div>
-                                                    </details>
+                                                {itemDescription && (
+                                                    <p
+                                                        className="mt-1 line-clamp-1 text-sm text-[#7A8373]"
+                                                        title={itemDescription.replace(/\s+/g, " ")}
+                                                    >
+                                                        {itemDescription.replace(/\s+/g, " ")}
+                                                    </p>
                                                 )}
 
                                                 {/* BOTTOM */}
@@ -226,10 +226,10 @@ export default function CartPage() {
                                                     {/* PRICE */}
                                                     <div className="text-right">
                                                         <p className="text-[11px] text-[#9AA094]">
-                                                            {item.price.toFixed(2)} € / unidade
+                                                            {formatPrice(item.price)} / unidade
                                                         </p>
                                                         <p className="mt-0.5 text-lg font-bold text-[#55624A] sm:text-xl">
-                                                            {(item.price * item.quantity).toFixed(2)} €
+                                                            {formatPrice(item.price * item.quantity)}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -264,7 +264,7 @@ export default function CartPage() {
                                         <div className="flex items-center justify-between text-[#7A8373]">
                                             <span>Subtotal</span>
                                             <span className="font-medium text-[#3F4A38]">
-                                                {total.toFixed(2)} €
+                                                {formatPrice(total)}
                                             </span>
                                         </div>
                                     </div>
@@ -275,7 +275,7 @@ export default function CartPage() {
                                         <div>
                                             <p className="text-xs text-[#8A9384]">Total</p>
                                             <p className="mt-0.5 text-xl font-bold text-[#2F3B2A]">
-                                                {total.toFixed(2)} €
+                                                {formatPrice(total)}
                                             </p>
                                         </div>
                                         <span className="rounded-full bg-[#F4F6F1] px-3 py-1 text-[10px] font-semibold text-[#66705F]">
@@ -306,7 +306,7 @@ export default function CartPage() {
                         </aside>
                     </div>
                 )}
-            </div>
+            </section>
         </div>
     );
 }

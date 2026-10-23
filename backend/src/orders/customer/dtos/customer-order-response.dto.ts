@@ -23,6 +23,9 @@ class CustomerOrderItemResponseDto {
     productName!: string;
 
     @ApiPropertyOptional()
+    image?: string | null;
+
+    @ApiPropertyOptional()
     description!: string | null;
 
     @ApiProperty()

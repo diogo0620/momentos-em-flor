@@ -143,6 +143,10 @@ export class PublicProductResponseDto {
     price!: number;
 
     @ApiProperty({
+    })
+    featured!: boolean;
+
+    @ApiProperty({
         type: PublicProductCategoryDto,
     })
     categories!: PublicProductCategoryDto[];

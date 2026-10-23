@@ -51,6 +51,7 @@ export class PublicProductsMapper extends BaseMapper<
             slug: product.slug,
             description: product.description,
             price: Number(product.customerPrice),
+            featured: product.featured,
             categories: product.categories.map((category) => ({ id: category.id, name: category.name })),
 
             images: product.images.map((image) =>this.storageService.getPublicUrl(image.path)),
@@ -70,7 +71,7 @@ export class PublicProductsMapper extends BaseMapper<
                 name: variant.name,
                 description: variant.description,
                 price: Number(variant.customerPrice),
-                image: '',
+                image: variant.imagePath ? this.storageService.getPublicUrl(variant.imagePath) : '',
             })),
 
             type: product.type,
@@ -88,6 +89,7 @@ export class PublicProductsMapper extends BaseMapper<
             name: product.name,
             slug: product.slug,
             type: product.type,
+            featured: product.featured,
             price: product.customerPrice.toNumber(),
             image: primaryImage ? this.storageService.getPublicUrl(primaryImage.path): '',
         };

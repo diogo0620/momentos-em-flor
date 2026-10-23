@@ -23,6 +23,10 @@ export class PublicProductListResponseDto {
     type!: ProductType;
 
     @ApiProperty({
+    })
+    featured!: boolean;
+
+    @ApiProperty({
         example: 49.08,
         description: 'Final price including VAT.',
     })

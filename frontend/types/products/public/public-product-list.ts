@@ -4,6 +4,7 @@ export type PublicProductList = {
     slug: string;
     type: ProductType;
     price: number;
+    featured: boolean;
     image: string;
 }
 export type ProductType = "SALE" | "RENTAL";

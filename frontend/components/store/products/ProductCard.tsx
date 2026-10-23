@@ -2,21 +2,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Flower2, Sparkles } from "lucide-react";
 
-import type { ProductListItem } from "@/types/product";
 import WishlistButton from "@/components/wishlist/WishlistButton";
+import { AdminProductList } from "@/types/products/admin/admin-product-list";
+import { PublicProductList } from "@/types/products/public/public-product-list";
 
 type Props = {
-    product: ProductListItem;
+    product: PublicProductList;
 };
 
 export default function ProductCard({ product }: Props) {
     return (
         <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-[#E5E7E0] bg-white shadow-[0_3px_16px_rgba(47,59,42,0.035)] transition-all duration-300 hover:-translate-y-1 hover:border-[#D5DCCB] hover:shadow-[0_14px_35px_rgba(47,59,42,0.09)]">
             <div className="relative aspect-[4/4.2] overflow-hidden bg-[#F1F3EC]">
-                <Link href={`/products/${product.id}`} className="block h-full" aria-label={`Ver ${product.name}`}>
-                    {product.image?.url ? (
+                <Link href={`/products/${product.slug}`} className="block h-full" aria-label={`Ver ${product.name}`}>
+                    {product.image ? (
                         <Image
-                            src={product.image.url}
+                            src={product.image}
                             alt={product.name}
                             fill
                             unoptimized
@@ -47,13 +48,13 @@ export default function ProductCard({ product }: Props) {
                         <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8A9580]">
                             {product.type === "RENTAL" ? "Aluguer" : "Coleção Momentos em Flor"}
                         </p>
-                        <Link href={`/products/${product.id}`} className="block">
+                        <Link href={`/products/${product.slug}`} className="block">
                             <h2 className="line-clamp-2 min-h-12 text-base font-semibold leading-6 tracking-[-0.02em] text-[#2F3B2A] transition-colors group-hover:text-[#55624A] sm:text-lg">
                                 {product.name}
                             </h2>
                         </Link>
                     </div>
-                    <Link href={`/products/${product.id}`} aria-label={`Ver detalhes de ${product.name}`} className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F3F5EE] text-[#55624A] transition-all duration-300 hover:bg-[#55624A] hover:text-white">
+                    <Link href={`/products/${product.slug}`} aria-label={`Ver detalhes de ${product.name}`} className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F3F5EE] text-[#55624A] transition-all duration-300 hover:bg-[#55624A] hover:text-white">
                         <ArrowUpRight size={18} strokeWidth={1.8} />
                     </Link>
                 </div>
@@ -67,7 +68,7 @@ export default function ProductCard({ product }: Props) {
                             {product.price.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })}
                         </p>
                     </div>
-                    <Link href={`/products/${product.id}`} className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-[#55624A] transition-colors hover:bg-[#F3F5EE]">
+                    <Link href={`/products/${product.slug}`} className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-[#55624A] transition-colors hover:bg-[#F3F5EE]">
                         Ver produto <ArrowUpRight size={14} />
                     </Link>
                 </div>

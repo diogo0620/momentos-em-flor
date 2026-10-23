@@ -86,7 +86,7 @@ export default function FavoritesPage() {
                                     className="group overflow-hidden rounded-3xl border border-[#E5E7E0] bg-white shadow-[0_3px_16px_rgba(47,59,42,0.035)] transition-all duration-300 hover:-translate-y-1 hover:border-[#D5DCCB] hover:shadow-[0_14px_35px_rgba(47,59,42,0.09)]"
                                 >
                                     <div className="relative aspect-[4/3] overflow-hidden bg-[#F1F3EC]">
-                                        <Link href={`/products/${item.id}`} className="block h-full" aria-label={`Ver ${item.name}`}>
+                                        <Link href={`/products/${item.slug}`} className="block h-full" aria-label={`Ver ${item.name}`}>
                                             {item.image ? (
                                                 <Image
                                                     src={item.image}

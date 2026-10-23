@@ -9,6 +9,7 @@ import { AdminStoreSettingsMapper } from '@/store-settings/admin/mapper/admin-st
 import { AdminOrdersController } from './admin/admin-orders.controller';
 import { AdminOrdersService } from './admin/admin-orders.service';
 import { AdminOrdersMapper } from './admin/mappers/admin-orders.mapper';
+import { StorageModule } from '@/storage/storage.module';
 
 
 
@@ -16,6 +17,7 @@ import { AdminOrdersMapper } from './admin/mappers/admin-orders.mapper';
 @Module({
   imports: [
     PrismaModule,
+    StorageModule
   ],
   controllers: [
     CustomerOrdersController,

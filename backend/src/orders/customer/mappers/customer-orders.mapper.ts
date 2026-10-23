@@ -5,6 +5,7 @@ import { BaseMapper } from '@/common/mappers/base.mapper';
 import { Order, Prisma } from '@prisma/client';
 import { CustomerOrderListResponseDto } from '../dtos/customer-order-list-response.dto';
 import { CustomerOrderResponseDto } from '../dtos/customer-order-response.dto';
+import { SupabaseStorageService } from '@/storage/supabase-storage.service';
 
 type OrderWithItems = Prisma.OrderGetPayload<{
     include: {
@@ -24,6 +25,12 @@ export class CustomerOrdersMapper extends BaseMapper<
     CustomerOrderResponseDto,
     CustomerOrderListResponseDto
 > {
+
+    constructor(
+        private readonly storageService: SupabaseStorageService,
+    ) {
+        super();
+    }
 
 
     toDetailResponse(
@@ -60,6 +67,7 @@ export class CustomerOrdersMapper extends BaseMapper<
                 productId: item.productId,
                 productName: item.name,
                 description: item.description,
+                image: item.imagePath ? this.storageService.getPublicUrl(item.imagePath) : "",
 
                 quantity: item.quantity,
 

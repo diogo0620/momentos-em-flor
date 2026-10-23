@@ -60,6 +60,38 @@ export const ERROR_MESSAGES = {
         code: 'ORDER_ALREADY_EXISTS',
         message: 'An order with this number already exists.',
     },
+    ORDER_OFFER_NOT_FOUND: {
+        code: 'ORDER_OFFER_NOT_FOUND',
+        message: 'Order Offer not found.',
+    },
+    ORDER_OFFER_ALREADY_EXISTS: {
+        code: 'ORDER_OFFER_ALREADY_EXISTS',
+        message: 'An order offer for this florist and order already exists and it is pending',
+    },
+    ORDER_NOT_WAITING_FOR_FLORIST: {
+        code: 'ORDER_NOT_WAITING_FOR_FLORIST',
+        message: 'The order is not waiting for a florist.'
+    },
+    ORDER_OFFER_PRICE_EXCEEDS_ORDER: {
+        code: 'ORDER_OFFER_PRICE_EXCEEDS_ORDER',
+        message: 'The offer price cannot exceed the order total.'
+    },
+    INVALID_ORDER_OFFER_REFERENCE: {
+        code: 'INVALID_ORDER_OFFER_REFERENCE',
+        message: 'The specified order or florist does not exist.'
+    },
+    ORDER_OFFER_CANNOT_BE_UPDATED: {
+        code: 'ORDER_OFFER_CANNOT_BE_UPDATED',
+        message: 'Only pending or viewed order offers can be updated.'
+    },
+    PAYMENT_IS_NOT_PENDING: {
+        code: 'PAYMENT_IS_NOT_PENDING',
+        message: 'This payment is not pending.'
+    },
+    ORDER_ALREADY_PAID: {
+        code: 'ORDER_ALREADY_PAID',
+        message: 'This order is already paid'
+    },
     UNAUTHORIZED: {
         code: 'UNAUTHORIZED',
         message: 'Unauthorized.',

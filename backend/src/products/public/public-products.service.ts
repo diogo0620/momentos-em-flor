@@ -25,7 +25,7 @@ export class PublicProductsService {
 
 
     async findAll(query: PublicProductQueryDto) {
-        const { page, pageSize, search, sort, categoryId, order } = query;
+        const { page, pageSize, search, sort, categoryId, type, featured, minPrice, maxPrice, order } = query;
 
         const where: Prisma.ProductWhereInput = {
             ...(search && {
@@ -36,13 +36,12 @@ export class PublicProductsService {
                 ],
             }),
             active: true,
-            ...(categoryId !== undefined && {
-                categories: {
-                    some: {
-                        id: categoryId,
-                    },
-                },
-            }),
+            ...(type !== undefined && { type }),
+            ...(featured !== undefined && { featured }),
+            ...(categoryId !== undefined && { categories: { some: { id: categoryId, } } }),
+            ...(minPrice !== undefined || maxPrice !== undefined ? {customerPrice: {...(minPrice !== undefined && {gte: minPrice}),...(maxPrice !== undefined && {lte: maxPrice})},
+      }
+    : {}),
         };
 
         const [products, total] = await Promise.all([
@@ -69,7 +68,7 @@ export class PublicProductsService {
                 categories: { select: { id: true, name: true }, where: { active: true } },
                 components: { where: { active: true }, orderBy: { sortOrder: 'asc' } },
                 variants: { where: { active: true }, orderBy: { sortOrder: 'asc', } },
-                images: { orderBy: { isPrimary: 'desc', sortOrder: 'asc', } },
+                images: { orderBy: [{isPrimary: 'desc'}, {sortOrder: 'asc'} ] },
             },
         });
 
