@@ -1,6 +1,8 @@
-export type AdminUpdateCategory =  {
-    name: string;
-    slug: string;
+
+export type AdminUpdateCategory = {
+    name?: string;
+    slug?: string;
     description?: string;
-    active: boolean;
-}
+    featured?: boolean;
+    active?: boolean;
+};

@@ -5,7 +5,7 @@ export type PublicProductDetail = {
     description: string | null;
     price: number;
     categories: PublicProductCategory[];
-    images: string[];
+    image: string;
     components?: PublicProductComponent[];
     variants?: PublicProductVariant[];
     type: ProductType;

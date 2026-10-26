@@ -1,64 +1,18 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import type { PublicCategoryList } from "@/types/categories/public/public-category-list";
+import type { PublicProductList } from "@/types/products/public/public-product-list";
 import {
     ArrowRight,
-    CalendarDays,
     Heart,
     Camera,
     Play,
-    ShieldCheck,
     Sparkles,
-    Truck,
 } from "lucide-react";
-
-const collections = [
-    {
-        title: "Bouquets",
-        text: "Composições pensadas para surpreender.",
-        image: "/categories/bouquets.jpg",
-    },
-    {
-        title: "Rosas",
-        text: "Um clássico que nunca deixa de dizer muito.",
-        image: "/categories/roses.jpg",
-    },
-    {
-        title: "Romântico",
-        text: "Para quando as palavras não chegam.",
-        image: "/categories/romantic.jpg",
-    },
-    {
-        title: "Aniversário",
-        text: "Para tornar um dia especial ainda mais especial.",
-        image: "/categories/birthday.jpg",
-    },
-];
-
-const featuredProducts = [
-    {
-        name: "Bouquet Primavera",
-        price: "35,00 €",
-        category: "Bouquets",
-        image: "/products/bouquet-primavera.jpg",
-    },
-    {
-        name: "Rosas Vermelhas",
-        price: "42,00 €",
-        category: "Rosas",
-        image: "/products/rosas-vermelhas.jpg",
-    },
-    {
-        name: "Bouquet Romântico",
-        price: "39,00 €",
-        category: "Romântico",
-        image: "/products/bouquet-romantico.jpg",
-    },
-    {
-        name: "Bouquet Delicado",
-        price: "32,00 €",
-        category: "Bouquets",
-        image: "/products/bouquet-delicado.jpg",
-    },
-];
+import { publicCategoriesApi } from "@/lib/api/categories/public-categories";
+import { publicProductsApi } from "@/lib/api/products/public-products";
 
 const reels = [
     {
@@ -99,6 +53,60 @@ const reviews = [
 ];
 
 export default function HomePage() {
+    const [collections, setCollections] = useState<PublicCategoryList[]>([]);
+    const [featuredProducts, setFeaturedProducts] = useState<PublicProductList[]>([]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function loadFeaturedContent() {
+            const [categoriesResponse, productsResponse] = await Promise.allSettled([
+                publicCategoriesApi.getAll({
+                    page: 1,
+                    pageSize: 4,
+                    featured: true,
+                }),
+                publicProductsApi.getAll({
+                    page: 1,
+                    pageSize: 4,
+                    featured: true,
+                }),
+            ]);
+
+            if (cancelled) return;
+
+            if (categoriesResponse.status === "fulfilled") {
+                setCollections(categoriesResponse.value.items);
+            } else {
+                console.error(
+                    "Não foi possível carregar as categorias em destaque:",
+                    categoriesResponse.reason,
+                );
+            }
+
+            if (productsResponse.status === "fulfilled") {
+                setFeaturedProducts(productsResponse.value.items);
+            } else {
+                console.error(
+                    "Não foi possível carregar os produtos em destaque:",
+                    productsResponse.reason,
+                );
+            }
+        }
+
+        void loadFeaturedContent();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const formatPrice = (price: number) =>
+        new Intl.NumberFormat("pt-PT", {
+            style: "currency",
+            currency: "EUR",
+        }).format(price);
+
     return (
         <div className="bg-[#F8F9F5] text-[#2F3B2A]">
 
@@ -193,14 +201,14 @@ export default function HomePage() {
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         {collections.map((collection, index) => (
                             <Link
-                                key={collection.title}
-                                href="/products"
+                                key={collection.id}
+                                href={`/products?categoryId=${collection.id}`}
                                 className={`group relative overflow-hidden rounded-[1.75rem] shadow-[0_12px_35px_rgba(47,59,42,0.07)] transition duration-500 hover:-translate-y-1 hover:shadow-[0_20px_45px_rgba(47,59,42,0.14)] ${index === 0 ? "lg:translate-y-5" : ""}`}
                             >
                                 <div className="aspect-[0.82] overflow-hidden bg-[#E7EBE2]">
                                     <img
-                                        src={collection.image}
-                                        alt={collection.title}
+                                        src={collection.image || "/categories/default.jpg"}
+                                        alt={collection.name}
                                         className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.045]"
                                     />
                                 </div>
@@ -211,11 +219,11 @@ export default function HomePage() {
                                     <div className="flex items-end justify-between gap-4">
                                         <div>
                                             <h3 className="text-xl font-medium">
-                                                {collection.title}
+                                                {collection.name}
                                             </h3>
 
                                             <p className="mt-1.5 max-w-[210px] text-xs leading-5 text-white/70">
-                                                {collection.text}
+                                                {collection.description || "Descobre flores escolhidas para tornar cada momento especial."}
                                             </p>
                                         </div>
 
@@ -260,20 +268,20 @@ export default function HomePage() {
                     <div className="grid grid-cols-2 gap-x-4 gap-y-9 md:grid-cols-4">
                         {featuredProducts.map((product) => (
                             <Link
-                                key={product.name}
-                                href="/products"
+                                key={product.id}
+                                href={`/products/${product.slug}`}
                                 className="group"
                             >
                                 <div className="relative aspect-[0.82] overflow-hidden rounded-[1.5rem] bg-[#EEF1EB] shadow-[0_10px_28px_rgba(47,59,42,0.06)]">
 
                                     <img
-                                        src={product.image}
+                                        src={product.image || "/products/default.jpg"}
                                         alt={product.name}
                                         className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.045]"
                                     />
 
                                     <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.13em] text-[#55624A] backdrop-blur-sm">
-                                        {product.category}
+                                        {product.type === "RENTAL" ? "Aluguer" : "Flores"}
                                     </span>
 
                                     <span className="absolute bottom-4 right-4 flex h-10 w-10 translate-y-2 items-center justify-center rounded-full bg-white text-[#35412F] opacity-0 shadow-sm transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
@@ -288,7 +296,7 @@ export default function HomePage() {
                                         </h3>
 
                                         <p className="shrink-0 text-sm font-semibold text-[#55624A]">
-                                            {product.price}
+                                            {formatPrice(product.price)}
                                         </p>
                                     </div>
                                     <p className="mt-2 text-xs text-[#8A9284]">

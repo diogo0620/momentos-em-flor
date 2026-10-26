@@ -125,7 +125,7 @@ export class AdminProductVariantDto {
     floristPrice!: number;
 
     @ApiProperty({})
-    image!: string;
+    image?: string;
 }
 
 
@@ -179,7 +179,7 @@ export class AdminProductResponseDto {
 
     @ApiProperty({
     })
-    images!: string[];
+    image? : string;
 
     @ApiProperty({
         type: AdminProductComponentDto,

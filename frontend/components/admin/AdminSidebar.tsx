@@ -14,6 +14,7 @@ import {
     Settings,
     LogOut,
     Tags,
+    Handshake,
 } from "lucide-react";
 
 const links = [
@@ -26,6 +27,11 @@ const links = [
         href: "/admin/orders",
         label: "Encomendas",
         icon: ShoppingCart,
+    },
+    {
+        href: "/admin/order-offers",
+        label: "Propostas a floristas",
+        icon: Handshake,
     },
     {
         href: "/admin/categories",

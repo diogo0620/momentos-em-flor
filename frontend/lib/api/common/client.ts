@@ -44,85 +44,66 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 
+
+export type UploadImageTarget =
+    | { categoryId: number }
+    | { productId: number }
+    | { variantId: number };
+
 export async function apiUpload<T>(
     endpoint: string,
     file: File,
-    options?: {
-        isPrimary?: boolean;
-        sortOrder?: number;
-    },
+    target: UploadImageTarget,
 ): Promise<T> {
     const formData = new FormData();
 
     formData.append("file", file);
 
-    if (options?.isPrimary !== undefined) {
-        formData.append(
-            "isPrimary",
-            String(options.isPrimary),
-        );
-    }
-
-    if (options?.sortOrder !== undefined) {
-        formData.append(
-            "sortOrder",
-            String(options.sortOrder),
-        );
+    if ("categoryId" in target) {
+        formData.append("categoryId", String(target.categoryId));
+    } else if ("productId" in target) {
+        formData.append("productId", String(target.productId));
+    } else {
+        formData.append("variantId", String(target.variantId));
     }
 
     const headers = new Headers();
 
     if (accessToken) {
-        headers.set(
-            "Authorization",
-            `Bearer ${accessToken}`,
-        );
+        headers.set("Authorization", `Bearer ${accessToken}`);
     }
 
-    let response = await fetch(
-        `${API_URL}${endpoint}`,
-        {
-            method: "POST",
-            headers,
-            body: formData,
-            credentials: "include",
-        },
-    );
+    let response = await fetch(`${API_URL}${endpoint}`, {
+        method: "POST",
+        headers,
+        body: formData,
+        credentials: "include",
+    });
 
     if (response.status === 401) {
-        const newAccessToken =
-            await refreshAccessToken();
+        const newAccessToken = await refreshAccessToken();
 
         if (newAccessToken) {
-            headers.set(
-                "Authorization",
-                `Bearer ${newAccessToken}`,
-            );
+            headers.set("Authorization", `Bearer ${newAccessToken}`);
 
-            response = await fetch(
-                `${API_URL}${endpoint}`,
-                {
-                    method: "POST",
-                    headers,
-                    body: formData,
-                    credentials: "include",
-                },
-            );
+            response = await fetch(`${API_URL}${endpoint}`, {
+                method: "POST",
+                headers,
+                body: formData,
+                credentials: "include",
+            });
         }
     }
 
     if (!response.ok) {
-        let message =
-            "Ocorreu um erro no upload do ficheiro.";
+        let message = "Ocorreu um erro no upload do ficheiro.";
 
         try {
             const error = await response.json();
 
             if (typeof error.message === "string") {
                 message = error.message;
-            } else if (
-                Array.isArray(error.message)
-            ) {
+            } else if (Array.isArray(error.message)) {
                 message = error.message.join(", ");
             }
         } catch {
@@ -132,8 +113,13 @@ export async function apiUpload<T>(
         throw new Error(message);
     }
 
+    if (response.status === 204) {
+        return undefined as T;
+    }
+
     return response.json();
 }
+
 
 
 export async function apiFetch<T>(

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import { AdminCreateCategoryDto } from './dtos/admin-create-category.dto';
 import { AdminUpdateCategoryDto } from './dtos/admin-update-category.dto';
@@ -26,7 +26,7 @@ export class AdminCategoriesService {
 
 
     async findAll(query: AdminCategoryQueryDto) {
-        const { page, pageSize, search, active, sort, order } = query;
+        const { page, pageSize, search, active, sort, featured, order } = query;
 
         const where: Prisma.CategoryWhereInput = {
             ...(search && {
@@ -36,6 +36,7 @@ export class AdminCategoriesService {
                 ],
             }),
             ...(active !== undefined && { active }),
+            ...(featured !== undefined && { featured }),
         };
 
         const [categories, total] = await Promise.all([
@@ -77,6 +78,7 @@ export class AdminCategoriesService {
                     name: dto.name,
                     slug: dto.slug,
                     description: dto.description,
+                    featured: dto.featured,
                     active: dto.active ?? true,
                 },
             });
@@ -90,7 +92,7 @@ export class AdminCategoriesService {
                     case 'P2002':
                         Exceptions.conflict(ERROR_MESSAGES.CATEGORY_ALREADY_EXISTS);
                     //case 'P2003':
-                        //Exceptions.badRequest(ERROR_MESSAGES.INVALID_CATEGORY_REFERENCE);
+                    //Exceptions.badRequest(ERROR_MESSAGES.INVALID_CATEGORY_REFERENCE);
                 }
             }
 
@@ -104,6 +106,7 @@ export class AdminCategoriesService {
         dto: AdminUpdateCategoryDto,
     ): Promise<void> {
         try {
+            Logger.log("update", dto)
             await this.prisma.category.update({
                 where: { id },
                 data: {
@@ -115,6 +118,9 @@ export class AdminCategoriesService {
                     }),
                     ...(dto.description !== undefined && {
                         description: dto.description,
+                    }),
+                    ...(dto.featured !== undefined && {
+                        featured: dto.featured,
                     }),
                     ...(dto.active !== undefined && {
                         active: dto.active,

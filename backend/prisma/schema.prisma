@@ -27,13 +27,6 @@ enum UserRole {
   CUSTOMER
 }
 
-enum FileProvider {
-  LOCAL
-  S3
-  AZURE
-  CLOUDINARY
-}
-
 enum PricingMarginType {
   FIXED_AMOUNT
   PERCENTAGE
@@ -127,6 +120,8 @@ model Category {
   name        String    @unique
   slug        String    @unique
   description String?
+  imagePath String?
+  featured     Boolean   @default(false)
   active      Boolean   @default(true)
 
   products    Product[] @relation("ProductCategories")
@@ -327,13 +322,7 @@ model Product {
   components ProductComponent[]
   variants   ProductVariant[]
 
-  /**
-   * Product images.
-   * An image can be:
-   * - product-wide: variantId = null
-   * - variant-specific: variantId != null
-   */
-  images ProductImage[]
+  imagePath String?
 
   orderItems OrderItem[]
 
@@ -440,24 +429,6 @@ model ProductVariant {
   @@index([productId])
   @@index([type])
   @@index([active])
-}
-
-//
-// PRODUCT IMAGE
-//
-
-
-model ProductImage {
-  id        Int      @id @default(autoincrement())
-  productId Int
-  path      String   @unique
-  isPrimary Boolean  @default(false)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-
-  product Product @relation(fields: [productId],references: [id],onDelete: Cascade)
-
-  @@index([productId])
 }
 
 

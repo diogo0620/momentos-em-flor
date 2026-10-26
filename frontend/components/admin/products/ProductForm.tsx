@@ -10,7 +10,6 @@ import {
     Save,
     Trash2,
     Upload,
-    X,
 } from "lucide-react";
 
 import { adminProductsApi } from "@/lib/api/products/admin-products";
@@ -23,6 +22,7 @@ import type { AdminUpdateProduct } from "@/types/products/admin/admin-update-pro
 import type { ProductType } from "@/types/products/admin/admin-product-list";
 import type { PublicCategoryList } from "@/types/categories/public/public-category-list";
 import type { AdminTaxCodeList } from "@/types/tax-codes/admin/admin-tax-code-list";
+import { adminUploadsApi } from "@/lib/api/uploads/admin-uploads";
 
 type ProductFormProps = {
     product?: AdminProductDetail;
@@ -36,12 +36,6 @@ type ComponentFormItem = {
     maxQuantity: number;
     customerPricePerAdditionalUnit: number;
     floristPricePerAdditionalUnit: number;
-};
-
-type ProductImageItem = {
-    id?: number;
-    url: string;
-    sortOrder: number;
 };
 
 type VariantFormItem = {
@@ -191,11 +185,10 @@ export default function ProductForm({ product }: ProductFormProps) {
     const [taxCodes, setTaxCodes] = useState<AdminTaxCodeList[]>([]);
     const [loadingOptions, setLoadingOptions] = useState(true);
 
-    const [existingImages, setExistingImages] = useState<ProductImageItem[]>(
-        (product?.images ?? []).map((url, index) => ({ url, sortOrder: index })),
+    const [productImage] = useState<string | null>(
+        product?.image ?? null,
     );
-    const [removedImageIds, setRemovedImageIds] = useState<number[]>([]);
-    const [imageFiles, setImageFiles] = useState<File[]>([]);
+    const [productImageFile, setProductImageFile] = useState<File | null>(null);
 
     const [components, setComponents] = useState<ComponentFormItem[]>(
         product?.components.map((component) => ({
@@ -234,67 +227,6 @@ export default function ProductForm({ product }: ProductFormProps) {
             setSlug(generateSlug(name));
         }
     }, [name, slugManuallyEdited]);
-
-    useEffect(() => {
-        if (!product) return;
-
-        let cancelled = false;
-
-        async function loadProductImages() {
-            try {
-                const response = await adminProductsApi.getImages(product.id);
-                const root = response as unknown;
-                const object = root && typeof root === "object"
-                    ? root as Record<string, unknown>
-                    : null;
-                const data = object && "data" in object ? object.data : root;
-                const dataObject = data && typeof data === "object"
-                    ? data as Record<string, unknown>
-                    : null;
-                const records = Array.isArray(data)
-                    ? data
-                    : dataObject && Array.isArray(dataObject.items)
-                        ? dataObject.items
-                        : dataObject && Array.isArray(dataObject.images)
-                            ? dataObject.images
-                            : [];
-
-                const mapped = records.flatMap((item, index) => {
-                    if (!item || typeof item !== "object") return [];
-                    const image = item as Record<string, unknown>;
-                    const url = typeof image.url === "string"
-                        ? image.url
-                        : typeof image.imageUrl === "string"
-                            ? image.imageUrl
-                            : typeof image.path === "string"
-                                ? image.path
-                                : undefined;
-                    const id = typeof image.id === "number"
-                        ? image.id
-                        : typeof image.id === "string" && image.id.trim() !== ""
-                            ? Number(image.id)
-                            : undefined;
-
-                    if (!url) return [];
-                    return [{
-                        id: Number.isFinite(id) ? id : undefined,
-                        url,
-                        sortOrder: typeof image.sortOrder === "number" ? image.sortOrder : index,
-                    }];
-                }).sort((a, b) => a.sortOrder - b.sortOrder)
-                  .map((image, index) => ({ ...image, sortOrder: index }));
-
-                if (!cancelled && mapped.length > 0) {
-                    setExistingImages(mapped);
-                }
-            } catch {
-                // Keep the image URLs from the product detail as a fallback.
-            }
-        }
-
-        void loadProductImages();
-        return () => { cancelled = true; };
-    }, [product]);
 
     useEffect(() => {
         let cancelled = false;
@@ -341,50 +273,24 @@ export default function ProductForm({ product }: ProductFormProps) {
         };
     }, []);
 
-    function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
-        const selectedFiles = Array.from(event.target.files ?? []);
+    function handleProductImageChange(event: ChangeEvent<HTMLInputElement>) {
+        const file = event.target.files?.[0] ?? null;
         event.target.value = "";
 
-        if (selectedFiles.length === 0) return;
+        if (!file) return;
 
-        const validFiles: File[] = [];
-        const invalidFiles: string[] = [];
-
-        for (const file of selectedFiles) {
-            if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-                invalidFiles.push(`${file.name}: formato não suportado`);
-            } else if (file.size > 5 * 1024 * 1024) {
-                invalidFiles.push(`${file.name}: excede 5 MB`);
-            } else {
-                validFiles.push(file);
-            }
-        }
-
-        if (invalidFiles.length > 0) {
-            setError(`Algumas imagens não foram adicionadas. ${invalidFiles.join("; ")}.`);
-        } else {
-            setError(null);
-        }
-
-        setImageFiles((current) => [...current, ...validFiles]);
-    }
-
-    function removeNewImage(index: number) {
-        setImageFiles((current) => current.filter((_, i) => i !== index));
-    }
-
-    function removeExistingImage(index: number) {
-        const image = existingImages[index];
-        if (!image) return;
-
-        if (image.id === undefined) {
-            setError("Não foi possível identificar esta imagem no servidor. Atualiza a página e tenta novamente.");
+        if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+            setError("A imagem do produto tem de ser JPEG, PNG ou WebP.");
             return;
         }
 
-        setRemovedImageIds((current) => [...current, image.id!]);
-        setExistingImages((current) => current.filter((_, i) => i !== index));
+        if (file.size > 5 * 1024 * 1024) {
+            setError("A imagem do produto não pode exceder 5 MB.");
+            return;
+        }
+
         setError(null);
+        setProductImageFile(file);
     }
 
     function toggleCategory(categoryId: number) {
@@ -497,8 +403,8 @@ export default function ProductForm({ product }: ProductFormProps) {
             return "Define uma caução válida para o produto de aluguer.";
         }
 
-        if (existingImages.length + imageFiles.length === 0) {
-            return "O produto tem de ter pelo menos uma imagem.";
+        if (!productImage && !productImageFile) {
+            return "O produto tem de ter uma imagem.";
         }
 
         if (components.length > 0 && variants.length > 0) {
@@ -622,45 +528,31 @@ export default function ProductForm({ product }: ProductFormProps) {
                 createdProductId = created.id;
             }
 
-            // Re-fetch to obtain the persisted IDs for variants before uploading images.
+            // Recarrega o produto para obter os IDs persistidos das variantes.
             const savedProduct = await adminProductsApi.getById(createdProductId);
-
             const uploadErrors: string[] = [];
 
-            // Remove apenas as imagens que o utilizador marcou para remoção.
-            for (const imageId of removedImageIds) {
+            // O endpoint centralizado mantém apenas uma imagem associada ao produto.
+            if (productImageFile) {
                 try {
-                    await adminProductsApi.deleteImage(createdProductId, imageId);
-                } catch (err) {
-                    uploadErrors.push(
-                        `Não foi possível remover a imagem ${imageId}: ${err instanceof Error ? err.message : "falha na remoção"}`,
-                    );
-                }
-            }
-
-            // Carrega apenas as imagens novas; as imagens existentes são mantidas.
-            for (let index = 0; index < imageFiles.length; index++) {
-                try {
-                    await adminProductsApi.uploadImage(createdProductId, imageFiles[index], {
-                        isPrimary: existingImages.length === 0 && index === 0,
-                        sortOrder: existingImages.length + index,
+                    await adminUploadsApi.uploadImage(productImageFile, {
+                        productId: createdProductId,
                     });
                 } catch (err) {
                     uploadErrors.push(
-                        `Imagem "${imageFiles[index].name}": ${err instanceof Error ? err.message : "falha no upload"}`,
+                        `Imagem do produto: ${err instanceof Error ? err.message : "falha no upload"}`,
                     );
                 }
             }
 
+            // Cada variante tem uma única imagem, carregada apenas quando foi substituída ou escolhida.
             for (let index = 0; index < variants.length; index++) {
                 const variant = variants[index];
-
                 if (!variant.imageFile) continue;
 
-                const savedVariant =
-                    savedProduct.variants.find(
-                        (item) => variant.id !== undefined && item.id === variant.id,
-                    ) ?? savedProduct.variants[index];
+                const savedVariant = savedProduct.variants.find(
+                    (item) => variant.id !== undefined && item.id === variant.id,
+                ) ?? savedProduct.variants[index];
 
                 if (!savedVariant) {
                     uploadErrors.push(
@@ -670,16 +562,12 @@ export default function ProductForm({ product }: ProductFormProps) {
                 }
 
                 try {
-                    await adminProductsApi.uploadVariantImage(
-                        createdProductId,
-                        savedVariant.id,
-                        variant.imageFile,
-                    );
+                    await adminUploadsApi.uploadImage(variant.imageFile, {
+                        variantId: savedVariant.id,
+                    });
                 } catch (err) {
                     uploadErrors.push(
-                        `Imagem da variante "${variant.name}": ${
-                            err instanceof Error ? err.message : "falha no upload"
-                        }`,
+                        `Imagem da variante "${variant.name}": ${err instanceof Error ? err.message : "falha no upload"}`,
                     );
                 }
             }
@@ -1017,88 +905,44 @@ export default function ProductForm({ product }: ProductFormProps) {
 
             <section className={sectionClassName}>
                 <SectionHeading
-                    title="Imagens do produto"
-                    description="Adiciona uma ou mais imagens JPEG, PNG ou WebP. Tamanho máximo de 5 MB por imagem."
+                    title="Imagem do produto"
+                    description="Escolhe uma única imagem JPEG, PNG ou WebP. Tamanho máximo de 5 MB. Ao carregar uma nova imagem, a anterior será substituída."
                 />
 
-                <label
-                    htmlFor="productImages"
-                    className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#D8DED1] bg-[#F8F9F5] px-5 py-8 text-center transition hover:border-[#55624A]"
-                >
-                    <Upload size={25} className="mb-3 text-[#55624A]" />
-                    <span className="text-sm font-semibold text-[#2F3B2A]">
-                        Escolher imagens
-                    </span>
-                    <span className="mt-1 text-xs text-[#7A8474]">
-                        Podes selecionar vários ficheiros
-                    </span>
-                    <input
-                        id="productImages"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        multiple
-                        onChange={handleImageChange}
-                        className="hidden"
-                        disabled={saving}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                    <ImagePreview
+                        file={productImageFile ?? undefined}
+                        src={productImage ?? undefined}
+                        alt={`Imagem do produto ${name || "novo produto"}`}
+                        className="h-44 w-44"
                     />
-                </label>
 
-                {(existingImages.length > 0 || imageFiles.length > 0) && (
-                    <div className="mt-5">
-                        <p className="mb-3 text-xs text-[#7A8474]">
-                            Imagens atuais e novas. Podes remover as que não pretendes manter.
+                    <div className="space-y-3">
+                        <label
+                            htmlFor="productImage"
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#D8DED1] px-4 py-2.5 text-sm font-medium text-[#55624A] transition hover:bg-[#F3F5EE]"
+                        >
+                            <Upload size={16} />
+                            {productImage || productImageFile ? "Substituir imagem" : "Escolher imagem"}
+                            <input
+                                id="productImage"
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={handleProductImageChange}
+                                className="hidden"
+                                disabled={saving}
+                            />
+                        </label>
+                        {productImageFile && (
+                            <p className="text-xs text-[#7A8474]">
+                                Nova imagem: {productImageFile.name}
+                            </p>
+                        )}
+                        <p className="text-xs text-[#7A8474]">
+                            Só podes associar uma imagem ao produto. Se escolheres outra, substituirá a atual quando guardares.
                         </p>
-                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                            {existingImages.map((image, index) => (
-                                <div key={`existing-${image.id ?? image.url}`} className="min-w-0 space-y-2">
-                                    <div className="relative">
-                                        <ImagePreview
-                                            src={image.url}
-                                            alt={`Imagem atual ${index + 1}`}
-                                            className="h-36 w-full"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => removeExistingImage(index)}
-                                            aria-label={`Remover imagem atual ${index + 1}`}
-                                            title="Remover imagem"
-                                            disabled={saving}
-                                            className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-red-600 shadow-sm hover:bg-red-50 disabled:opacity-40"
-                                        >
-                                            <X size={16} />
-                                        </button>
-                                    </div>
-                                    <p className="truncate text-xs text-[#7A8474]">Imagem atual</p>
-                                </div>
-                            ))}
-                            {imageFiles.map((file, index) => (
-                                <div key={`${file.name}-${file.size}-${index}`} className="min-w-0 space-y-2">
-                                    <div className="relative">
-                                        <ImagePreview
-                                            file={file}
-                                            alt={file.name}
-                                            className="h-36 w-full"
-                                        />
-                                        <span className="absolute bottom-2 left-2 rounded-full bg-[#55624A] px-2.5 py-1 text-[10px] font-semibold text-white">
-                                            Nova
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => removeNewImage(index)}
-                                            aria-label={`Remover nova imagem ${index + 1}`}
-                                            title="Remover imagem"
-                                            disabled={saving}
-                                            className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-red-600 shadow-sm hover:bg-red-50 disabled:opacity-40"
-                                        >
-                                            <X size={16} />
-                                        </button>
-                                    </div>
-                                    <p className="truncate text-xs text-[#7A8474]">{file.name}</p>
-                                </div>
-                            ))}
-                        </div>
                     </div>
-                )}
+                </div>
             </section>
 
             <section className={sectionClassName}>

@@ -20,6 +20,10 @@ import {
     X,
     Search,
     UserRound,
+    CircleCheck,
+    CircleX,
+    History,
+    LoaderCircle,
 } from "lucide-react";
 
 import { adminOrdersApi } from "@/lib/api/orders/admin-orders";
@@ -381,42 +385,80 @@ function toDateTimeLocal(value: string | null | undefined) {
 function OfferCard({
     offer,
     onEdit,
+    onAccept,
+    onDecline,
+    actionLoading,
 }: {
     offer: AdminOrderOffer;
     onEdit: (offer: AdminOrderOffer) => void;
+    onAccept: (offer: AdminOrderOffer) => void;
+    onDecline: (offer: AdminOrderOffer) => void;
+    actionLoading: boolean;
 }) {
     const canManage = offer.status === "PENDING" || offer.status === "VIEWED";
+    const statusAccent: Record<AdminOrderOfferStatus, string> = {
+        PENDING: "border-l-amber-400",
+        VIEWED: "border-l-blue-400",
+        ACCEPTED: "border-l-green-500",
+        DECLINED: "border-l-red-400",
+        EXPIRED: "border-l-gray-300",
+        CANCELLED: "border-l-gray-300",
+    };
 
     return (
-        <div className="rounded-2xl border border-[#E8EBE4] p-4">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]"><Store size={19} /></div>
-                    <div>
-                        <h3 className="font-semibold text-[#2F3B2A]">{offer.florist.name}</h3>
-                        <p className="mt-1 text-sm text-gray-500">Distância: {formatDistance(offer.distanceKm)}</p>
+        <article className={`overflow-hidden rounded-2xl border border-[#E8EBE4] border-l-4 ${statusAccent[offer.status]} bg-white shadow-sm transition hover:shadow-md`}>
+            <div className="p-4 sm:p-5">
+                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+                    <div className="flex min-w-0 items-start gap-3">
+                        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${offer.status === "ACCEPTED" ? "bg-green-100 text-green-700" : offer.status === "DECLINED" ? "bg-red-100 text-red-700" : offer.status === "PENDING" ? "bg-amber-100 text-amber-700" : offer.status === "VIEWED" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
+                            <Store size={19} />
+                        </div>
+                        <div className="min-w-0">
+                            <h3 className="font-semibold text-[#2F3B2A]">{offer.florist.name}</h3>
+                            <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-500"><MapPin size={14} /> {formatDistance(offer.distanceKm)}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
+                        <p className="text-xl font-semibold tracking-tight text-[#2F3B2A]">{formatPrice(offer.price)}</p>
+                        <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${OFFER_STATUS_STYLES[offer.status]}`}>
+                            {offer.status === "ACCEPTED" ? <CircleCheck size={13} /> : offer.status === "DECLINED" ? <CircleX size={13} /> : null}
+                            {OFFER_STATUS_LABELS[offer.status]}
+                        </span>
                     </div>
                 </div>
-                <div className="sm:text-right">
-                    <p className="font-semibold text-[#2F3B2A]">{formatPrice(offer.price)}</p>
-                    <span className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${OFFER_STATUS_STYLES[offer.status]}`}>{OFFER_STATUS_LABELS[offer.status]}</span>
+
+                {offer.status === "ACCEPTED" && (
+                    <div className="mt-4 flex items-start gap-2 rounded-xl border border-green-100 bg-green-50 p-3 text-sm text-green-800">
+                        <CircleCheck size={17} className="mt-0.5 shrink-0" />
+                        <p>Esta proposta foi aceite e a florista ficou associada à encomenda.</p>
+                    </div>
+                )}
+                {offer.declineReason && (
+                    <div className="mt-4 flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-800">
+                        <CircleX size={17} className="mt-0.5 shrink-0" />
+                        <p><span className="font-semibold">Motivo da recusa:</span> {offer.declineReason}</p>
+                    </div>
+                )}
+                {offer.status === "CANCELLED" && (
+                    <p className="mt-4 rounded-xl bg-gray-50 px-3 py-2 text-sm text-gray-600">Proposta cancelada, por exemplo, porque outra florista foi selecionada.</p>
+                )}
+
+                <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-[#FAFBF8] p-3 sm:grid-cols-4">
+                    <DetailField label="Criada em" value={formatDateTime(offer.createdAt)} />
+                    <DetailField label="Expira em" value={formatDateTime(offer.expiresAt)} />
+                    <DetailField label="Visualizada em" value={formatDateTime(offer.viewedAt)} />
+                    <DetailField label={offer.status === "ACCEPTED" ? "Aceite em" : offer.status === "DECLINED" ? "Recusada em" : "Respondida em"} value={formatDateTime(offer.acceptedAt ?? offer.declinedAt)} />
                 </div>
+
+                {canManage && (
+                    <div className="mt-4 flex flex-wrap gap-2 border-t border-[#EEF0EB] pt-4">
+                        <button type="button" onClick={() => onEdit(offer)} disabled={actionLoading} className="inline-flex items-center gap-2 rounded-full border border-[#DCE2D5] px-4 py-2 text-sm font-medium text-[#55624A] transition hover:bg-[#F3F5EE] disabled:opacity-50"><Pencil size={15} /> Editar proposta</button>
+                        <button type="button" onClick={() => onAccept(offer)} disabled={actionLoading} className="inline-flex items-center gap-2 rounded-full bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60">{actionLoading ? <LoaderCircle size={15} className="animate-spin" /> : <Check size={15} />} Aceitar</button>
+                        <button type="button" onClick={() => onDecline(offer)} disabled={actionLoading} className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"><X size={15} /> Recusar</button>
+                    </div>
+                )}
             </div>
-            {offer.declineReason && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700"><span className="font-medium">Motivo da recusa:</span> {offer.declineReason}</p>}
-            <div className="mt-4 grid grid-cols-1 gap-3 border-t border-[#EEF0EB] pt-4 sm:grid-cols-2">
-                <DetailField label="Criada em" value={formatDateTime(offer.createdAt)} />
-                <DetailField label="Expira em" value={formatDateTime(offer.expiresAt)} />
-                <DetailField label="Visualizada em" value={formatDateTime(offer.viewedAt)} />
-                <DetailField label="Respondida em" value={formatDateTime(offer.acceptedAt ?? offer.declinedAt)} />
-            </div>
-            {canManage && (
-                <div className="mt-4 flex flex-wrap gap-2 border-t border-[#EEF0EB] pt-4">
-                    <button type="button" onClick={() => onEdit(offer)} className="inline-flex items-center gap-2 rounded-full border border-[#DCE2D5] px-4 py-2 text-sm font-medium text-[#55624A] transition hover:bg-[#F3F5EE]"><Pencil size={15} /> Editar proposta</button>
-                    <button type="button" disabled className="inline-flex cursor-not-allowed items-center gap-2 rounded-full bg-green-100 px-4 py-2 text-sm font-medium text-green-800 opacity-70" title="A ação será ligada à API posteriormente"><Check size={15} /> Aceitar</button>
-                    <button type="button" disabled className="inline-flex cursor-not-allowed items-center gap-2 rounded-full bg-red-100 px-4 py-2 text-sm font-medium text-red-800 opacity-70" title="A ação será ligada à API posteriormente"><X size={15} /> Recusar</button>
-                </div>
-            )}
-        </div>
+        </article>
     );
 }
 
@@ -439,6 +481,9 @@ export default function EditOrderPage() {
     const [editingOffer, setEditingOffer] = useState<AdminOrderOffer | null>(null);
     const [offerSaving, setOfferSaving] = useState(false);
     const [offerError, setOfferError] = useState<string | null>(null);
+    const [offerActionLoadingId, setOfferActionLoadingId] = useState<number | null>(null);
+    const [decliningOffer, setDecliningOffer] = useState<AdminOrderOffer | null>(null);
+    const [declineReason, setDeclineReason] = useState("");
 
     const canCreateOffer = order?.status === "WAITING_FOR_FLORISTS";
     const minimumExpiry = useMemo(() => toDateTimeLocal(new Date().toISOString()), []);
@@ -586,6 +631,47 @@ export default function EditOrderPage() {
         }
     };
 
+
+    const acceptOffer = async (offer: AdminOrderOffer) => {
+        const confirmed = window.confirm(`Queres aceitar a proposta de ${offer.florist.name}? As restantes propostas pendentes ou visualizadas serão canceladas e a encomenda será atribuída a esta florista.`);
+        if (!confirmed) return;
+
+        setOfferActionLoadingId(offer.id);
+        setOfferError(null);
+        try {
+            await adminOrderOffersApi.accept(offer.id);
+            const refreshedOrder = await adminOrdersApi.getById(id);
+            if (refreshedOrder) setOrder(refreshedOrder);
+        } catch (err) {
+            setOfferError(err instanceof Error ? err.message : "Não foi possível aceitar a proposta.");
+        } finally {
+            setOfferActionLoadingId(null);
+        }
+    };
+
+    const submitDecline = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!decliningOffer) return;
+        const reason = declineReason.trim();
+        if (!reason) {
+            setOfferError("Indica o motivo da recusa.");
+            return;
+        }
+
+        setOfferActionLoadingId(decliningOffer.id);
+        setOfferError(null);
+        try {
+            await adminOrderOffersApi.decline(decliningOffer.id, {declineReason: reason});
+            setDecliningOffer(null);
+            setDeclineReason("");
+            const refreshedOrder = await adminOrdersApi.getById(id);
+            if (refreshedOrder) setOrder(refreshedOrder);
+        } catch (err) {
+            setOfferError(err instanceof Error ? err.message : "Não foi possível recusar a proposta.");
+        } finally {
+            setOfferActionLoadingId(null);
+        }
+    };
 
     const loadOrder = useCallback(async () => {
         if (!Number.isSafeInteger(id) || id <= 0) {
@@ -1020,8 +1106,12 @@ export default function EditOrderPage() {
 
 
 
+                        {offerError && !offerFormOpen && !decliningOffer && (
+                            <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{offerError}</div>
+                        )}
+
                         {order.offers.length > 0 ? (
-                            <div className="space-y-4">{order.offers.map((offer) => <OfferCard key={offer.id} offer={offer} onEdit={startEditingOffer} />)}</div>
+                            <div className="space-y-4">{order.offers.map((offer) => <OfferCard key={offer.id} offer={offer} onEdit={startEditingOffer} onAccept={acceptOffer} onDecline={(selectedOffer) => { setOfferError(null); setDeclineReason(""); setDecliningOffer(selectedOffer); }} actionLoading={offerActionLoadingId !== null} />)}</div>
                         ) : (
                             <div className="rounded-2xl bg-[#FAFBF8] p-5 text-sm text-[#7A8474]">Ainda não existem propostas de floristas para esta encomenda.</div>
                         )}
@@ -1032,23 +1122,26 @@ export default function EditOrderPage() {
                         description="Datas relevantes para o acompanhamento da encomenda."
                         icon={CalendarDays}
                     >
-                        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                            <DetailField
-                                label="Criada em"
-                                value={formatDateTime(order.createdAt)}
-                            />
-                            <DetailField
-                                label="Última atualização"
-                                value={formatDateTime(order.updatedAt)}
-                            />
-                            <DetailField
-                                label="Florista atribuída em"
-                                value={formatDateTime(order.assignedAt)}
-                            />
-                            <DetailField
-                                label="Cancelada em"
-                                value={formatDateTime(order.cancelledAt)}
-                            />
+                        <div className="relative ml-2 space-y-5 border-l-2 border-[#E8EBE4] pl-6">
+                            {[
+                                { label: "Encomenda criada", date: order.createdAt, detail: "A encomenda foi registada no sistema.", tone: "bg-[#55624A]" },
+                                { label: "Florista atribuída", date: order.assignedAt, detail: order.assignedFlorist?.name ? `Atribuída a ${order.assignedFlorist.name}.` : "Ainda não foi atribuída uma florista.", tone: "bg-green-500" },
+                                { label: "Encomenda cancelada", date: order.cancelledAt, detail: order.cancellationReason ? CANCELLATION_REASON_LABELS[order.cancellationReason] : "Sem cancelamento registado.", tone: "bg-red-500" },
+                                { label: "Última atualização", date: order.updatedAt, detail: "Última alteração registada na encomenda.", tone: "bg-blue-500" },
+                            ].map((event) => (
+                                <div key={event.label} className="relative flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+                                    <span className={`absolute -left-[33px] top-1 flex h-4 w-4 items-center justify-center rounded-full ring-4 ring-white ${event.tone}`} />
+                                    <div>
+                                        <p className="text-sm font-semibold text-[#374132]">{event.label}</p>
+                                        <p className="mt-1 text-sm text-[#7A8474]">{event.detail}</p>
+                                    </div>
+                                    <p className="shrink-0 text-sm font-medium text-[#55624A]">{formatDateTime(event.date)}</p>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-6 flex items-start gap-3 rounded-2xl border border-[#E8EBE4] bg-[#FAFBF8] p-4">
+                            <History size={18} className="mt-0.5 shrink-0 text-[#7A8474]" />
+                            <p className="text-sm leading-6 text-[#7A8474]">O histórico apresenta as datas disponíveis no registo atual da encomenda. As ações das propostas são apresentadas nos respetivos cartões.</p>
                         </div>
                     </Section>
                 </div>
@@ -1070,6 +1163,32 @@ export default function EditOrderPage() {
                     Voltar às encomendas
                 </Link>
             </div>
+
+            {decliningOffer && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget && offerActionLoadingId === null) { setDecliningOffer(null); setDeclineReason(""); setOfferError(null); } }}>
+                    <div role="dialog" aria-modal="true" aria-labelledby="decline-offer-title" className="my-auto w-full max-w-lg rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)] sm:p-8">
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-red-100 text-red-700"><CircleX size={22} /></div>
+                            <div>
+                                <h2 id="decline-offer-title" className="text-xl font-semibold text-[#2F3B2A]">Recusar proposta</h2>
+                                <p className="mt-1 text-sm text-[#7A8474]">Indica o motivo da recusa à proposta de <strong>{decliningOffer.florist.name}</strong>.</p>
+                            </div>
+                        </div>
+                        <form onSubmit={submitDecline} className="mt-6 space-y-4">
+                            <div>
+                                <label htmlFor="decline-reason" className="mb-2 block text-sm font-medium text-[#374132]">Motivo da recusa *</label>
+                                <textarea id="decline-reason" value={declineReason} onChange={(event) => setDeclineReason(event.target.value)} rows={4} maxLength={1000} required disabled={offerActionLoadingId !== null} placeholder="Explica por que motivo estás a recusar esta proposta..." className="w-full resize-y rounded-xl border border-[#E2E6DD] bg-white px-4 py-3 text-sm text-[#2F3B2A] outline-none transition placeholder:text-[#A0A89A] focus:border-red-400 focus:ring-4 focus:ring-red-100 disabled:bg-[#F3F5EE]" />
+                                <p className="mt-1 text-right text-xs text-[#7A8474]">{declineReason.length}/1000</p>
+                            </div>
+                            {offerError && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{offerError}</div>}
+                            <div className="flex flex-col-reverse gap-3 border-t border-[#EEF0EA] pt-5 sm:flex-row sm:justify-end">
+                                <button type="button" onClick={() => { setDecliningOffer(null); setDeclineReason(""); setOfferError(null); }} disabled={offerActionLoadingId !== null} className="rounded-full border border-[#DDE2D7] px-5 py-3 text-sm font-medium text-[#55624A] transition hover:bg-[#F3F5EE] disabled:opacity-50">Cancelar</button>
+                                <button type="submit" disabled={offerActionLoadingId !== null || !declineReason.trim()} className="inline-flex items-center justify-center gap-2 rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60">{offerActionLoadingId !== null ? <LoaderCircle size={16} className="animate-spin" /> : <X size={16} />} Confirmar recusa</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {offerFormOpen && order && (
                 <div

@@ -17,6 +17,13 @@ export class AdminCategoryResponseDto {
   })
   description!: string | null;
 
+  @ApiProperty({
+  })
+  image!: string;
+
+  @ApiProperty()
+  featured!: boolean;
+
   @ApiProperty()
   active!: boolean;
 

@@ -152,9 +152,8 @@ export class PublicProductResponseDto {
     categories!: PublicProductCategoryDto[];
 
     @ApiProperty({
-        isArray: true,
     })
-    images!: string[];
+    image?: string;
 
     @ApiProperty({
         type: PublicProductComponentDto,

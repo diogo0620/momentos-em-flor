@@ -1,9 +1,12 @@
+
 export type AdminCategoryDetail = {
     id: number;
     name: string;
-    description?: string;
+    description?: string | null;
     slug: string;
+    image: string | null;
+    featured: boolean;
     active: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-}
+    createdAt: Date | string;
+    updatedAt: Date | string;
+};

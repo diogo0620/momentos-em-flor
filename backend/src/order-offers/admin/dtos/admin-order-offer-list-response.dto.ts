@@ -46,5 +46,8 @@ export class AdminOrderOfferListResponseDto {
     })
     status!: OrderOfferStatus;
 
+    @ApiProperty()
+    expiresAt!: Date;
+
     
 }

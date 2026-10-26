@@ -4,6 +4,7 @@ export type AdminOrderOfferList = {
     florist: OrderOfferFlorist;
     price: number;
     status: OrderOfferStatus;
+    expiresAt: Date;
 }
 
 export type OrderOfferOrder = {

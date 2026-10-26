@@ -48,8 +48,7 @@ export class PublicProductsService {
             this.prisma.product.findMany({
                 where,
                 orderBy: { [sort]: order },
-                ...getPagination(page, pageSize),
-                include: { images: { where: { isPrimary: true }, take: 1 } },
+                ...getPagination(page, pageSize)
             }),
             this.prisma.product.count({ where }),
         ]);
@@ -67,8 +66,7 @@ export class PublicProductsService {
             include: {
                 categories: { select: { id: true, name: true }, where: { active: true } },
                 components: { where: { active: true }, orderBy: { sortOrder: 'asc' } },
-                variants: { where: { active: true }, orderBy: { sortOrder: 'asc', } },
-                images: { orderBy: [{isPrimary: 'desc'}, {sortOrder: 'asc'} ] },
+                variants: { where: { active: true }, orderBy: { sortOrder: 'asc', } }
             },
         });
 

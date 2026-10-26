@@ -144,6 +144,8 @@ export class AdminTaxCodesService {
                 switch (error.code) {
                     case 'P2025':
                         Exceptions.notFound(ERROR_MESSAGES.TAX_CODE_NOT_FOUND);
+                    case "P2003":
+                        Exceptions.badRequest(ERROR_MESSAGES.TAX_CODE_IN_USE);
                 }
             }
 

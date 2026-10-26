@@ -12,18 +12,6 @@ type PublicProductDetail = Prisma.ProductGetPayload<{
         categories: { select: { id: true; name: true } };
         components: true;
         variants: true;
-        images: true;
-    };
-}>;
-
-export type PublicProductWithImages = Prisma.ProductGetPayload<{
-    include: {
-        images: {
-            where: {
-                isPrimary: true;
-            };
-            take: 1;
-        };
     };
 }>;
 
@@ -54,7 +42,7 @@ export class PublicProductsMapper extends BaseMapper<
             featured: product.featured,
             categories: product.categories.map((category) => ({ id: category.id, name: category.name })),
 
-            images: product.images.map((image) =>this.storageService.getPublicUrl(image.path)),
+            image: product.imagePath ? this.storageService.getPublicUrl(product.imagePath) : undefined,
 
             components: product.components.map((component) => ({
                 id: component.id,
@@ -80,9 +68,8 @@ export class PublicProductsMapper extends BaseMapper<
     }
 
     protected toListItemResponse(
-        product: PublicProductWithImages,
+        product: Product,
     ): PublicProductListResponseDto {
-        const primaryImage = product.images[0];
 
         return {
             id: product.id,
@@ -91,7 +78,7 @@ export class PublicProductsMapper extends BaseMapper<
             type: product.type,
             featured: product.featured,
             price: product.customerPrice.toNumber(),
-            image: primaryImage ? this.storageService.getPublicUrl(primaryImage.path): '',
+            image: product.imagePath ? this.storageService.getPublicUrl(product.imagePath) : undefined,
         };
     }
 }

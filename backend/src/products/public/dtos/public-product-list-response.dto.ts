@@ -34,5 +34,5 @@ export class PublicProductListResponseDto {
 
     @ApiProperty({
     })
-    image!: string;
+    image?: string;
 }

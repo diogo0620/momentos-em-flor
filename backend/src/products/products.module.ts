@@ -8,8 +8,6 @@ import { PublicProductsController } from './public/public-products.controller';
 import { PublicProductsService } from './public/public-products.service';
 import { PublicProductsMapper } from './public/mappers/public-products.mapper';
 import { StorageModule } from '@/storage/storage.module';
-import { AdminProductImagesController } from './admin/admin-product-images.controller';
-import { AdminProductImagesService } from './admin/admin-product-images.service';
 
 
 
@@ -20,15 +18,13 @@ import { AdminProductImagesService } from './admin/admin-product-images.service'
   ],
   controllers: [
     AdminProductsController,
-    PublicProductsController,
-    AdminProductImagesController
+    PublicProductsController
   ],
   providers: [
     AdminProductsService,
     AdminProductsMapper,
     PublicProductsService,
     PublicProductsMapper,
-    AdminProductImagesService
   ]
 })
 export class ProductsModule {}

@@ -71,6 +71,7 @@ export class AdminOrderOffersMapper extends BaseMapper<
             },
             price: offer.price.toNumber(),
             status: offer.status,
+            expiresAt: offer.expiresAt
         };
     }
 }

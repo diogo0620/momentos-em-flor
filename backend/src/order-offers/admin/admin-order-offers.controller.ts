@@ -24,6 +24,7 @@ import { RolesGuard } from '@/auth/guards/roles.guard';
 import { Roles } from '@/auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { AdminOrderOffersService } from './admin-order-offers.service';
+import { AdminDeclineOrderOfferDto } from './dtos/admin-decline-order-offer.dto';
 
 @ApiTags('Order Offers (Admin)')
 @ApiBearerAuth('JWT')
@@ -37,7 +38,7 @@ export class AdminOrderOffersController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    async findAll(@Query() query: AdminOrderOfferQueryDto) { 
+    async findAll(@Query() query: AdminOrderOfferQueryDto) {
         return await this.service.findAll(query);
     }
 
@@ -53,7 +54,7 @@ export class AdminOrderOffersController {
     @HttpCode(HttpStatus.CREATED)
     async create(@Body() dto: AdminCreateOrderOfferDto) {
         return await this.service.create(dto);
-     }
+    }
 
     @Patch(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
@@ -62,5 +63,22 @@ export class AdminOrderOffersController {
         @Body() dto: AdminUpdateOrderOfferDto,
     ) {
         return await this.service.update(id, dto);
-     }
+    }
+
+    @Post(":id/accept")
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async accept(
+        @Param("id", ParseIntPipe) id: number,
+    ): Promise<void> {
+        return this.service.accept(id);
+    }
+
+    @Post(":id/decline")
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async decline(
+        @Param("id", ParseIntPipe) id: number,
+        @Body() dto: AdminDeclineOrderOfferDto,
+    ): Promise<void> {
+        return await this.service.decline(id, dto);
+    }
 }

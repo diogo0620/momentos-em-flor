@@ -60,6 +60,18 @@ export class CustomerOrderResponseDto {
     @ApiProperty()
     orderNumber!: string;
 
+    @ApiProperty()
+    customerFirstName!: string;
+
+    @ApiProperty()
+    customerLastName!: string;
+
+    @ApiProperty()
+    customerEmail!: string;
+
+    @ApiProperty()
+    customerPhone! : string;
+
     @ApiPropertyOptional()
     customerTaxNumber?: string | null;
 

@@ -44,6 +44,10 @@ export const ERROR_MESSAGES = {
         code: 'TAX_CODE_ALREADY_EXISTS',
         message: 'A tax code with this name already exists.',
     },
+    TAX_CODE_IN_USE: {
+        code: 'TAX_CODE_IN_USE',
+        message: 'Cannot delete this tax code because it is associated with one or more products.'
+    },
     FLORIST_NOT_FOUND: {
         code: 'FLORIST_NOT_FOUND',
         message: 'Florist not found.',
@@ -83,6 +87,10 @@ export const ERROR_MESSAGES = {
     ORDER_OFFER_CANNOT_BE_UPDATED: {
         code: 'ORDER_OFFER_CANNOT_BE_UPDATED',
         message: 'Only pending or viewed order offers can be updated.'
+    },
+    ORDER_ALREADY_ASSIGNED: {
+        code: 'ORDER_ALREADY_ASSIGNED',
+        message: 'This order is already assigned to a florist'
     },
     PAYMENT_IS_NOT_PENDING: {
         code: 'PAYMENT_IS_NOT_PENDING',

@@ -5,9 +5,11 @@ import {
     useEffect,
     useMemo,
     useState,
+    useRef,
     type FormEvent,
 } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
     ArrowDownWideNarrow,
     ArrowRight,
@@ -58,18 +60,64 @@ const SORT_OPTIONS = [
     { value: "newest", label: "Mais recentes", sort: "createdAt", order: "desc" as const },
 ];
 
+function getInitialState(params: URLSearchParams) {
+    const rawCategoryId = params.get("categoryId")?.trim() ?? "";
+
+    const categoryId =
+        /^\d+$/.test(rawCategoryId) && Number(rawCategoryId) > 0
+            ? rawCategoryId
+            : "";
+
+    const rawType = params.get("type")?.trim().toUpperCase();
+
+    const type: Filters["type"] =
+        rawType === "SALE" || rawType === "RENTAL"
+            ? rawType
+            : "ALL";
+
+    const rawMinPrice = params.get("minPrice") ?? "";
+    const rawMaxPrice = params.get("maxPrice") ?? "";
+    const minPrice = rawMinPrice !== "" && Number.isFinite(Number(rawMinPrice)) && Number(rawMinPrice) >= 0
+        ? rawMinPrice
+        : "";
+    const maxPrice = rawMaxPrice !== "" && Number.isFinite(Number(rawMaxPrice)) && Number(rawMaxPrice) >= 0
+        ? rawMaxPrice
+        : "";
+
+    const sort = params.get("sort");
+    const sortValue = SORT_OPTIONS.some((option) => option.value === sort)
+        ? sort!
+        : "featured";
+    const search = params.get("search") ?? "";
+    const featured = params.get("featured") === "true";
+
+    return {
+        filters: { categoryId, minPrice, maxPrice, type, featured } satisfies Filters,
+        search,
+        sortValue,
+    };
+}
+
 export default function ProductsPage() {
+    const searchParams = useSearchParams();
+    const queryString = searchParams.toString();
+    const initialState = useRef<ReturnType<typeof getInitialState> | null>(null);
+    if (initialState.current === null) {
+        initialState.current = getInitialState(new URLSearchParams(queryString));
+    }
+    const lastQueryString = useRef(queryString);
+
     const [products, setProducts] = useState<PublicProductList[]>([]);
     const [categories, setCategories] = useState<PublicCategoryList[]>([]);
     const [page, setPage] = useState(1);
     const [pages, setPages] = useState(0);
     const [total, setTotal] = useState(0);
 
-    const [searchInput, setSearchInput] = useState("");
-    const [search, setSearch] = useState("");
-    const [draftFilters, setDraftFilters] = useState<Filters>(DEFAULT_FILTERS);
-    const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
-    const [sortValue, setSortValue] = useState("featured");
+    const [searchInput, setSearchInput] = useState(initialState.current.search);
+    const [search, setSearch] = useState(initialState.current.search);
+    const [draftFilters, setDraftFilters] = useState<Filters>(initialState.current.filters);
+    const [filters, setFilters] = useState<Filters>(initialState.current.filters);
+    const [sortValue, setSortValue] = useState(initialState.current.sortValue);
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingCategories, setIsLoadingCategories] = useState(true);
@@ -143,6 +191,21 @@ export default function ProductsPage() {
         }
     }, [filters, search, selectedSort]);
 
+
+    useEffect(() => {
+        if (lastQueryString.current === queryString) return;
+
+        lastQueryString.current = queryString;
+        const nextState = getInitialState(new URLSearchParams(queryString));
+
+        setDraftFilters(nextState.filters);
+        setFilters(nextState.filters);
+        setSearchInput(nextState.search);
+        setSearch(nextState.search);
+        setSortValue(nextState.sortValue);
+        setPage(1);
+        setError(null);
+    }, [queryString]);
 
     useEffect(() => {
         void loadProducts(page);

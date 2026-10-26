@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
-    ArrowLeft, Check, ChevronLeft, ChevronRight, Heart, Minus, Plus,
+    ArrowLeft, Check, Heart, Minus, Plus,
     ShieldCheck, ShoppingBag, Sparkles, Truck,
 } from "lucide-react";
 
@@ -57,7 +57,6 @@ export default function PublicProductDetailPage() {
     const [product, setProduct] = useState<PublicProductDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
     const [componentQuantities, setComponentQuantities] = useState<ComponentQuantities>({});
     const [quantity, setQuantity] = useState(1);
@@ -89,7 +88,6 @@ export default function PublicProductDetailPage() {
                     component.id, component.minQuantity,
                 ]),
             ));
-            setActiveImageIndex(0);
         } catch (err) {
             setProduct(null);
             setError(err instanceof Error ? err.message : "Ocorreu um erro ao carregar o produto.");
@@ -105,15 +103,8 @@ export default function PublicProductDetailPage() {
         [product, selectedVariantId],
     );
 
-    const galleryImages = useMemo(() => {
-        if (!product) return [];
-        return [...new Set([
-            ...(selectedVariant?.image ? [selectedVariant.image] : []),
-            ...(product.images ?? []),
-        ].filter(Boolean))];
-    }, [product, selectedVariant]);
-
-    useEffect(() => { setActiveImageIndex(0); }, [selectedVariantId]);
+    const productImage = product?.image ?? "";
+    const activeImage = selectedVariant?.image || productImage;
 
     const componentsExtra = useMemo(() => (product?.components ?? []).reduce((total, component) => {
         const selected = componentQuantities[component.id] ?? component.minQuantity;
@@ -124,7 +115,6 @@ export default function PublicProductDetailPage() {
     const unitPrice = selectedVariant?.price ?? product?.price ?? 0;
     const totalUnitPrice = unitPrice + componentsExtra;
     const totalPrice = totalUnitPrice * quantity;
-    const activeImage = galleryImages[activeImageIndex] ?? product?.images?.[0] ?? "";
     const favorite = product ? isInWishlist(product.id) : false;
 
     const updateComponentQuantity = (component: PublicProductComponent, next: number) => {
@@ -186,7 +176,7 @@ export default function PublicProductDetailPage() {
             description: configurationDescription,
             image:
                 selectedVariant?.image ??
-                product.images?.[0] ??
+                product.image ??
                 "",
             price: totalUnitPrice,
             quantity,
@@ -200,13 +190,6 @@ export default function PublicProductDetailPage() {
         });
 
         setAddedToCart(true);
-    };
-
-    const changeImage = (direction: -1 | 1) => {
-        if (galleryImages.length < 2) return;
-        setActiveImageIndex((current) =>
-            (current + direction + galleryImages.length) % galleryImages.length,
-        );
     };
 
     if (loading) {
@@ -258,7 +241,7 @@ export default function PublicProductDetailPage() {
 
                 <div className="mt-6 grid items-start gap-9 lg:grid-cols-[1.08fr_0.92fr] lg:gap-14">
                     <section className="min-w-0">
-                        <div className="relative overflow-hidden rounded-[2rem] bg-[#F3F5EE] shadow-sm">
+                        <div className="relative overflow-hidden rounded-[2rem] bg-white shadow-sm">
                             <div className="relative aspect-[4/5] sm:aspect-[5/4] lg:aspect-[4/5]">
                                 <ProductImage
                                     src={activeImage}
@@ -266,7 +249,7 @@ export default function PublicProductDetailPage() {
                                     priority
                                     sizes="(max-width: 1023px) 100vw, 55vw"
                                 />
-                                <span className="absolute left-4 top-4 rounded-full border border-white/70 bg-white/90 px-3 py-1.5 text-xs font-semibold text-[#55624A] shadow-sm backdrop-blur">
+                                <span className="absolute left-4 top-4 rounded-full border border-[#E8EBE4] bg-white/95 px-3 py-1.5 text-xs font-semibold text-[#55624A] shadow-sm">
                                     {product.type === "RENTAL" ? "Aluguer" : "Feito com carinho"}
                                 </span>
                                 <button
@@ -277,42 +260,19 @@ export default function PublicProductDetailPage() {
                                             id: product.id,
                                             slug: product.slug,
                                             name: product.name,
-                                            image: product.images?.[0]
+                                            image: productImage,
                                         });
                                     }}
-                                    className={`absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full border border-white/70 shadow-sm backdrop-blur ${favorite ? "bg-[#D6DEC8] text-[#3F4B35]" : "bg-white/90 text-[#55624A]"}`}
+                                    className={`absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full border border-[#E8EBE4] shadow-sm ${favorite ? "bg-[#D6DEC8] text-[#3F4B35]" : "bg-white/95 text-[#55624A]"}`}
                                 >
                                     <Heart size={19} fill={favorite ? "currentColor" : "none"} />
                                 </button>
-                                {galleryImages.length > 1 && (
-                                    <>
-                                        <button type="button" aria-label="Imagem anterior" onClick={() => changeImage(-1)} className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#3F4B35] shadow-sm hover:bg-white">
-                                            <ChevronLeft size={20} />
-                                        </button>
-                                        <button type="button" aria-label="Imagem seguinte" onClick={() => changeImage(1)} className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#3F4B35] shadow-sm hover:bg-white">
-                                            <ChevronRight size={20} />
-                                        </button>
-                                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/45 px-3 py-1 text-xs font-medium text-white">
-                                            {activeImageIndex + 1} / {galleryImages.length}
-                                        </div>
-                                    </>
-                                )}
                             </div>
                         </div>
 
-                        {galleryImages.length > 1 && (
-                            <div className="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-5">
-                                {galleryImages.map((image, index) => (
-                                    <button key={`${image}-${index}`} type="button" onClick={() => setActiveImageIndex(index)} aria-label={`Ver imagem ${index + 1}`} className={`relative aspect-square overflow-hidden rounded-2xl bg-[#F3F5EE] ${activeImageIndex === index ? "ring-2 ring-[#657456] ring-offset-2" : "opacity-75 hover:opacity-100"}`}>
-                                        <ProductImage
-                                            src={image}
-                                            alt={`${product.name} ${index + 1}`}
-                                            sizes="(max-width: 639px) 22vw, 120px"
-                                        />
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                        <p className="mt-2 text-right text-[11px] leading-4 text-[#92998A]">
+                            Imagem meramente ilustrativa; poderá não corresponder exatamente ao produto final.
+                        </p>
 
                         {product.description && (
                             <div className="mt-8 hidden rounded-[1.75rem] border border-[#E8EBE4] bg-white p-6 lg:block">
@@ -362,7 +322,7 @@ export default function PublicProductDetailPage() {
                                         return (
                                             <button key={variant.id} type="button" onClick={() => { setSelectedVariantId(variant.id); setAddedToCart(false); }} className={`overflow-hidden rounded-2xl border text-left transition ${selected ? "border-[#657456] bg-[#F4F6F0] ring-1 ring-[#657456]" : "border-[#E5E9DD] bg-white hover:border-[#B8C3AA] hover:bg-[#FAFBF8]"}`}>
                                                 <div className="flex gap-3 p-3">
-                                                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#E9EDE1]">
+                                                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-white">
                                                         <ProductImage
                                                             src={variant.image}
                                                             alt={variant.name}

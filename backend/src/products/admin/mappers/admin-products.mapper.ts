@@ -13,18 +13,6 @@ type AdminProductDetail = Prisma.ProductGetPayload<{
         taxCode: true,
         components: true;
         variants: true;
-        images: true;
-    };
-}>;
-
-export type AdminProductWithImages = Prisma.ProductGetPayload<{
-    include: {
-        images: {
-            where: {
-                isPrimary: true;
-            };
-            take: 1;
-        };
     };
 }>;
 
@@ -60,7 +48,7 @@ export class AdminProductsMapper extends BaseMapper<
                 name: category.name,
             })),
 
-            images: product.images.map((image) => this.storageService.getPublicUrl(image.path)),
+            image: product.imagePath ? this.storageService.getPublicUrl(product.imagePath) : undefined,
 
             components: product.components.map((component) => ({
                 id: component.id,
@@ -79,7 +67,7 @@ export class AdminProductsMapper extends BaseMapper<
                 description: variant.description,
                 customerPrice: Number(variant.customerPrice),
                 floristPrice: Number(variant.floristPrice),
-                image: variant.imagePath ? this.storageService.getPublicUrl(variant.imagePath) : "",
+                image: variant.imagePath ? this.storageService.getPublicUrl(variant.imagePath) : undefined,
             })),
             taxCode: {
                 id: product.taxCode.id,
@@ -96,9 +84,8 @@ export class AdminProductsMapper extends BaseMapper<
     }
 
     protected toListItemResponse(
-        product: AdminProductWithImages,
+        product: AdminProductDetail,
     ): AdminProductListResponseDto {
-        const primaryImage = product.images[0];
 
         return {
             id: product.id,
@@ -108,7 +95,7 @@ export class AdminProductsMapper extends BaseMapper<
             featured: product.featured,
             customerPrice: Number(product.customerPrice),
             floristPrice: Number(product.floristPrice),
-            image: primaryImage ? this.storageService.getPublicUrl(primaryImage.path): '',
+            image: product.imagePath ? this.storageService.getPublicUrl(product.imagePath) : undefined,
             active: product.active
         };
     }

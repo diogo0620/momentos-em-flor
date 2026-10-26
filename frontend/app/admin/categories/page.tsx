@@ -14,6 +14,7 @@ import {
     Plus,
     Search,
     SlidersHorizontal,
+    Star,
 } from "lucide-react";
 
 import PageHeader from "@/components/admin/common/PageHeader";
@@ -44,6 +45,7 @@ export default function AdminCategoriesPage() {
     const [search, setSearch] = useState("");
 
     const [activeFilter, setActiveFilter] = useState("");
+    const [featuredFilter, setFeaturedFilter] = useState("");
 
     const [sort, setSort] = useState("name");
     const [order, setOrder] = useState<SortOrder>("asc");
@@ -73,6 +75,10 @@ export default function AdminCategoriesPage() {
                     params.active = activeFilter === "true";
                 }
 
+                if (featuredFilter !== "") {
+                    params.featured = featuredFilter === "true";
+                }
+
                 const response = await adminCategoriesApi.getAll(params);
 
                 setCategories(response.items);
@@ -89,7 +95,7 @@ export default function AdminCategoriesPage() {
                 setIsLoading(false);
             }
         },
-        [search, activeFilter, sort, order],
+        [search, activeFilter, featuredFilter, sort, order],
     );
 
     /* ====================================================================== */
@@ -117,6 +123,7 @@ export default function AdminCategoriesPage() {
         setSearchInput("");
         setSearch("");
         setActiveFilter("");
+        setFeaturedFilter("");
     }
 
     /* ====================================================================== */
@@ -176,7 +183,7 @@ export default function AdminCategoriesPage() {
                         </h2>
 
                         <p className="text-xs text-gray-400">
-                            Encontra categorias pelo nome, slug ou estado.
+                            Encontra categorias pelo nome, slug, estado ou destaque.
                         </p>
                     </div>
                 </div>
@@ -217,6 +224,16 @@ export default function AdminCategoriesPage() {
                             <option value="">Todos os estados</option>
                             <option value="true">Ativas</option>
                             <option value="false">Inativas</option>
+                        </FilterSelect>
+
+                        <FilterSelect
+                            label="Destaque"
+                            value={featuredFilter}
+                            onChange={setFeaturedFilter}
+                        >
+                            <option value="">Todos</option>
+                            <option value="true">Destacadas</option>
+                            <option value="false">Não destacadas</option>
                         </FilterSelect>
                     </div>
 
@@ -266,6 +283,10 @@ export default function AdminCategoriesPage() {
                                 </th>
 
                                 <th className="px-5 py-4 font-semibold text-[#2F3B2A]">
+                                    Destaque
+                                </th>
+
+                                <th className="px-5 py-4 font-semibold text-[#2F3B2A]">
                                     Estado
                                 </th>
 
@@ -281,7 +302,7 @@ export default function AdminCategoriesPage() {
                             ) : categories.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={3}
+                                        colSpan={4}
                                         className="px-6 py-20 text-center"
                                     >
                                         <FolderTree
@@ -387,8 +408,16 @@ function CategoryRow({
 
             <td className="px-5 py-5">
                 <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F3F5EE] text-[#55624A]">
-                        <FolderTree size={21} />
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#F3F5EE] text-[#55624A]">
+                        {category.image ? (
+                            <img
+                                src={category.image}
+                                alt={category.name}
+                                className="h-full w-full object-cover"
+                            />
+                        ) : (
+                            <FolderTree size={21} />
+                        )}
                     </div>
 
                     <div className="min-w-0">
@@ -401,6 +430,21 @@ function CategoryRow({
                         </p>
                     </div>
                 </div>
+            </td>
+
+            {/* FEATURED */}
+
+            <td className="px-5 py-5">
+                {category.featured ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700">
+                        <Star size={13} className="fill-current" />
+                        Sim
+                    </span>
+                ) : (
+                    <span className="text-xs text-gray-400">
+                        Não
+                    </span>
+                )}
             </td>
 
             {/* STATUS */}
@@ -525,7 +569,7 @@ function LoadingRows() {
                     key={rowIndex}
                     className="border-b border-gray-50"
                 >
-                    {Array.from({ length: 3 }).map((_, cellIndex) => (
+                    {Array.from({ length: 4 }).map((_, cellIndex) => (
                         <td
                             key={cellIndex}
                             className="px-5 py-5"

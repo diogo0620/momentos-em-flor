@@ -8,7 +8,7 @@ export type AdminProductDetail = {
     floristPrice: number;
     featured: boolean;
     categories: ProductCategory[];
-    images: string[];
+    image: string;
     components: ProductComponent[];
     variants: ProductVariant[];
     taxCode: ProductTaxCode;

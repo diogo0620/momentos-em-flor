@@ -104,15 +104,7 @@ export class CustomerOrdersService {
             include: {
                 taxCode: true,
                 variants: true,
-                components: true,
-                images: {
-                    select: {
-                        path: true
-                    },
-                    where: {
-                        isPrimary: true
-                    }
-                }
+                components: true
             },
         });
 
@@ -145,7 +137,7 @@ export class CustomerOrdersService {
 
             const imagePath =
                 selectedVariant?.imagePath ??
-                product.images[0].path ??
+                product?.imagePath ??
                 null;
 
             const selectedComponents = requestedItem.components ?? [];
@@ -466,7 +458,7 @@ export class CustomerOrdersService {
                     customerFirstName: user.firstName,
                     customerLastName: user.lastName,
                     customerEmail: user.email,
-                    customerPhone: '',
+                    customerPhone: user.phone,
 
                     customerTaxNumber: dto.customerTaxNumber ?? null,
 

@@ -7,12 +7,14 @@ import { AdminCategoriesService } from './admin/admin-categories.service';
 import { PublicCategoriesController } from './public/public-categories.controller';
 import { PublicCategoriesService } from './public/public-categories.service';
 import { PublicCategoriesMapper } from './public/mappers/public-categories.mapper';
+import { StorageModule } from '@/storage/storage.module';
 
 
 
 @Module({
   imports: [
     PrismaModule,
+    StorageModule
   ],
   controllers: [
     AdminCategoriesController,

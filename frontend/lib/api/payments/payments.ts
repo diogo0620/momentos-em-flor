@@ -17,16 +17,6 @@ class PaymentsApi extends BaseApi<
         super("/payments");
     }
 
-    async deleteImage(
-        productId: number,
-        imageId: number,
-    ) {
-        return apiFetch<void>(
-            `${this.endpoint}/${productId}/images/${imageId}`,
-            { method: "DELETE" },
-        );
-    }
-
     async createPaymentIntent(orderNumber: string): Promise<PaymentIntent>{
         return apiFetch<PaymentIntent>(
             `${this.endpoint}/intent`,

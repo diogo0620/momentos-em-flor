@@ -36,6 +36,14 @@ export class AdminCreateCategoryDto {
   description?: string;
 
   @ApiPropertyOptional({
+    example: false,
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  featured?: boolean;
+
+  @ApiPropertyOptional({
     example: true,
     default: true,
   })

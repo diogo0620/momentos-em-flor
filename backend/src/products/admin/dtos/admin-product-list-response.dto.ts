@@ -41,7 +41,7 @@ export class AdminProductListResponseDto {
 
     @ApiProperty({
     })
-    image!: string;
+    image?: string;
 
     @ApiProperty({ example: true })
     active!: boolean;

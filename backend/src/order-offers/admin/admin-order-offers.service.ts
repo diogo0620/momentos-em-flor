@@ -13,6 +13,7 @@ import { getPaginationResponse } from '@/common/database/pagination-response';
 import { AdminOrderOffersMapper } from './mappers/admin-order-offers.mapper';
 import { AdminOrderOfferQueryDto } from './dtos/admin-order-offer-query.dto';
 import { AdminOrderOfferResponseDto } from './dtos/admin-order-offer-response.dto';
+import { AdminDeclineOrderOfferDto } from './dtos/admin-decline-order-offer.dto';
 
 
 @Injectable()
@@ -39,6 +40,20 @@ export class AdminOrderOffersService {
                 where,
                 orderBy: { [sort]: order },
                 ...getPagination(page, pageSize),
+                include: {
+                    order: {
+                        select: {
+                            id: true,
+                            orderNumber: true,
+                        },
+                    },
+                    florist: {
+                        select: {
+                            id: true,
+                            name: true
+                        }
+                    }
+                }
             }),
             this.prisma.orderOffer.count({ where }),
         ]);
@@ -178,12 +193,12 @@ export class AdminOrderOffersService {
         if (!orderOffer)
             Exceptions.notFound(ERROR_MESSAGES.ORDER_OFFER_NOT_FOUND,);
 
-        if (orderOffer.status !== OrderOfferStatus.PENDING && orderOffer.status !== OrderOfferStatus.VIEWED) 
+        if (orderOffer.status !== OrderOfferStatus.PENDING && orderOffer.status !== OrderOfferStatus.VIEWED)
             Exceptions.badRequest(ERROR_MESSAGES.ORDER_OFFER_CANNOT_BE_UPDATED);
 
         const orderTotal = Number(orderOffer.order.total);
 
-        if (dto.price > orderTotal) 
+        if (dto.price > orderTotal)
             Exceptions.badRequest(ERROR_MESSAGES.ORDER_OFFER_PRICE_EXCEEDS_ORDER);
 
         try {
@@ -206,6 +221,133 @@ export class AdminOrderOffersService {
                         ERROR_MESSAGES.ORDER_OFFER_NOT_FOUND,
                     );
                 }
+            }
+
+            throw error;
+        }
+    }
+
+    async accept(id: number): Promise<void> {
+        const now = new Date();
+
+        await this.prisma.$transaction(async (tx) => {
+            const offer = await tx.orderOffer.findUnique({
+                where: { id },
+                select: {
+                    id: true,
+                    orderId: true,
+                    floristId: true,
+                    status: true,
+                    order: {
+                        select: {
+                            status: true,
+                        },
+                    },
+                },
+            });
+
+            if (!offer)
+                Exceptions.notFound(ERROR_MESSAGES.ORDER_OFFER_NOT_FOUND);
+
+            if (offer.status !== OrderOfferStatus.PENDING && offer.status !== OrderOfferStatus.VIEWED)
+                Exceptions.badRequest(ERROR_MESSAGES.ORDER_OFFER_CANNOT_BE_UPDATED);
+
+            if (offer.order.status !== OrderStatus.WAITING_FOR_FLORISTS)
+                Exceptions.badRequest(ERROR_MESSAGES.ORDER_ALREADY_ASSIGNED);
+
+            // Garantir que esta proposta continua elegível para aceitação.
+            const accepted = await tx.orderOffer.updateMany({
+                where: {
+                    id: offer.id,
+                    status: {
+                        in: [
+                            OrderOfferStatus.PENDING,
+                            OrderOfferStatus.VIEWED,
+                        ],
+                    },
+                },
+                data: {
+                    status: OrderOfferStatus.ACCEPTED,
+                    acceptedAt: now,
+                },
+            });
+
+            if (accepted.count !== 1)
+                Exceptions.badRequest(ERROR_MESSAGES.ORDER_OFFER_CANNOT_BE_UPDATED);
+
+            // Cancelar todas as restantes propostas ainda em aberto.
+            await tx.orderOffer.updateMany({
+                where: {
+                    orderId: offer.orderId,
+                    id: {
+                        not: offer.id,
+                    },
+                    status: {
+                        in: [
+                            OrderOfferStatus.PENDING,
+                            OrderOfferStatus.VIEWED,
+                        ],
+                    },
+                },
+                data: {
+                    status: OrderOfferStatus.CANCELLED,
+                },
+            });
+
+            // Atribuir a encomenda à florista que teve a proposta aceite.
+            const updatedOrder = await tx.order.updateMany({
+                where: {
+                    id: offer.orderId,
+                    status: OrderStatus.WAITING_FOR_FLORISTS,
+                },
+                data: {
+                    status: OrderStatus.ASSIGNED,
+                    assignedFloristId: offer.floristId,
+                    assignedAt: now,
+                },
+            });
+
+            if (updatedOrder.count !== 1) {
+                Exceptions.badRequest(ERROR_MESSAGES.ORDER_ALREADY_ASSIGNED);
+            }
+        });
+    }
+
+    async decline(
+        id: number,
+        dto: AdminDeclineOrderOfferDto
+    ): Promise<void> {
+        const orderOffer = await this.prisma.orderOffer.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                status: true,
+            },
+        });
+
+        if (!orderOffer)
+            Exceptions.notFound(ERROR_MESSAGES.ORDER_OFFER_NOT_FOUND);
+
+        if (orderOffer.status !== OrderOfferStatus.PENDING && orderOffer.status !== OrderOfferStatus.VIEWED)
+            Exceptions.badRequest(ERROR_MESSAGES.ORDER_OFFER_CANNOT_BE_UPDATED);
+
+        try {
+            await this.prisma.orderOffer.update({
+                where: { id },
+                data: {
+                    status: OrderOfferStatus.DECLINED,
+                    declinedAt: new Date(),
+                    declineReason: dto.declineReason,
+                },
+            });
+        } catch (error) {
+            if (
+                error instanceof Prisma.PrismaClientKnownRequestError &&
+                error.code === "P2025"
+            ) {
+                Exceptions.notFound(
+                    ERROR_MESSAGES.ORDER_OFFER_NOT_FOUND,
+                );
             }
 
             throw error;

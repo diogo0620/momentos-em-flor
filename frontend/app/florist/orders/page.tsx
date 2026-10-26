@@ -13,12 +13,7 @@ import {
     Clock,
 } from "lucide-react";
 
-import { getOrders } from "@/lib/api/orders";
 
-import type {
-    Order,
-    OrderStatus,
-} from "@/types/order";
 
 type Pagination = {
     page: number;

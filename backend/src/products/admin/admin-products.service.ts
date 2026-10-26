@@ -52,8 +52,7 @@ export class AdminProductsService {
             this.prisma.product.findMany({
                 where,
                 orderBy: { [sort]: order },
-                ...getPagination(page, pageSize),
-                include: { images: { where: { isPrimary: true }, take: 1 } },
+                ...getPagination(page, pageSize)
             }),
             this.prisma.product.count({ where }),
         ]);
@@ -73,8 +72,7 @@ export class AdminProductsService {
                 categories: {select: {id: true,name: true,},},
                 components: {orderBy: {sortOrder: 'asc'}},
                 variants: {orderBy: {sortOrder: 'asc'}},
-                taxCode: true,
-                images: {orderBy: [{isPrimary: 'desc'}, {sortOrder: 'asc'}]},
+                taxCode: true
             },
         });
 

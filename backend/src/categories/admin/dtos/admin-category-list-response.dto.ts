@@ -11,6 +11,13 @@ export class AdminCategoryListResponseDto {
   @ApiProperty()
   slug!: string;
 
+  @ApiProperty({
+  })
+  image!: string;
+
+   @ApiProperty()
+  featured!: boolean;
+
   @ApiProperty({ example: true })
   active!: boolean;
 }

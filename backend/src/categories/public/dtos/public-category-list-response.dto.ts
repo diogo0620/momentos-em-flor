@@ -7,4 +7,10 @@ export class PublicCategoryListResponseDto {
 
   @ApiProperty()
   name!: string;
+
+  @ApiProperty()
+  image?: string;
+
+  @ApiProperty()
+  description?: string;
 }

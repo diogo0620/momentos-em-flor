@@ -20,7 +20,7 @@ export class PublicCategoriesService {
 
 
     async findAll(query: PublicCategoryQueryDto) {
-        const { page, pageSize, search, sort, order } = query;
+        const { page, pageSize, search, sort, featured, order } = query;
 
         const where: Prisma.CategoryWhereInput = {
             ...(search && {
@@ -30,6 +30,7 @@ export class PublicCategoriesService {
                 ],
             }),
             active: true,
+            ...(featured !== undefined && { featured }),
         };
 
         const [categories, total] = await Promise.all([
