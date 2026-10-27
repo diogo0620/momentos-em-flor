@@ -1,33 +1,37 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
-
 import {
     ArrowLeft,
     CalendarDays,
-    Check,
     CheckCircle2,
-    Clock,
-    History,
-    Loader2,
+    Clock3,
     MapPin,
     MessageSquare,
     Package,
     Phone,
-    User,
+    ReceiptText,
+    UserRound,
     XCircle,
 } from "lucide-react";
 
+import { floristOrdersApi } from "@/lib/api/orders/florist-orders";
+import type {
+    FloristOrderDetail,
+    FloristOrderItem,
+} from "@/types/orders/florist/florist-order-detail";
+import type {
+    FloristOrderStatus,
+    FloristDeliveryTimeSlot,
+    FloristOrderItemType,
+    FloristProductVariantType,
+} from "@/types/orders/florist/florist-order-status";
 
-
-/* -------------------------------------------------------------------------- */
-/* STATUS                                                                     */
-/* -------------------------------------------------------------------------- */
-
-const statusLabels: Record<OrderStatus, string> = {
+const STATUS_LABELS: Record<FloristOrderStatus, string> = {
     CREATED: "Criada",
+    PENDING_PAYMENT: 'Pending Payment',
     WAITING_FOR_FLORISTS: "À espera de florista",
     ASSIGNED: "Atribuída",
     IN_PRODUCTION: "Em preparação",
@@ -36,1574 +40,395 @@ const statusLabels: Record<OrderStatus, string> = {
     CANCELLED: "Cancelada",
 };
 
-const statusStyles: Record<
-    OrderStatus,
-    {
-        badge: string;
-        dot: string;
-        panel: string;
-        icon: string;
-        title: string;
-        description: string;
-    }
-> = {
-    CREATED: {
-        badge:
-            "bg-blue-50 text-blue-700 border-blue-200",
-        dot: "bg-blue-500",
-        panel:
-            "border-blue-100 bg-blue-50",
-        icon:
-            "bg-blue-100 text-blue-700",
-        title: "Encomenda criada",
-        description:
-            "A encomenda foi criada e está a aguardar processamento.",
-    },
-
-    WAITING_FOR_FLORISTS: {
-        badge:
-            "bg-amber-50 text-amber-700 border-amber-200",
-        dot: "bg-amber-500",
-        panel:
-            "border-amber-100 bg-amber-50",
-        icon:
-            "bg-amber-100 text-amber-700",
-        title: "À espera de florista",
-        description:
-            "A encomenda está a aguardar que uma florista aceite a proposta.",
-    },
-
-    ASSIGNED: {
-        badge:
-            "bg-emerald-50 text-emerald-700 border-emerald-200",
-        dot: "bg-emerald-500",
-        panel:
-            "border-emerald-100 bg-emerald-50",
-        icon:
-            "bg-emerald-100 text-emerald-700",
-        title: "Encomenda atribuída",
-        description:
-            "Esta encomenda foi atribuída à sua florista e pode começar a ser preparada.",
-    },
-
-    IN_PRODUCTION: {
-        badge:
-            "bg-orange-50 text-orange-700 border-orange-200",
-        dot: "bg-orange-500",
-        panel:
-            "border-orange-100 bg-orange-50",
-        icon:
-            "bg-orange-100 text-orange-700",
-        title: "Encomenda em preparação",
-        description:
-            "A encomenda está a ser preparada. Quando estiver pronta, poderá avançar para a entrega.",
-    },
-
-    READY_FOR_DELIVERY: {
-        badge:
-            "bg-purple-50 text-purple-700 border-purple-200",
-        dot: "bg-purple-500",
-        panel:
-            "border-purple-100 bg-purple-50",
-        icon:
-            "bg-purple-100 text-purple-700",
-        title: "Pronta para entrega",
-        description:
-            "A encomenda está pronta para ser entregue.",
-    },
-
-    DELIVERED: {
-        badge:
-            "bg-green-50 text-green-700 border-green-200",
-        dot: "bg-green-500",
-        panel:
-            "border-green-100 bg-green-50",
-        icon:
-            "bg-green-100 text-green-700",
-        title: "Encomenda entregue",
-        description:
-            "Esta encomenda foi marcada como entregue. Não existem mais ações pendentes.",
-    },
-
-    CANCELLED: {
-        badge:
-            "bg-red-50 text-red-700 border-red-200",
-        dot: "bg-red-500",
-        panel:
-            "border-red-100 bg-red-50",
-        icon:
-            "bg-red-100 text-red-700",
-        title: "Encomenda cancelada",
-        description:
-            "Esta encomenda foi cancelada e já não pode ser processada.",
-    },
+const STATUS_STYLES: Record<FloristOrderStatus, string> = {
+    CREATED: "border-blue-200 bg-blue-50 text-blue-700",
+    WAITING_FOR_FLORISTS: "border-amber-200 bg-amber-50 text-amber-700",
+    PENDING_PAYMENT: "border-amber-200 bg-amber-50 text-amber-700",
+    ASSIGNED: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    IN_PRODUCTION: "border-orange-200 bg-orange-50 text-orange-700",
+    READY_FOR_DELIVERY: "border-violet-200 bg-violet-50 text-violet-700",
+    DELIVERED: "border-green-200 bg-green-50 text-green-700",
+    CANCELLED: "border-red-200 bg-red-50 text-red-700",
 };
 
-/* -------------------------------------------------------------------------- */
-/* HELPERS                                                                    */
-/* -------------------------------------------------------------------------- */
+const STATUS_DESCRIPTIONS: Record<FloristOrderStatus, string> = {
+    CREATED: "A encomenda foi criada e aguarda processamento.",
+    PENDING_PAYMENT: 'Pending Payment',
+    WAITING_FOR_FLORISTS: "A encomenda está à espera que uma florista aceite a proposta.",
+    ASSIGNED: "A encomenda foi atribuída à tua florista. Consulta os detalhes para preparar a entrega.",
+    IN_PRODUCTION: "A encomenda está a ser preparada.",
+    READY_FOR_DELIVERY: "A encomenda está pronta para ser entregue.",
+    DELIVERED: "A entrega foi concluída.",
+    CANCELLED: "Esta encomenda foi cancelada e já não pode ser processada.",
+};
 
-function formatDate(value: string) {
-    return new Intl.DateTimeFormat(
-        "pt-PT",
-        {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-        },
-    ).format(new Date(value));
+const TIME_SLOT_LABELS: Record<FloristDeliveryTimeSlot, string> = {
+    MORNING: "Manhã",
+    AFTERNOON: "Tarde",
+    EVENING: "Noite",
+};
+
+const ITEM_TYPE_LABELS: Record<string, string> = {
+    PRODUCT: "Produto",
+    BOUQUET: "Ramo",
+    CUSTOM: "Personalizado",
+};
+
+const VARIANT_TYPE_LABELS: Record<string, string> = {
+    SIZE: "Tamanho",
+    COLOR: "Cor",
+    STYLE: "Estilo",
+};
+
+const DATE_FORMATTER = new Intl.DateTimeFormat("pt-PT", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+});
+
+const DATETIME_FORMATTER = new Intl.DateTimeFormat("pt-PT", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+});
+
+function formatDate(value?: string | null): string {
+    if (!value) return "—";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "—" : DATE_FORMATTER.format(date);
 }
 
-function formatDateTime(value: string) {
-    return new Intl.DateTimeFormat(
-        "pt-PT",
-        {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-        },
-    ).format(new Date(value));
+function formatDateTime(value?: string | null): string {
+    if (!value) return "—";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "—" : DATETIME_FORMATTER.format(date);
 }
 
-function formatCurrency(value: number) {
-    return new Intl.NumberFormat(
-        "pt-PT",
-        {
-            style: "currency",
-            currency: "EUR",
-        },
-    ).format(Number(value));
+function formatCurrency(value: number): string {
+    return new Intl.NumberFormat("pt-PT", {
+        style: "currency",
+        currency: "EUR",
+    }).format(value);
 }
 
-function formatTimeSlot(value: string) {
-    const labels: Record<string, string> = {
-        MORNING: "Manhã",
-        AFTERNOON: "Tarde",
-        EVENING: "Noite",
-    };
-
-    return labels[value] ?? value;
+function getRecipientName(order: FloristOrderDetail): string {
+    return [order.recipientFirstName, order.recipientLastName]
+        .filter((part): part is string => Boolean(part?.trim()))
+        .join(" ");
 }
 
-function formatOccasion(
-    value: string | null,
-) {
-    if (!value) {
-        return null;
-    }
+function getFullAddress(order: FloristOrderDetail): string {
+    const street = [
+        order.deliveryStreet,
+        order.deliveryStreetNumber,
+    ].filter(Boolean).join(", ");
 
-    const labels: Record<string, string> = {
-        BIRTHDAY: "Aniversário",
-        ANNIVERSARY: "Aniversário",
-        LOVE: "Amor",
-        WEDDING: "Casamento",
-        FUNERAL: "Funeral",
-        NEW_BABY: "Nascimento",
-        MOTHERS_DAY: "Dia da Mãe",
-        FATHERS_DAY: "Dia do Pai",
-        CHRISTMAS: "Natal",
-        OTHER: "Outra ocasião",
-    };
-
-    return labels[value] ?? value;
+    return [
+        street,
+        order.deliveryStreet2,
+        `${order.deliveryPostalCode} ${order.deliveryCity}`.trim(),
+        order.deliveryDistrict,
+    ].filter((part): part is string => Boolean(part?.trim())).join(", ");
 }
 
-/* -------------------------------------------------------------------------- */
-/* PAGE                                                                       */
-/* -------------------------------------------------------------------------- */
+function getTimeline(order: FloristOrderDetail) {
+    return [
+        { label: "Encomenda criada", date: order.createdAt, description: "A encomenda foi registada." },
+        { label: "Florista atribuída", date: order.assignedAt, description: "A encomenda foi atribuída à tua florista." },
+        { label: "Preparação iniciada", date: order.inProductionAt, description: "A preparação da encomenda foi iniciada." },
+        { label: "Pronta para entrega", date: order.readyForDeliveryAt, description: "A encomenda ficou pronta para entrega." },
+        { label: "Entregue", date: order.deliveredAt, description: "A entrega foi concluída." },
+        { label: "Cancelada", date: order.cancelledAt, description: "A encomenda foi cancelada." },
+    ].filter((item) => Boolean(item.date));
+}
 
 export default function FloristOrderDetailPage() {
-    const params = useParams();
+    const params = useParams<{ id: string }>();
+    const orderId = Number(params.id);
 
-    const id = params.id;
+    const [order, setOrder] = useState<FloristOrderDetail | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const orderId = Number(id);
-
-    const [order, setOrder] =
-        useState<Order | null>(null);
-
-    const [isLoading, setIsLoading] =
-        useState(true);
-
-    const [
-        isChangingStatus,
-        setIsChangingStatus,
-    ] = useState(false);
-
-    const [error, setError] =
-        useState<string | null>(null);
-
-    const [toast, setToast] =
-        useState<{
-            type: "success" | "error";
-            message: string;
-        } | null>(null);
-
-    /* ---------------------------------------------------------------------- */
-    /* TOAST                                                                  */
-    /* ---------------------------------------------------------------------- */
-
-    function showToast(
-        type: "success" | "error",
-        message: string,
-    ) {
-        setToast({
-            type,
-            message,
-        });
-    }
-
-    useEffect(() => {
-        if (!toast) {
-            return;
-        }
-
-        const timeout = setTimeout(() => {
-            setToast(null);
-        }, 4000);
-
-        return () => {
-            clearTimeout(timeout);
-        };
-    }, [toast]);
-
-    /* ---------------------------------------------------------------------- */
-    /* LOAD ORDER                                                             */
-    /* ---------------------------------------------------------------------- */
-
-    useEffect(() => {
-        if (
-            !id ||
-            Number.isNaN(orderId)
-        ) {
-            setError(
-                "A encomenda solicitada não é válida.",
-            );
-
-            setIsLoading(false);
-
-            return;
-        }
-
-        async function loadOrder() {
-            try {
-                setIsLoading(true);
-                setError(null);
-
-                const response =
-                    await getOrder(orderId);
-
-                setOrder(response.data);
-            } catch (err) {
-                console.error(
-                    "Erro ao obter order:",
-                    err,
-                );
-
-                setError(
-                    err instanceof Error
-                        ? err.message
-                        : "Não foi possível carregar a encomenda.",
-                );
-            } finally {
-                setIsLoading(false);
-            }
-        }
-
-        loadOrder();
-    }, [id, orderId]);
-
-    /* ---------------------------------------------------------------------- */
-    /* CHANGE STATUS                                                          */
-    /* ---------------------------------------------------------------------- */
-
-    async function handleStatusChange(
-        action:
-            | "start-production"
-            | "ready-for-delivery"
-            | "deliver",
-    ) {
-        if (!order || isChangingStatus) {
+    const loadOrder = useCallback(async () => {
+        if (!Number.isSafeInteger(orderId) || orderId <= 0) {
+            setError("O identificador da encomenda é inválido.");
+            setLoading(false);
             return;
         }
 
         try {
-            setIsChangingStatus(true);
-
-            let response: {
-                success: boolean;
-                data: Order;
-            };
-
-            switch (action) {
-                case "start-production":
-                    response =
-                        await startProduction(
-                            order.id,
-                        );
-                    break;
-
-                case "ready-for-delivery":
-                    response =
-                        await readyForDelivery(
-                            order.id,
-                        );
-                    break;
-
-                case "deliver":
-                    response =
-                        await deliverOrder(
-                            order.id,
-                        );
-                    break;
-            }
-
-            console.log(
-                "Status alterado:",
-                response,
-            );
-
-            /*
-             * A API já devolve a order atualizada.
-             * Não fazemos um novo GET.
-             */
-            setOrder(response.data);
-
-            const messages = {
-                "start-production":
-                    "A encomenda foi colocada em preparação.",
-
-                "ready-for-delivery":
-                    "A encomenda foi marcada como pronta para entrega.",
-
-                deliver:
-                    "A encomenda foi marcada como entregue.",
-            };
-
-            showToast(
-                "success",
-                messages[action],
-            );
+            setLoading(true);
+            setError(null);
+            const response = await floristOrdersApi.getById(orderId);
+            setOrder(response);
         } catch (err) {
-            console.error(
-                "Erro ao alterar estado:",
-                err,
-            );
-
-            showToast(
-                "error",
-                err instanceof Error
-                    ? err.message
-                    : "Não foi possível alterar o estado da encomenda.",
-            );
+            setError(err instanceof Error ? err.message : "Não foi possível carregar a encomenda.");
         } finally {
-            setIsChangingStatus(false);
+            setLoading(false);
         }
-    }
+    }, [orderId]);
 
-    /* ---------------------------------------------------------------------- */
-    /* LOADING                                                                */
-    /* ---------------------------------------------------------------------- */
+    useEffect(() => {
+        void loadOrder();
+    }, [loadOrder]);
 
-    if (isLoading) {
+    const timeline = useMemo(() => order ? getTimeline(order) : [], [order]);
+
+    if (loading) {
         return (
-            <div className="mx-auto max-w-6xl">
-
-                <Link
-                    href="/florist/orders"
-                    className="
-                        inline-flex
-                        items-center
-                        gap-2
-                        text-sm
-                        text-gray-500
-                        transition
-                        hover:text-[#55624A]
-                    "
-                >
-                    <ArrowLeft size={16} />
-                    Voltar às encomendas
-                </Link>
-
-                <div className="mt-8 space-y-5">
-
-                    <div className="h-8 w-64 animate-pulse rounded-xl bg-gray-100" />
-
-                    <div className="h-32 animate-pulse rounded-3xl bg-gray-100" />
-
-                    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-
-                        <div className="h-[700px] animate-pulse rounded-3xl bg-gray-100" />
-
-                        <div className="h-[500px] animate-pulse rounded-3xl bg-gray-100" />
-
-                    </div>
-
+            <div className="mx-auto w-full max-w-6xl space-y-6 pb-10">
+                <div className="h-5 w-44 animate-pulse rounded bg-gray-200" />
+                <div className="h-36 animate-pulse rounded-3xl bg-gray-100" />
+                <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+                    <div className="h-[520px] animate-pulse rounded-3xl bg-gray-100" />
+                    <div className="h-[420px] animate-pulse rounded-3xl bg-gray-100" />
                 </div>
-
             </div>
         );
     }
-
-    /* ---------------------------------------------------------------------- */
-    /* ERROR                                                                  */
-    /* ---------------------------------------------------------------------- */
 
     if (error || !order) {
         return (
-            <div className="mx-auto max-w-6xl">
-
-                <Link
-                    href="/florist/orders"
-                    className="
-                        inline-flex
-                        items-center
-                        gap-2
-                        text-sm
-                        text-gray-500
-                        transition
-                        hover:text-[#55624A]
-                    "
-                >
-                    <ArrowLeft size={16} />
-                    Voltar às encomendas
+            <div className="mx-auto w-full max-w-6xl pb-10">
+                <Link href="/florist/orders" className="inline-flex items-center gap-2 text-sm text-[#7A8474] transition hover:text-[#55624A]">
+                    <ArrowLeft size={16} /> Voltar às encomendas
                 </Link>
-
-                <div className="mt-8 rounded-3xl bg-white p-12 text-center shadow-sm">
-
-                    <div
-                        className="
-                            mx-auto
-                            flex
-                            h-16
-                            w-16
-                            items-center
-                            justify-center
-                            rounded-full
-                            bg-[#F5F7F2]
-                            text-[#55624A]
-                        "
-                    >
-                        <Package size={28} />
+                <div className="mt-6 rounded-3xl border border-[#E8EBE4] bg-white p-8 text-center shadow-sm sm:p-12">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#F3F5EE] text-[#55624A]">
+                        <Package size={25} />
                     </div>
-
-                    <h1 className="mt-5 text-2xl font-bold text-[#2F3B2A]">
-                        Encomenda não encontrada
-                    </h1>
-
-                    <p className="mt-2 text-gray-500">
-                        {error ??
-                            "Não foi possível carregar a encomenda."}
-                    </p>
-
+                    <h1 className="mt-4 text-2xl font-semibold text-[#2F3B2A]">Encomenda não encontrada</h1>
+                    <p className="mx-auto mt-2 max-w-lg text-sm text-[#7A8474]">{error ?? "Não foi possível carregar os detalhes desta encomenda."}</p>
+                    <button type="button" onClick={() => void loadOrder()} className="mt-5 rounded-full bg-[#55624A] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#435039]">
+                        Tentar novamente
+                    </button>
                 </div>
-
             </div>
         );
     }
 
-    const status = order.status;
-
-    const statusStyle =
-        statusStyles[status];
-
-    const occasion =
-        formatOccasion(order.occasion);
-
-    const recipientName = [
-        order.recipientFirstName,
-        order.recipientLastName,
-    ]
-        .filter(Boolean)
-        .join(" ");
-
-    /* ---------------------------------------------------------------------- */
-    /* RENDER                                                                 */
-    /* ---------------------------------------------------------------------- */
+    const recipientName = getRecipientName(order);
+    const address = getFullAddress(order);
+    const orderTimeline = timeline;
 
     return (
-        <div className="mx-auto max-w-6xl">
-
-            {/* ================================================================= */}
-            {/* TOAST                                                             */}
-            {/* ================================================================= */}
-
-            {toast && (
-                <div
-                    className="
-                        fixed
-                        right-6
-                        top-6
-                        z-[9999]
-                        w-[calc(100%-3rem)]
-                        max-w-sm
-                    "
-                >
-                    <div
-                        className={`
-                            flex
-                            items-start
-                            gap-4
-                            rounded-2xl
-                            border
-                            bg-white
-                            p-4
-                            shadow-2xl
-                            ${
-                                toast.type ===
-                                "success"
-                                    ? "border-green-200"
-                                    : "border-red-200"
-                            }
-                        `}
-                    >
-
-                        <div
-                            className={`
-                                flex
-                                h-10
-                                w-10
-                                shrink-0
-                                items-center
-                                justify-center
-                                rounded-full
-                                ${
-                                    toast.type ===
-                                    "success"
-                                        ? "bg-green-100 text-green-600"
-                                        : "bg-red-100 text-red-600"
-                                }
-                            `}
-                        >
-                            {toast.type ===
-                            "success" ? (
-                                <CheckCircle2
-                                    size={21}
-                                />
-                            ) : (
-                                <XCircle
-                                    size={21}
-                                />
-                            )}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-
-                            <p className="font-semibold text-[#2F3B2A]">
-                                {toast.type ===
-                                "success"
-                                    ? "Ação concluída"
-                                    : "Erro"}
-                            </p>
-
-                            <p className="mt-1 text-sm leading-5 text-gray-500">
-                                {
-                                    toast.message
-                                }
-                            </p>
-
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                setToast(
-                                    null,
-                                )
-                            }
-                            className="
-                                shrink-0
-                                rounded-full
-                                p-1
-                                text-gray-400
-                                transition
-                                hover:bg-gray-100
-                                hover:text-gray-600
-                            "
-                            aria-label="Fechar"
-                        >
-                            <XCircle
-                                size={18}
-                            />
-                        </button>
-
-                    </div>
-                </div>
-            )}
-
-            {/* ================================================================= */}
-            {/* HEADER                                                            */}
-            {/* ================================================================= */}
-
-            <div className="mb-6">
-
-                <Link
-                    href="/florist/orders"
-                    className="
-                        inline-flex
-                        items-center
-                        gap-2
-                        text-sm
-                        text-gray-500
-                        transition
-                        hover:text-[#55624A]
-                    "
-                >
-                    <ArrowLeft size={16} />
-                    Voltar às encomendas
+        <div className="mx-auto w-full max-w-6xl space-y-6 pb-10">
+            <header>
+                <Link href="/florist/orders" className="inline-flex items-center gap-2 text-sm text-[#7A8474] transition hover:text-[#55624A]">
+                    <ArrowLeft size={16} /> Voltar às encomendas
                 </Link>
 
-                <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-
-                    <div>
-
-                        <p className="text-sm font-medium uppercase tracking-wider text-[#55624A]">
-                            Detalhe da encomenda
-                        </p>
-
-                        <h1 className="mt-2 text-3xl font-bold text-[#2F3B2A]">
-                            #{order.orderNumber}
+                <div className="mt-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+                    <div className="min-w-0">
+                        <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#55624A]">Detalhe da encomenda</p>
+                        <h1 className="mt-2 break-words text-3xl font-semibold tracking-tight text-[#2F3B2A]">
+                            Encomenda #{order.orderNumber}
                         </h1>
-
-                        <p className="mt-2 text-sm text-gray-500">
-                            Criada em{" "}
-                            {formatDateTime(
-                                order.createdAt,
-                            )}
+                        <p className="mt-2 text-sm text-[#7A8474]">
+                            Criada a {formatDateTime(order.createdAt)}
                         </p>
-
                     </div>
-
-                    <span
-                        className={`
-                            inline-flex
-                            items-center
-                            gap-2
-                            self-start
-                            rounded-full
-                            border
-                            px-4
-                            py-2
-                            text-sm
-                            font-semibold
-                            ${statusStyle.badge}
-                        `}
-                    >
-
-                        <span
-                            className={`
-                                h-2
-                                w-2
-                                rounded-full
-                                ${statusStyle.dot}
-                            `}
-                        />
-
-                        {
-                            statusLabels[
-                                status
-                            ]
-                        }
-
+                    <span className={`inline-flex w-fit shrink-0 items-center rounded-full border px-4 py-2 text-sm font-semibold ${STATUS_STYLES[order.status]}`}>
+                        <span className="mr-2 h-2 w-2 rounded-full bg-current" />
+                        {STATUS_LABELS[order.status]}
                     </span>
-
                 </div>
+            </header>
 
-            </div>
-
-            {/* ================================================================= */}
-            {/* STATUS / ACTION                                                   */}
-            {/* ================================================================= */}
-
-            <section
-                className={`
-                    mb-6
-                    rounded-3xl
-                    border
-                    p-6
-                    ${statusStyle.panel}
-                `}
-            >
-
-                <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-
-                    <div className="flex items-start gap-4">
-
-                        <div
-                            className={`
-                                flex
-                                h-12
-                                w-12
-                                shrink-0
-                                items-center
-                                justify-center
-                                rounded-2xl
-                                ${statusStyle.icon}
-                            `}
-                        >
-
-                            {status ===
-                            "DELIVERED" ? (
-                                <CheckCircle2
-                                    size={24}
-                                />
-                            ) : status ===
-                              "CANCELLED" ? (
-                                <XCircle
-                                    size={24}
-                                />
-                            ) : status ===
-                              "ASSIGNED" ? (
-                                <Package
-                                    size={24}
-                                />
-                            ) : status ===
-                              "READY_FOR_DELIVERY" ? (
-                                <Check
-                                    size={24}
-                                />
-                            ) : (
-                                <Clock
-                                    size={24}
-                                />
-                            )}
-
-                        </div>
-
-                        <div>
-
-                            <h2 className="text-lg font-semibold text-[#2F3B2A]">
-                                {
-                                    statusStyle.title
-                                }
-                            </h2>
-
-                            <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-600">
-                                {
-                                    statusStyle.description
-                                }
-                            </p>
-
-                        </div>
-
+            <section className="rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-sm sm:p-8">
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F3F5EE] text-[#55624A]">
+                        {order.status === "CANCELLED" ? <XCircle size={24} /> : order.status === "DELIVERED" ? <CheckCircle2 size={24} /> : <Package size={24} />}
                     </div>
-
-                    {/* ACTIONS */}
-
-                    {status ===
-                        "ASSIGNED" && (
-                        <button
-                            type="button"
-                            disabled={
-                                isChangingStatus
-                            }
-                            onClick={() =>
-                                handleStatusChange(
-                                    "start-production",
-                                )
-                            }
-                            className="
-                                inline-flex
-                                shrink-0
-                                items-center
-                                justify-center
-                                gap-2
-                                rounded-2xl
-                                bg-[#55624A]
-                                px-6
-                                py-3.5
-                                text-sm
-                                font-semibold
-                                text-white
-                                shadow-sm
-                                transition
-                                hover:bg-[#46523C]
-                                hover:shadow-md
-                                disabled:cursor-not-allowed
-                                disabled:opacity-50
-                            "
-                        >
-
-                            {isChangingStatus ? (
-                                <Loader2
-                                    size={18}
-                                    className="animate-spin"
-                                />
-                            ) : (
-                                <Package
-                                    size={18}
-                                />
-                            )}
-
-                            Começar preparação
-
-                        </button>
-                    )}
-
-                    {status ===
-                        "IN_PRODUCTION" && (
-                        <button
-                            type="button"
-                            disabled={
-                                isChangingStatus
-                            }
-                            onClick={() =>
-                                handleStatusChange(
-                                    "ready-for-delivery",
-                                )
-                            }
-                            className="
-                                inline-flex
-                                shrink-0
-                                items-center
-                                justify-center
-                                gap-2
-                                rounded-2xl
-                                bg-[#55624A]
-                                px-6
-                                py-3.5
-                                text-sm
-                                font-semibold
-                                text-white
-                                shadow-sm
-                                transition
-                                hover:bg-[#46523C]
-                                hover:shadow-md
-                                disabled:cursor-not-allowed
-                                disabled:opacity-50
-                            "
-                        >
-
-                            {isChangingStatus ? (
-                                <Loader2
-                                    size={18}
-                                    className="animate-spin"
-                                />
-                            ) : (
-                                <Check
-                                    size={18}
-                                />
-                            )}
-
-                            Marcar como pronta
-
-                        </button>
-                    )}
-
-                    {status ===
-                        "READY_FOR_DELIVERY" && (
-                        <button
-                            type="button"
-                            disabled={
-                                isChangingStatus
-                            }
-                            onClick={() =>
-                                handleStatusChange(
-                                    "deliver",
-                                )
-                            }
-                            className="
-                                inline-flex
-                                shrink-0
-                                items-center
-                                justify-center
-                                gap-2
-                                rounded-2xl
-                                bg-[#55624A]
-                                px-6
-                                py-3.5
-                                text-sm
-                                font-semibold
-                                text-white
-                                shadow-sm
-                                transition
-                                hover:bg-[#46523C]
-                                hover:shadow-md
-                                disabled:cursor-not-allowed
-                                disabled:opacity-50
-                            "
-                        >
-
-                            {isChangingStatus ? (
-                                <Loader2
-                                    size={18}
-                                    className="animate-spin"
-                                />
-                            ) : (
-                                <CheckCircle2
-                                    size={18}
-                                />
-                            )}
-
-                            Marcar como entregue
-
-                        </button>
-                    )}
-
-                    {status ===
-                        "DELIVERED" && (
-                        <div className="flex shrink-0 items-center gap-2 rounded-2xl bg-white/70 px-4 py-3 text-sm font-medium text-green-700">
-
-                            <CheckCircle2
-                                size={18}
-                            />
-
-                            Processo concluído
-
-                        </div>
-                    )}
-
-                    {status ===
-                        "CANCELLED" && (
-                        <div className="flex shrink-0 items-center gap-2 rounded-2xl bg-white/70 px-4 py-3 text-sm font-medium text-red-700">
-
-                            <XCircle
-                                size={18}
-                            />
-
-                            Sem ações disponíveis
-
-                        </div>
-                    )}
-
+                    <div className="min-w-0 flex-1">
+                        <h2 className="text-xl font-semibold text-[#2F3B2A]">{STATUS_LABELS[order.status]}</h2>
+                        <p className="mt-1 max-w-3xl text-sm leading-6 text-[#7A8474]">{STATUS_DESCRIPTIONS[order.status]}</p>
+                    </div>
+                    <div className="rounded-2xl bg-[#F3F5EE] px-5 py-4 sm:min-w-48">
+                        <p className="text-xs font-medium text-[#7A8474]">Valor da encomenda</p>
+                        <p className="mt-1 text-2xl font-bold text-[#55624A]">{formatCurrency(order.price)}</p>
+                    </div>
                 </div>
 
+                <div className="mt-7 grid gap-4 border-t border-[#EEF0EA] pt-6 sm:grid-cols-2 xl:grid-cols-4">
+                    <SummaryItem icon={<CalendarDays size={18} />} label="Data de entrega" value={formatDate(order.deliveryDate)} detail={TIME_SLOT_LABELS[order.deliveryTimeSlot] ?? order.deliveryTimeSlot} />
+                    <SummaryItem icon={<UserRound size={18} />} label="Destinatário" value={recipientName || "Não indicado"} />
+                    <SummaryItem icon={<MapPin size={18} />} label="Localidade" value={[order.deliveryCity, order.deliveryDistrict].filter(Boolean).join(", ")} />
+                    <SummaryItem icon={<ReceiptText size={18} />} label="Pagamento" value={order.paidAt ? "Pago" : "Por confirmar"} detail={order.paidAt ? formatDateTime(order.paidAt) : undefined} />
+                </div>
             </section>
 
-            {/* ================================================================= */}
-            {/* DELIVERY HIGHLIGHT                                                */}
-            {/* ================================================================= */}
-
-            <div className="mb-6 rounded-3xl bg-[#55624A] p-6 text-white shadow-sm">
-
-                <div className="grid gap-6 md:grid-cols-3">
-
-                    <div className="flex items-start gap-4">
-
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10">
-                            <CalendarDays
-                                size={21}
-                            />
-                        </div>
-
-                        <div>
-
-                            <p className="text-sm text-white/70">
-                                Data de entrega
-                            </p>
-
-                            <p className="mt-1 font-semibold">
-                                {formatDate(
-                                    order.deliveryDate,
-                                )}
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                    <div className="flex items-start gap-4">
-
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10">
-                            <Clock size={21} />
-                        </div>
-
-                        <div>
-
-                            <p className="text-sm text-white/70">
-                                Período
-                            </p>
-
-                            <p className="mt-1 font-semibold">
-                                {formatTimeSlot(
-                                    order.deliveryTimeSlot,
-                                )}
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                    <div className="flex items-start gap-4">
-
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10">
-                            <MapPin
-                                size={21}
-                            />
-                        </div>
-
-                        <div>
-
-                            <p className="text-sm text-white/70">
-                                Local
-                            </p>
-
-                            <p className="mt-1 font-semibold">
-                                {
-                                    order.deliveryCity
-                                }
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            {/* ================================================================= */}
-            {/* CONTENT                                                           */}
-            {/* ================================================================= */}
-
-            <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-
-                <div className="space-y-6">
-
-                    {/* PRODUCTS */}
-
-                    <section className="rounded-3xl bg-white p-6 shadow-sm">
-
-                        <div className="flex items-center gap-3">
-
-                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F5F7F2] text-[#55624A]">
-                                <Package size={20} />
-                            </div>
-
-                            <div>
-
-                                <h2 className="font-semibold text-[#2F3B2A]">
-                                    Produtos
-                                </h2>
-
-                                <p className="text-sm text-gray-500">
-                                    Artigos a preparar
-                                </p>
-
-                            </div>
-
-                        </div>
-
-                        <div className="mt-6 divide-y divide-gray-100">
-
-                            {order.items.map(
-                                (item) => (
-                                    <div
-                                        key={
-                                            item.id
-                                        }
-                                        className="
-                                            flex
-                                            items-center
-                                            justify-between
-                                            gap-4
-                                            py-4
-                                            first:pt-0
-                                            last:pb-0
-                                        "
-                                    >
-
-                                        <div className="min-w-0">
-
-                                            <p className="font-medium text-[#2F3B2A]">
-                                                {
-                                                    item.productName
-                                                }
-                                            </p>
-
-                                            {item.productDescription && (
-                                                <p className="mt-1 line-clamp-2 text-sm text-gray-500">
-                                                    {
-                                                        item.productDescription
-                                                    }
-                                                </p>
-                                            )}
-
-                                        </div>
-
-                                        <div className="shrink-0 text-right">
-
-                                            <p className="text-sm font-medium text-gray-700">
-                                                ×{" "}
-                                                {
-                                                    item.quantity
-                                                }
-                                            </p>
-
-                                            <p className="mt-1 text-sm text-gray-500">
-                                                {formatCurrency(
-                                                    item.lineTotal,
-                                                )}
-                                            </p>
-
-                                        </div>
-
-                                    </div>
-                                ),
-                            )}
-
-                        </div>
-
-                        <div className="mt-6 border-t border-gray-100 pt-5">
-
-                            <div className="flex items-center justify-between">
-
-                                <span className="font-medium text-gray-500">
-                                    Total
-                                </span>
-
-                                <span className="text-2xl font-bold text-[#55624A]">
-                                    {formatCurrency(
-                                        order.total,
-                                    )}
-                                </span>
-
-                            </div>
-
-                        </div>
-
-                    </section>
-
-                    {/* RECIPIENT */}
-
-                    <section className="rounded-3xl bg-white p-6 shadow-sm">
-
-                        <div className="flex items-center gap-3">
-
-                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F5F7F2] text-[#55624A]">
-                                <User size={20} />
-                            </div>
-
-                            <div>
-
-                                <h2 className="font-semibold text-[#2F3B2A]">
-                                    Destinatário
-                                </h2>
-
-                                <p className="text-sm text-gray-500">
-                                    Pessoa que irá receber as flores
-                                </p>
-
-                            </div>
-
-                        </div>
-
-                        <div className="mt-6">
-
-                            <p className="text-lg font-semibold text-[#2F3B2A]">
-                                {
-                                    recipientName
-                                }
-                            </p>
-
-                            {order.recipientPhone && (
-                                <a
-                                    href={`tel:${order.recipientPhone}`}
-                                    className="
-                                        mt-3
-                                        inline-flex
-                                        items-center
-                                        gap-2
-                                        text-sm
-                                        text-[#55624A]
-                                        transition
-                                        hover:underline
-                                    "
-                                >
-                                    <Phone
-                                        size={16}
-                                    />
-
-                                    {
-                                        order.recipientPhone
-                                    }
-                                </a>
-                            )}
-
-                        </div>
-
-                    </section>
-
-                    {/* ADDRESS */}
-
-                    <section className="rounded-3xl bg-white p-6 shadow-sm">
-
-                        <div className="flex items-center gap-3">
-
-                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F5F7F2] text-[#55624A]">
-                                <MapPin
-                                    size={20}
-                                />
-                            </div>
-
-                            <div>
-
-                                <h2 className="font-semibold text-[#2F3B2A]">
-                                    Morada de entrega
-                                </h2>
-
-                                <p className="text-sm text-gray-500">
-                                    Local onde a encomenda deve ser entregue
-                                </p>
-
-                            </div>
-
-                        </div>
-
-                        <div className="mt-6 rounded-2xl bg-[#FAFBF8] p-5">
-
-                            <p className="font-medium text-[#2F3B2A]">
-                                {
-                                    order.deliveryStreet
-                                }
-                            </p>
-
-                            {order.deliveryStreet2 && (
-                                <p className="mt-1 text-gray-600">
-                                    {
-                                        order.deliveryStreet2
-                                    }
-                                </p>
-                            )}
-
-                            <p className="mt-3 text-gray-600">
-                                {
-                                    order.deliveryPostalCode
-                                }{" "}
-                                {
-                                    order.deliveryCity
-                                }
-                            </p>
-
-                            <p className="text-gray-500">
-                                {
-                                    order.deliveryDistrict
-                                }
-                            </p>
-
-                        </div>
-
-                    </section>
-
-                    {/* ADDITIONAL INFORMATION */}
-
-                    {(order.deliveryInstructions ||
-                        order.cardMessage ||
-                        occasion) && (
-                        <section className="rounded-3xl bg-white p-6 shadow-sm">
-
+            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+                <div className="min-w-0 space-y-6">
+                    <section className="overflow-hidden rounded-3xl border border-[#E8EBE4] bg-white shadow-sm">
+                        <div className="border-b border-[#EEF0EA] px-6 py-5 sm:px-8">
                             <div className="flex items-center gap-3">
-
-                                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F5F7F2] text-[#55624A]">
-                                    <MessageSquare
-                                        size={20}
-                                    />
-                                </div>
-
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]"><Package size={19} /></div>
                                 <div>
-
-                                    <h2 className="font-semibold text-[#2F3B2A]">
-                                        Informações adicionais
-                                    </h2>
-
-                                    <p className="text-sm text-gray-500">
-                                        Informações importantes para preparar e entregar a encomenda
-                                    </p>
-
+                                    <h2 className="font-semibold text-[#2F3B2A]">Produtos da encomenda</h2>
+                                    <p className="mt-0.5 text-sm text-[#7A8474]">{order.items.length} {order.items.length === 1 ? "artigo" : "artigos"}</p>
                                 </div>
-
                             </div>
+                        </div>
 
-                            <div className="mt-6 space-y-5">
+                        {order.items.length === 0 ? (
+                            <p className="p-8 text-sm text-[#7A8474]">Não existem artigos associados a esta encomenda.</p>
+                        ) : (
+                            <div className="divide-y divide-[#EEF0EA]">
+                                {order.items.map((item) => <OrderItemCard key={item.id} item={item} />)}
+                            </div>
+                        )}
+                        <div className="flex items-center justify-between gap-4 bg-[#FAFBF8] px-6 py-5 sm:px-8">
+                            <span className="text-sm font-medium text-[#7A8474]">Total da encomenda</span>
+                            <span className="text-xl font-bold text-[#2F3B2A]">{formatCurrency(order.price)}</span>
+                        </div>
+                    </section>
 
-                                {occasion && (
-                                    <div>
-
-                                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                            Ocasião
-                                        </p>
-
-                                        <p className="mt-1 text-gray-700">
-                                            {
-                                                occasion
-                                            }
-                                        </p>
-
-                                    </div>
-                                )}
-
+                    {(order.deliveryInstructions || order.cardMessage) && (
+                        <section className="rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-sm sm:p-8">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]"><MessageSquare size={19} /></div>
+                                <h2 className="font-semibold text-[#2F3B2A]">Instruções e mensagem</h2>
+                            </div>
+                            <div className="mt-5 space-y-4">
                                 {order.deliveryInstructions && (
-                                    <div>
-
-                                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                            Instruções de entrega
-                                        </p>
-
-                                        <p className="mt-1 whitespace-pre-wrap text-gray-700">
-                                            {
-                                                order.deliveryInstructions
-                                            }
-                                        </p>
-
+                                    <div className="rounded-2xl bg-[#FAFBF8] p-4">
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-[#7A8474]">Instruções de entrega</p>
+                                        <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[#374132]">{order.deliveryInstructions}</p>
                                     </div>
                                 )}
-
                                 {order.cardMessage && (
-                                    <div>
-
-                                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                            Mensagem do cartão
-                                        </p>
-
-                                        <div className="mt-2 rounded-2xl bg-[#FAFBF8] p-4">
-
-                                            <p className="whitespace-pre-wrap text-gray-700">
-                                                {
-                                                    order.cardMessage
-                                                }
-                                            </p>
-
-                                        </div>
-
+                                    <div className="rounded-2xl border border-[#E4E8DC] bg-[#F8F9F5] p-4">
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-[#7A8474]">Mensagem do cartão</p>
+                                        <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[#374132]">{order.cardMessage}</p>
                                     </div>
                                 )}
-
                             </div>
-
                         </section>
                     )}
-
                 </div>
 
-                {/* ================================================================= */}
-                {/* SIDEBAR                                                          */}
-                {/* ================================================================= */}
-
-                <aside className="space-y-6">
-
-                    {/* SUMMARY */}
-
-                    <section className="rounded-3xl bg-white p-6 shadow-sm">
-
-                        <h2 className="font-semibold text-[#2F3B2A]">
-                            Resumo
-                        </h2>
-
-                        <div className="mt-5 space-y-4">
-
-                            <div className="flex items-center justify-between gap-4">
-
-                                <span className="text-sm text-gray-500">
-                                    Subtotal
-                                </span>
-
-                                <span className="text-sm font-medium text-gray-700">
-                                    {formatCurrency(
-                                        order.subtotal,
-                                    )}
-                                </span>
-
-                            </div>
-
-                            <div className="flex items-center justify-between gap-4">
-
-                                <span className="text-sm text-gray-500">
-                                    Entrega
-                                </span>
-
-                                <span className="text-sm font-medium text-gray-700">
-                                    {formatCurrency(
-                                        order.deliveryFee,
-                                    )}
-                                </span>
-
-                            </div>
-
-                            {Number(
-                                order.discount,
-                            ) > 0 && (
-                                <div className="flex items-center justify-between gap-4">
-
-                                    <span className="text-sm text-gray-500">
-                                        Desconto
-                                    </span>
-
-                                    <span className="text-sm font-medium text-green-600">
-                                        -
-                                        {formatCurrency(
-                                            order.discount,
-                                        )}
-                                    </span>
-
-                                </div>
-                            )}
-
-                            <div className="border-t border-gray-100 pt-4">
-
-                                <div className="flex items-center justify-between gap-4">
-
-                                    <span className="font-semibold text-[#2F3B2A]">
-                                        Total
-                                    </span>
-
-                                    <span className="text-xl font-bold text-[#55624A]">
-                                        {formatCurrency(
-                                            order.total,
-                                        )}
-                                    </span>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </section>
-
-                    {/* HISTORY */}
-
-                    <section className="rounded-3xl bg-white p-6 shadow-sm">
-
+                <aside className="min-w-0 space-y-6">
+                    <section className="rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-sm">
                         <div className="flex items-center gap-3">
-
-                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F5F7F2] text-[#55624A]">
-                                <History
-                                    size={20}
-                                />
-                            </div>
-
-                            <div>
-
-                                <h2 className="font-semibold text-[#2F3B2A]">
-                                    Histórico
-                                </h2>
-
-                                <p className="text-sm text-gray-500">
-                                    Evolução da encomenda
-                                </p>
-
-                            </div>
-
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]"><MapPin size={19} /></div>
+                            <h2 className="font-semibold text-[#2F3B2A]">Entrega</h2>
                         </div>
-
-                        <div className="mt-6">
-
-                            {order.statusHistory?.length ? (
-                                <div className="relative space-y-6">
-
-                                    <div className="absolute bottom-2 left-[7px] top-2 w-px bg-gray-200" />
-
-                                    {[
-                                        ...order.statusHistory,
-                                    ]
-                                        .sort(
-                                            (
-                                                a,
-                                                b,
-                                            ) =>
-                                                new Date(
-                                                    b.createdAt,
-                                                ).getTime() -
-                                                new Date(
-                                                    a.createdAt,
-                                                ).getTime(),
-                                        )
-                                        .map(
-                                            (
-                                                history,
-                                            ) => {
-                                                const historyStyle =
-                                                    statusStyles[
-                                                        history.toStatus
-                                                    ];
-
-                                                return (
-                                                    <div
-                                                        key={
-                                                            history.id
-                                                        }
-                                                        className="relative flex gap-4"
-                                                    >
-
-                                                        <div
-                                                            className={`
-                                                                relative
-                                                                z-10
-                                                                mt-1
-                                                                h-4
-                                                                w-4
-                                                                shrink-0
-                                                                rounded-full
-                                                                border-4
-                                                                border-white
-                                                                ${historyStyle.dot}
-                                                            `}
-                                                        />
-
-                                                        <div className="min-w-0">
-
-                                                            <p className="font-medium text-[#2F3B2A]">
-                                                                {
-                                                                    statusLabels[
-                                                                        history.toStatus
-                                                                    ]
-                                                                }
-                                                            </p>
-
-                                                            <p className="mt-1 text-xs text-gray-400">
-                                                                {formatDateTime(
-                                                                    history.createdAt,
-                                                                )}
-                                                            </p>
-
-                                                            {history.reason && (
-                                                                <p className="mt-2 text-sm text-gray-500">
-                                                                    {
-                                                                        history.reason
-                                                                    }
-                                                                </p>
-                                                            )}
-
-                                                            {history.changedByUser && (
-                                                                <p className="mt-2 text-xs text-gray-400">
-                                                                    Alterado por{" "}
-                                                                    {
-                                                                        history
-                                                                            .changedByUser
-                                                                            .firstName
-                                                                    }{" "}
-                                                                    {
-                                                                        history
-                                                                            .changedByUser
-                                                                            .lastName
-                                                                    }
-                                                                </p>
-                                                            )}
-
-                                                        </div>
-
-                                                    </div>
-                                                );
-                                            },
-                                        )}
-
-                                </div>
-                            ) : (
-                                <p className="text-sm text-gray-400">
-                                    Ainda não existe histórico disponível.
-                                </p>
-                            )}
-
+                        <div className="mt-5">
+                            <p className="text-xs font-medium uppercase tracking-wide text-[#7A8474]">Morada completa</p>
+                            <p className="mt-2 break-words text-sm leading-6 text-[#374132]">{address || "Morada não disponível"}</p>
                         </div>
-
+                        <div className="mt-5 border-t border-[#EEF0EA] pt-5">
+                            <p className="text-xs font-medium uppercase tracking-wide text-[#7A8474]">Data e período</p>
+                            <p className="mt-2 font-semibold text-[#2F3B2A]">{formatDate(order.deliveryDate)}</p>
+                            <p className="mt-1 text-sm text-[#7A8474]">{TIME_SLOT_LABELS[order.deliveryTimeSlot] ?? order.deliveryTimeSlot}</p>
+                        </div>
                     </section>
 
+                    <section className="rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-sm">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]"><UserRound size={19} /></div>
+                            <h2 className="font-semibold text-[#2F3B2A]">Destinatário</h2>
+                        </div>
+                        <p className="mt-5 break-words font-semibold text-[#2F3B2A]">{recipientName || "Nome não disponível"}</p>
+                        {order.recipientPhone ? (
+                            <a href={`tel:${order.recipientPhone}`} className="mt-3 inline-flex max-w-full items-center gap-2 break-all text-sm font-medium text-[#55624A] hover:underline">
+                                <Phone size={16} className="shrink-0" /> {order.recipientPhone}
+                            </a>
+                        ) : (
+                            <p className="mt-3 text-sm text-[#7A8474]">Sem contacto telefónico disponível.</p>
+                        )}
+                    </section>
+
+                    <section className="rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-sm">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]"><Clock3 size={19} /></div>
+                            <h2 className="font-semibold text-[#2F3B2A]">Histórico</h2>
+                        </div>
+                        <div className="mt-5 space-y-5">
+                            {orderTimeline.map((event, index) => (
+                                <div key={`${event.label}-${event.date}`} className="relative flex gap-3">
+                                    {index < orderTimeline.length - 1 && <span className="absolute left-[15px] top-8 h-[calc(100%+4px)] w-px bg-[#E4E8DC]" />}
+                                    <span className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F3F5EE] text-[#55624A]"><CheckCircle2 size={16} /></span>
+                                    <div className="min-w-0 flex-1 pb-1">
+                                        <p className="text-sm font-semibold text-[#2F3B2A]">{event.label}</p>
+                                        <p className="mt-1 text-xs text-[#7A8474]">{formatDateTime(event.date)}</p>
+                                        <p className="mt-1 text-sm leading-5 text-[#7A8474]">{event.description}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
                 </aside>
-
             </div>
-
         </div>
+    );
+}
+
+function SummaryItem({
+    icon,
+    label,
+    value,
+    detail,
+}: {
+    icon: React.ReactNode;
+    label: string;
+    value: string;
+    detail?: string;
+}) {
+    return (
+        <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]">{icon}</div>
+            <div className="min-w-0">
+                <p className="text-xs font-medium text-[#7A8474]">{label}</p>
+                <p className="mt-1 break-words font-semibold text-[#2F3B2A]">{value}</p>
+                {detail && <p className="mt-1 break-words text-xs text-[#7A8474]">{detail}</p>}
+            </div>
+        </div>
+    );
+}
+
+function OrderItemCard({ item }: { item: FloristOrderItem }) {
+    return (
+        <article className="p-6 sm:px-8">
+            <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F3F5EE] text-[#55624A]"><Package size={21} /></div>
+                <div className="min-w-0 flex-1">
+                    <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="break-words font-semibold text-[#2F3B2A]">{item.name}</h3>
+                                <span className="rounded-full bg-[#F3F5EE] px-2.5 py-1 text-xs font-medium text-[#55624A]">{ITEM_TYPE_LABELS[item.type] ?? item.type}</span>
+                            </div>
+                            <p className="mt-1 text-sm text-[#7A8474]">Quantidade: {item.quantity}</p>
+                        </div>
+                        {(item.variantName || item.variantType) && (
+                            <div className="rounded-xl bg-[#FAFBF8] px-3 py-2 text-sm text-[#55624A]">
+                                {item.variantType ? `${VARIANT_TYPE_LABELS[item.variantType] ?? item.variantType}: ` : ""}{item.variantName ?? "—"}
+                            </div>
+                        )}
+                    </div>
+
+                    {item.description && <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-[#64705D]">{item.description}</p>}
+
+                    {item.components.length > 0 && (
+                        <div className="mt-4 rounded-2xl border border-[#EEF0EA] p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[#7A8474]">Composição</p>
+                            <ul className="mt-3 space-y-2">
+                                {item.components.map((component) => (
+                                    <li key={component.id} className="flex items-start justify-between gap-4 text-sm">
+                                        <span className="min-w-0 break-words text-[#374132]">{component.componentName}</span>
+                                        <span className="shrink-0 font-medium text-[#55624A]">× {component.quantity}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </article>
     );
 }

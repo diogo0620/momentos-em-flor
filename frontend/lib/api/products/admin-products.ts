@@ -5,7 +5,6 @@ import { AdminProductDetail } from "@/types/products/admin/admin-product-detail"
 import { AdminCreateProduct } from "@/types/products/admin/admin-create-product";
 import { AdminUpdateProduct } from "@/types/products/admin/admin-update-product";
 import { AdminProductList } from "@/types/products/admin/admin-product-list";
-import { apiFetch } from "../common/client";
 
 
 

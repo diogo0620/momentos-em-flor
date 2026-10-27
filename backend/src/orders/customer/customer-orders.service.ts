@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import { CustomerCreateOrderDto } from './dtos/customer-create-order.dto';
 import { CustomerOrderQueryDto } from './dtos/customer-order-query.dto';
@@ -444,6 +444,7 @@ export class CustomerOrdersService {
          * 11. Create the order, items and tax totals atomically
          */
 
+        Logger.log("User", user)
         const order = await this.prisma.$transaction(async (tx) => {
             return tx.order.create({
                 data: {

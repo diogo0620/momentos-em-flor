@@ -7,12 +7,14 @@ import { AdminFloristsService } from './admin/admin-florists.service';
 import { FloristFloristsController } from './florist/florist-florists.controller';
 import { FloristFloristsService } from './florist/florist-florists.service';
 import { FloristFloristsMapper } from './florist/mappers/florist-florists.mapper';
+import { GeocodingModule } from '@/geocoding/geocoding.module';
 
 
 
 @Module({
   imports: [
     PrismaModule,
+    GeocodingModule
   ],
   controllers: [
     AdminFloristsController,

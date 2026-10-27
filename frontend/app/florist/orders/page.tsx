@@ -1,1119 +1,319 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import {
-    Search,
+    ArrowDown,
+    ArrowRight,
+    ArrowUp,
+    ArrowUpDown,
+    CalendarDays,
     ChevronLeft,
     ChevronRight,
-    Eye,
-    Package,
-    CalendarDays,
     MapPin,
-    Clock,
+    Package,
+    Search,
+    SlidersHorizontal,
 } from "lucide-react";
 
+import PageHeader from "@/components/admin/common/PageHeader";
+import SearchInput from "@/components/admin/common/SearchInput";
+import DataTable from "@/components/admin/DataTable";
+import type { PaginationParams } from "@/lib/api/common/base-api";
+import { floristOrdersApi } from "@/lib/api/orders/florist-orders";
+import type { FloristOrderList } from "@/types/orders/florist/florist-order-list";
+import type {
+    FloristDeliveryTimeSlot,
+    FloristOrderStatus,
+} from "@/types/orders/florist/florist-order-status";
 
+const PAGE_SIZE = 10;
+type SortOrder = "asc" | "desc";
+type QueryParams = PaginationParams & { status?: FloristOrderStatus };
 
-type Pagination = {
-    page: number;
-    pageSize: number;
-    total: number;
-    pages: number;
-};
+const STATUS_OPTIONS: { value: FloristOrderStatus; label: string }[] = [
+    { value: "ASSIGNED", label: "Atribuída" },
+    { value: "IN_PRODUCTION", label: "Em preparação" },
+    { value: "READY_FOR_DELIVERY", label: "Pronta para entrega" },
+    { value: "DELIVERED", label: "Entregue" },
+    { value: "CANCELLED", label: "Cancelada" },
+];
 
-/* -------------------------------------------------------------------------- */
-/* STATUS                                                                     */
-/* -------------------------------------------------------------------------- */
-
-const statusLabels: Record<OrderStatus, string> = {
+const STATUS_LABELS: Record<FloristOrderStatus, string> = {
     CREATED: "Criada",
-    WAITING_FOR_FLORISTS:
-        "À espera de florista",
+    PENDING_PAYMENT: "Pendente de pagamento",
+    WAITING_FOR_FLORISTS: "À espera de floristas",
     ASSIGNED: "Atribuída",
     IN_PRODUCTION: "Em preparação",
-    READY_FOR_DELIVERY:
-        "Pronta para entrega",
+    READY_FOR_DELIVERY: "Pronta para entrega",
     DELIVERED: "Entregue",
     CANCELLED: "Cancelada",
 };
 
-const statusClasses: Record<OrderStatus, string> = {
-    CREATED:
-        "bg-blue-50 text-blue-700",
-
-    WAITING_FOR_FLORISTS:
-        "bg-yellow-50 text-yellow-700",
-
-    ASSIGNED:
-        "bg-emerald-50 text-emerald-700",
-
-    IN_PRODUCTION:
-        "bg-orange-50 text-orange-700",
-
-    READY_FOR_DELIVERY:
-        "bg-purple-50 text-purple-700",
-
-    DELIVERED:
-        "bg-green-50 text-green-700",
-
-    CANCELLED:
-        "bg-red-50 text-red-700",
+const STATUS_STYLES: Record<FloristOrderStatus, string> = {
+    CREATED: "border-gray-200 bg-gray-100 text-gray-600",
+    PENDING_PAYMENT: "border-amber-100 bg-amber-50 text-amber-700",
+    WAITING_FOR_FLORISTS: "border-yellow-100 bg-yellow-50 text-yellow-700",
+    ASSIGNED: "border-blue-100 bg-blue-50 text-blue-700",
+    IN_PRODUCTION: "border-indigo-100 bg-indigo-50 text-indigo-700",
+    READY_FOR_DELIVERY: "border-violet-100 bg-violet-50 text-violet-700",
+    DELIVERED: "border-green-100 bg-green-50 text-green-700",
+    CANCELLED: "border-red-100 bg-red-50 text-red-700",
 };
 
-const statusDotClasses: Record<OrderStatus, string> = {
-    CREATED:
-        "bg-blue-500",
-
-    WAITING_FOR_FLORISTS:
-        "bg-yellow-500",
-
-    ASSIGNED:
-        "bg-emerald-500",
-
-    IN_PRODUCTION:
-        "bg-orange-500",
-
-    READY_FOR_DELIVERY:
-        "bg-purple-500",
-
-    DELIVERED:
-        "bg-green-500",
-
-    CANCELLED:
-        "bg-red-500",
+const TIME_SLOT_LABELS: Record<FloristDeliveryTimeSlot, string> = {
+    MORNING: "Manhã",
+    AFTERNOON: "Tarde",
+    EVENING: "Final do dia",
 };
 
-/* -------------------------------------------------------------------------- */
-/* HELPERS                                                                    */
-/* -------------------------------------------------------------------------- */
-
-function formatDate(
-    value: string,
-) {
-    return new Intl.DateTimeFormat(
-        "pt-PT",
-        {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-        },
-    ).format(new Date(value));
+function formatPrice(value: number) {
+    return new Intl.NumberFormat("pt-PT", {
+        style: "currency",
+        currency: "EUR",
+    }).format(Number(value));
 }
 
-function formatCurrency(
-    value: number,
-) {
-    return new Intl.NumberFormat(
-        "pt-PT",
-        {
-            style: "currency",
-            currency: "EUR",
-        },
-    ).format(Number(value));
+function formatDate(value: string, withTime = false) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "—";
+
+    return new Intl.DateTimeFormat("pt-PT", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
+    }).format(date);
 }
-
-function formatTimeSlot(
-    value: string,
-) {
-    const labels: Record<string, string> = {
-        MORNING: "Manhã",
-        AFTERNOON: "Tarde",
-        EVENING: "Noite",
-    };
-
-    return labels[value] ?? value;
-}
-
-function getRecipientName(
-    order: Order,
-) {
-    return [
-        order.recipientFirstName,
-        order.recipientLastName,
-    ]
-        .filter(Boolean)
-        .join(" ");
-}
-
-/* -------------------------------------------------------------------------- */
-/* PAGE                                                                       */
-/* -------------------------------------------------------------------------- */
 
 export default function FloristOrdersPage() {
-    const [orders, setOrders] =
-        useState<Order[]>([]);
+    const [orders, setOrders] = useState<FloristOrderList[]>([]);
+    const [page, setPage] = useState(1);
+    const [pages, setPages] = useState(0);
+    const [total, setTotal] = useState(0);
+    const [searchInput, setSearchInput] = useState("");
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
+    const [sort, setSort] = useState("createdAt");
+    const [order, setOrder] = useState<SortOrder>("desc");
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const [pagination, setPagination] =
-        useState<Pagination>({
-            page: 1,
-            pageSize: 10,
-            total: 0,
-            pages: 0,
-        });
+    const loadOrders = useCallback(async (requestedPage = 1) => {
+        try {
+            setIsLoading(true);
+            setError(null);
+            const params: QueryParams = {
+                page: requestedPage,
+                pageSize: PAGE_SIZE,
+                search: search || undefined,
+                sort,
+                order,
+            };
+            if (statusFilter) params.status = statusFilter as FloristOrderStatus;
 
-    const [searchInput, setSearchInput] =
-        useState("");
-
-    const [search, setSearch] =
-        useState("");
-
-    const [status, setStatus] =
-        useState<string>("");
-
-    const [isLoading, setIsLoading] =
-        useState(true);
-
-    const [error, setError] =
-        useState<string | null>(null);
-
-    /* ---------------------------------------------------------------------- */
-    /* LOAD ORDERS                                                            */
-    /* ---------------------------------------------------------------------- */
-
-    const loadOrders = useCallback(
-        async (page = 1) => {
-            try {
-                setIsLoading(true);
-                setError(null);
-
-                const response =
-                    await getOrders({
-                        page,
-                        pageSize: 10,
-                        search,
-                        sort: "createdAt",
-                        order: "desc",
-                    });
-
-                let data =
-                    response.data;
-
-                /*
-                 * Temporariamente filtramos o estado
-                 * no frontend.
-                 *
-                 * Idealmente o backend deverá receber
-                 * o status como query parameter para
-                 * que a paginação seja correta.
-                 */
-                if (status) {
-                    data = data.filter(
-                        (order) =>
-                            order.status ===
-                            status,
-                    );
-                }
-
-                setOrders(data);
-
-                setPagination(
-                    response.pagination,
-                );
-            } catch (err) {
-                setError(
-                    err instanceof Error
-                        ? err.message
-                        : "Não foi possível carregar as encomendas.",
-                );
-            } finally {
-                setIsLoading(false);
-            }
-        },
-        [search, status],
-    );
+            const response = await floristOrdersApi.getAll(params);
+            setOrders(response.items);
+            setPage(response.page);
+            setPages(response.pages);
+            setTotal(response.total);
+        } catch (err) {
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Não foi possível carregar as encomendas.",
+            );
+        } finally {
+            setIsLoading(false);
+        }
+    }, [search, statusFilter, sort, order]);
 
     useEffect(() => {
-        loadOrders(1);
+        void loadOrders(1);
     }, [loadOrders]);
 
-    /* ---------------------------------------------------------------------- */
-    /* SEARCH                                                                  */
-    /* ---------------------------------------------------------------------- */
-
-    function handleSearch(
-        event: React.FormEvent,
-    ) {
+    function handleSearch(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-
-        setSearch(
-            searchInput.trim(),
-        );
+        setSearch(searchInput.trim());
     }
 
-    /* ---------------------------------------------------------------------- */
-    /* FILTERS                                                                 */
-    /* ---------------------------------------------------------------------- */
-
-    function clearFilters() {
+    function resetFilters() {
         setSearchInput("");
         setSearch("");
-        setStatus("");
+        setStatusFilter("");
     }
 
-    /* ---------------------------------------------------------------------- */
-    /* LOADING                                                                  */
-    /* ---------------------------------------------------------------------- */
-
-    if (isLoading) {
-        return (
-            <div>
-
-                <div className="mb-8">
-
-                    <h1 className="text-3xl font-bold text-[#2F3B2A]">
-                        Encomendas
-                    </h1>
-
-                    <p className="mt-2 text-gray-500">
-                        Consulte e acompanhe as encomendas atribuídas à sua florista.
-                    </p>
-
-                </div>
-
-                <div className="space-y-4">
-
-                    {[1, 2, 3, 4].map(
-                        (item) => (
-                            <div
-                                key={item}
-                                className="
-                                    h-28
-                                    animate-pulse
-                                    rounded-3xl
-                                    bg-gray-100
-                                "
-                            />
-                        ),
-                    )}
-
-                </div>
-
-            </div>
-        );
+    function handleSort(field: string) {
+        if (sort === field) {
+            setOrder((current) => current === "asc" ? "desc" : "asc");
+        } else {
+            setSort(field);
+            setOrder(field === "createdAt" ? "desc" : "asc");
+        }
     }
-
-    /* ---------------------------------------------------------------------- */
-    /* ERROR                                                                    */
-    /* ---------------------------------------------------------------------- */
-
-    if (error) {
-        return (
-            <div>
-
-                <div className="mb-8">
-
-                    <h1 className="text-3xl font-bold text-[#2F3B2A]">
-                        Encomendas
-                    </h1>
-
-                    <p className="mt-2 text-gray-500">
-                        Consulte e acompanhe as encomendas atribuídas à sua florista.
-                    </p>
-
-                </div>
-
-                <div className="rounded-3xl bg-red-50 p-8 text-center text-red-600">
-                    {error}
-                </div>
-
-            </div>
-        );
-    }
-
-    /* ---------------------------------------------------------------------- */
-    /* PAGE                                                                     */
-    /* ---------------------------------------------------------------------- */
 
     return (
-        <div>
+        <div className="space-y-6 pb-10">
+            <PageHeader
+                title="As minhas encomendas"
+                subtitle="Acompanha as encomendas atribuídas à tua florista e consulta os detalhes de entrega."
+            />
 
-            {/* ---------------------------------------------------------------- */}
-            {/* HEADER                                                           */}
-            {/* ---------------------------------------------------------------- */}
-
-            <div className="mb-8">
-
-                <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-
+            <section className="rounded-3xl bg-white p-5 shadow-sm sm:p-6">
+                <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]">
+                        <SlidersHorizontal size={19} />
+                    </div>
                     <div>
-
-                        <p className="text-sm font-medium uppercase tracking-wider text-[#55624A]">
-                            Portal da Florista
-                        </p>
-
-                        <h1 className="mt-2 text-3xl font-bold text-[#2F3B2A]">
-                            Encomendas
-                        </h1>
-
-                        <p className="mt-2 text-gray-500">
-                            Consulte e acompanhe as encomendas atribuídas à sua florista.
-                        </p>
-
+                        <h2 className="font-semibold text-[#2F3B2A]">Pesquisa e filtros</h2>
+                        <p className="text-xs text-gray-400">Pesquisa pelo número da encomenda ou localidade e filtra pelo estado.</p>
                     </div>
-
-                    <div
-                        className="
-                            inline-flex
-                            items-center
-                            gap-2
-                            self-start
-                            rounded-full
-                            bg-[#F5F7F2]
-                            px-4
-                            py-2
-                            text-sm
-                            font-medium
-                            text-[#55624A]
-                        "
-                    >
-                        <Package size={16} />
-
-                        {pagination.total}{" "}
-                        {pagination.total === 1
-                            ? "encomenda"
-                            : "encomendas"}
-                    </div>
-
                 </div>
 
-            </div>
-
-            {/* ---------------------------------------------------------------- */}
-            {/* FILTERS                                                          */}
-            {/* ---------------------------------------------------------------- */}
-
-            <div className="mb-6 rounded-3xl bg-white p-5 shadow-sm">
-
-                <div className="flex flex-col gap-4 lg:flex-row">
-
-                    <form
-                        onSubmit={
-                            handleSearch
-                        }
-                        className="flex flex-1 gap-3"
-                    >
-
-                        <div className="relative flex-1">
-
-                            <Search
-                                size={18}
-                                className="
-                                    absolute
-                                    left-4
-                                    top-1/2
-                                    -translate-y-1/2
-                                    text-gray-400
-                                "
+                <form onSubmit={handleSearch} className="mt-5 space-y-4">
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                        <div className="flex-1">
+                            <SearchInput
+                                value={searchInput}
+                                onChange={setSearchInput}
+                                placeholder="Número da encomenda ou localidade..."
                             />
-
-                            <input
-                                type="text"
-                                value={
-                                    searchInput
-                                }
-                                onChange={(
-                                    event,
-                                ) =>
-                                    setSearchInput(
-                                        event
-                                            .target
-                                            .value,
-                                    )
-                                }
-                                placeholder="Pesquisar por encomenda..."
-                                className="
-                                    w-full
-                                    rounded-2xl
-                                    border
-                                    border-gray-200
-                                    bg-white
-                                    py-3
-                                    pl-11
-                                    pr-4
-                                    outline-none
-                                    transition
-                                    focus:border-[#55624A]
-                                    focus:ring-4
-                                    focus:ring-[#55624A]/10
-                                "
-                            />
-
                         </div>
-
-                        <button
-                            type="submit"
-                            className="
-                                rounded-2xl
-                                bg-[#55624A]
-                                px-6
-                                font-medium
-                                text-white
-                                transition
-                                hover:opacity-90
-                            "
-                        >
-                            Pesquisar
+                        <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#55624A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#46523C]">
+                            <Search size={17} /> Pesquisar
                         </button>
+                    </div>
 
-                    </form>
-
-                    <select
-                        value={status}
-                        onChange={(
-                            event,
-                        ) =>
-                            setStatus(
-                                event.target
-                                    .value,
-                            )
-                        }
-                        className="
-                            rounded-2xl
-                            border
-                            border-gray-200
-                            bg-white
-                            px-5
-                            py-3
-                            text-sm
-                            outline-none
-                            focus:border-[#55624A]
-                        "
-                    >
-                        <option value="">
-                            Todos os estados
-                        </option>
-
-                        {Object.entries(
-                            statusLabels,
-                        ).map(
-                            ([
-                                value,
-                                label,
-                            ]) => (
-                                <option
-                                    key={
-                                        value
-                                    }
-                                    value={
-                                        value
-                                    }
-                                >
-                                    {label}
-                                </option>
-                            ),
-                        )}
-                    </select>
-
-                    {(search ||
-                        status) && (
-                        <button
-                            type="button"
-                            onClick={
-                                clearFilters
-                            }
-                            className="
-                                rounded-2xl
-                                px-4
-                                py-3
-                                text-sm
-                                font-medium
-                                text-gray-500
-                                transition
-                                hover:bg-gray-100
-                            "
+                    <label className="block sm:max-w-md">
+                        <span className="mb-2 block text-xs font-semibold text-gray-500">Estado da encomenda</span>
+                        <select
+                            value={statusFilter}
+                            onChange={(event) => setStatusFilter(event.target.value)}
+                            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700 outline-none transition focus:border-[#55624A] focus:ring-4 focus:ring-[#55624A]/10"
                         >
-                            Limpar
+                            <option value="">Todos os estados</option>
+                            {STATUS_OPTIONS.map((status) => (
+                                <option key={status.value} value={status.value}>{status.label}</option>
+                            ))}
+                        </select>
+                    </label>
+
+                    <div className="flex justify-end">
+                        <button type="button" onClick={resetFilters} className="text-sm font-medium text-gray-500 transition hover:text-[#55624A]">
+                            Limpar filtros
                         </button>
-                    )}
+                    </div>
+                </form>
+            </section>
 
+            {error && (
+                <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-red-100 bg-red-50 p-5 text-sm text-red-600 sm:flex-row sm:items-center sm:justify-between">
+                    <p>{error}</p>
+                    <button type="button" onClick={() => void loadOrders(page)} className="font-semibold underline">Tentar novamente</button>
                 </div>
-
-            </div>
-
-            {/* ---------------------------------------------------------------- */}
-            {/* EMPTY                                                            */}
-            {/* ---------------------------------------------------------------- */}
-
-            {orders.length === 0 ? (
-                <div className="rounded-3xl bg-white p-14 text-center shadow-sm">
-
-                    <div
-                        className="
-                            mx-auto
-                            flex
-                            h-16
-                            w-16
-                            items-center
-                            justify-center
-                            rounded-full
-                            bg-[#F5F7F2]
-                            text-[#55624A]
-                        "
-                    >
-                        <Package size={28} />
-                    </div>
-
-                    <h2 className="mt-5 text-xl font-semibold text-[#2F3B2A]">
-                        Nenhuma encomenda encontrada
-                    </h2>
-
-                    <p className="mt-2 text-sm text-gray-500">
-                        Não existem encomendas que correspondam aos filtros selecionados.
-                    </p>
-
-                </div>
-            ) : (
-                <>
-
-                    {/* ======================================================== */}
-                    {/* DESKTOP                                                   */}
-                    {/* ======================================================== */}
-
-                    <div className="hidden overflow-hidden rounded-3xl bg-white shadow-sm lg:block">
-
-                        <table className="w-full">
-
-                            <thead>
-
-                                <tr className="border-b border-gray-100 text-left">
-
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                        Encomenda
-                                    </th>
-
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                        Destinatário
-                                    </th>
-
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                        Entrega
-                                    </th>
-
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                        Local
-                                    </th>
-
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                        Valor
-                                    </th>
-
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                        Estado
-                                    </th>
-
-                                    <th className="px-6 py-4" />
-
-                                </tr>
-
-                            </thead>
-
-                            <tbody>
-
-                                {orders.map(
-                                    (order) => (
-                                        <tr
-                                            key={
-                                                order.id
-                                            }
-                                            className="
-                                                border-b
-                                                border-gray-50
-                                                last:border-0
-                                                transition
-                                                hover:bg-[#FAFBF8]
-                                            "
-                                        >
-
-                                            {/* ORDER */}
-
-                                            <td className="px-6 py-5">
-
-                                                <div>
-
-                                                    <p className="font-semibold text-[#2F3B2A]">
-                                                        #
-                                                        {
-                                                            order.orderNumber
-                                                        }
-                                                    </p>
-
-                                                    <p className="mt-1 text-xs text-gray-400">
-                                                        Criada em{" "}
-                                                        {formatDate(
-                                                            order.createdAt,
-                                                        )}
-                                                    </p>
-
-                                                </div>
-
-                                            </td>
-
-                                            {/* RECIPIENT */}
-
-                                            <td className="px-6 py-5">
-
-                                                <p className="font-medium text-gray-700">
-                                                    {getRecipientName(
-                                                        order,
-                                                    )}
-                                                </p>
-
-                                            </td>
-
-                                            {/* DELIVERY */}
-
-                                            <td className="px-6 py-5">
-
-                                                <div className="space-y-2">
-
-                                                    <div className="flex items-center gap-2">
-
-                                                        <CalendarDays
-                                                            size={
-                                                                16
-                                                            }
-                                                            className="text-gray-400"
-                                                        />
-
-                                                        <span className="text-sm font-medium text-gray-700">
-                                                            {formatDate(
-                                                                order.deliveryDate,
-                                                            )}
-                                                        </span>
-
-                                                    </div>
-
-                                                    <div className="flex items-center gap-2">
-
-                                                        <Clock
-                                                            size={
-                                                                15
-                                                            }
-                                                            className="text-gray-400"
-                                                        />
-
-                                                        <span className="text-xs text-gray-500">
-                                                            {formatTimeSlot(
-                                                                order.deliveryTimeSlot,
-                                                            )}
-                                                        </span>
-
-                                                    </div>
-
-                                                </div>
-
-                                            </td>
-
-                                            {/* LOCATION */}
-
-                                            <td className="px-6 py-5">
-
-                                                <div className="flex items-center gap-2">
-
-                                                    <MapPin
-                                                        size={
-                                                            16
-                                                        }
-                                                        className="text-gray-400"
-                                                    />
-
-                                                    <span className="text-sm text-gray-600">
-                                                        {
-                                                            order.deliveryCity
-                                                        }
-                                                    </span>
-
-                                                </div>
-
-                                            </td>
-
-                                            {/* VALUE */}
-
-                                            <td className="px-6 py-5">
-
-                                                <span className="font-semibold text-[#2F3B2A]">
-                                                    {formatCurrency(
-                                                        order.total,
-                                                    )}
-                                                </span>
-
-                                            </td>
-
-                                            {/* STATUS */}
-
-                                            <td className="px-6 py-5">
-
-                                                <span
-                                                    className={`
-                                                        inline-flex
-                                                        items-center
-                                                        gap-2
-                                                        rounded-full
-                                                        px-3
-                                                        py-1.5
-                                                        text-xs
-                                                        font-medium
-                                                        ${
-                                                            statusClasses[
-                                                                order.status
-                                                            ]
-                                                        }
-                                                    `}
-                                                >
-
-                                                    <span
-                                                        className={`
-                                                            h-1.5
-                                                            w-1.5
-                                                            rounded-full
-                                                            ${
-                                                                statusDotClasses[
-                                                                    order.status
-                                                                ]
-                                                            }
-                                                        `}
-                                                    />
-
-                                                    {
-                                                        statusLabels[
-                                                            order.status
-                                                        ]
-                                                    }
-
-                                                </span>
-
-                                            </td>
-
-                                            {/* DETAIL */}
-
-                                            <td className="px-6 py-5">
-
-                                                <Link
-                                                    href={`/florist/orders/${order.id}`}
-                                                    className="
-                                                        flex
-                                                        h-10
-                                                        w-10
-                                                        items-center
-                                                        justify-center
-                                                        rounded-full
-                                                        bg-[#F5F7F2]
-                                                        text-[#55624A]
-                                                        transition
-                                                        hover:bg-[#D6DEC8]
-                                                    "
-                                                    title="Ver encomenda"
-                                                >
-                                                    <Eye
-                                                        size={
-                                                            18
-                                                        }
-                                                    />
-                                                </Link>
-
-                                            </td>
-
-                                        </tr>
-                                    ),
-                                )}
-
-                            </tbody>
-
-                        </table>
-
-                    </div>
-
-                    {/* ======================================================== */}
-                    {/* MOBILE                                                    */}
-                    {/* ======================================================== */}
-
-                    <div className="space-y-4 lg:hidden">
-
-                        {orders.map(
-                            (order) => (
-                                <Link
-                                    key={
-                                        order.id
-                                    }
-                                    href={`/florist/orders/${order.id}`}
-                                    className="
-                                        block
-                                        rounded-3xl
-                                        bg-white
-                                        p-5
-                                        shadow-sm
-                                        transition
-                                        hover:shadow-md
-                                    "
-                                >
-
-                                    {/* TOP */}
-
-                                    <div className="flex items-start justify-between gap-4">
-
-                                        <div>
-
-                                            <p className="font-semibold text-[#2F3B2A]">
-                                                #
-                                                {
-                                                    order.orderNumber
-                                                }
-                                            </p>
-
-                                            <p className="mt-1 text-sm text-gray-500">
-                                                {getRecipientName(
-                                                    order,
-                                                )}
-                                            </p>
-
-                                        </div>
-
-                                        <span
-                                            className={`
-                                                inline-flex
-                                                shrink-0
-                                                items-center
-                                                gap-2
-                                                rounded-full
-                                                px-3
-                                                py-1.5
-                                                text-xs
-                                                font-medium
-                                                ${
-                                                    statusClasses[
-                                                        order.status
-                                                    ]
-                                                }
-                                            `}
-                                        >
-
-                                            <span
-                                                className={`
-                                                    h-1.5
-                                                    w-1.5
-                                                    rounded-full
-                                                    ${
-                                                        statusDotClasses[
-                                                            order.status
-                                                        ]
-                                                    }
-                                                `}
-                                            />
-
-                                            {
-                                                statusLabels[
-                                                    order.status
-                                                ]
-                                            }
-
-                                        </span>
-
-                                    </div>
-
-                                    {/* DELIVERY */}
-
-                                    <div className="mt-5 grid grid-cols-2 gap-4 border-t border-gray-100 pt-4">
-
-                                        <div>
-
-                                            <div className="flex items-center gap-2">
-
-                                                <CalendarDays
-                                                    size={
-                                                        15
-                                                    }
-                                                    className="text-gray-400"
-                                                />
-
-                                                <p className="text-xs text-gray-400">
-                                                    Entrega
-                                                </p>
-
-                                            </div>
-
-                                            <p className="mt-1 text-sm font-medium text-gray-700">
-                                                {formatDate(
-                                                    order.deliveryDate,
-                                                )}
-                                            </p>
-
-                                            <p className="mt-1 text-xs text-gray-400">
-                                                {formatTimeSlot(
-                                                    order.deliveryTimeSlot,
-                                                )}
-                                            </p>
-
-                                        </div>
-
-                                        <div>
-
-                                            <div className="flex items-center gap-2">
-
-                                                <MapPin
-                                                    size={
-                                                        15
-                                                    }
-                                                    className="text-gray-400"
-                                                />
-
-                                                <p className="text-xs text-gray-400">
-                                                    Local
-                                                </p>
-
-                                            </div>
-
-                                            <p className="mt-1 text-sm font-medium text-gray-700">
-                                                {
-                                                    order.deliveryCity
-                                                }
-                                            </p>
-
-                                        </div>
-
-                                    </div>
-
-                                    {/* BOTTOM */}
-
-                                    <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4">
-
-                                        <div>
-
-                                            <p className="text-xs text-gray-400">
-                                                Valor da encomenda
-                                            </p>
-
-                                            <p className="mt-1 font-semibold text-[#55624A]">
-                                                {formatCurrency(
-                                                    order.total,
-                                                )}
-                                            </p>
-
-                                        </div>
-
-                                        <div className="flex items-center gap-1 text-sm font-medium text-[#55624A]">
-
-                                            Ver detalhes
-
-                                            <Eye
-                                                size={
-                                                    16
-                                                }
-                                            />
-
-                                        </div>
-
-                                    </div>
-
-                                </Link>
-                            ),
-                        )}
-
-                    </div>
-
-                    {/* ======================================================== */}
-                    {/* PAGINATION                                                */}
-                    {/* ======================================================== */}
-
-                    {pagination.pages >
-                        1 && (
-                        <div className="mt-8 flex items-center justify-center gap-4">
-
-                            <button
-                                type="button"
-                                disabled={
-                                    pagination.page <=
-                                    1
-                                }
-                                onClick={() =>
-                                    loadOrders(
-                                        pagination.page -
-                                            1,
-                                    )
-                                }
-                                className="
-                                    flex
-                                    h-11
-                                    w-11
-                                    items-center
-                                    justify-center
-                                    rounded-full
-                                    border
-                                    border-gray-200
-                                    transition
-                                    hover:bg-[#F5F7F2]
-                                    disabled:cursor-not-allowed
-                                    disabled:opacity-40
-                                "
-                            >
-                                <ChevronLeft
-                                    size={
-                                        20
-                                    }
-                                />
-                            </button>
-
-                            <span className="text-sm text-gray-500">
-
-                                Página{" "}
-
-                                <strong className="text-[#2F3B2A]">
-                                    {
-                                        pagination.page
-                                    }
-                                </strong>
-
-                                {" "}de{" "}
-
-                                <strong className="text-[#2F3B2A]">
-                                    {
-                                        pagination.pages
-                                    }
-                                </strong>
-
-                            </span>
-
-                            <button
-                                type="button"
-                                disabled={
-                                    pagination.page >=
-                                    pagination.pages
-                                }
-                                onClick={() =>
-                                    loadOrders(
-                                        pagination.page +
-                                            1,
-                                    )
-                                }
-                                className="
-                                    flex
-                                    h-11
-                                    w-11
-                                    items-center
-                                    justify-center
-                                    rounded-full
-                                    border
-                                    border-gray-200
-                                    transition
-                                    hover:bg-[#F5F7F2]
-                                    disabled:cursor-not-allowed
-                                    disabled:opacity-40
-                                "
-                            >
-                                <ChevronRight
-                                    size={
-                                        20
-                                    }
-                                />
-                            </button>
-
-                        </div>
-                    )}
-
-                </>
-
             )}
 
+            <DataTable>
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead>
+                            <tr className="border-b border-gray-100 bg-[#FAFBF8] text-left">
+                                <th className="px-5 py-4"><SortButton label="Encomenda" field="orderNumber" currentSort={sort} order={order} onSort={handleSort} /></th>
+                                <th className="px-5 py-4"><SortButton label="Entrega" field="deliveryDate" currentSort={sort} order={order} onSort={handleSort} /></th>
+                                <th className="px-5 py-4 font-semibold text-[#2F3B2A]">Localidade</th>
+                                <th className="px-5 py-4"><SortButton label="Valor" field="price" currentSort={sort} order={order} onSort={handleSort} /></th>
+                                <th className="px-5 py-4"><SortButton label="Estado" field="status" currentSort={sort} order={order} onSort={handleSort} /></th>
+                                <th className="px-5 py-4"><SortButton label="Criada em" field="createdAt" currentSort={sort} order={order} onSort={handleSort} /></th>
+                                <th className="px-5 py-4 text-right font-semibold text-[#2F3B2A]">Detalhes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {isLoading ? <LoadingRows /> : orders.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} className="px-6 py-20 text-center">
+                                        <Package size={30} className="mx-auto text-[#55624A]" />
+                                        <p className="mt-4 font-semibold text-[#2F3B2A]">Nenhuma encomenda encontrada</p>
+                                        <p className="mt-1 text-sm text-gray-400">Quando aceitares uma proposta, a encomenda aparecerá aqui.</p>
+                                    </td>
+                                </tr>
+                            ) : orders.map((item) => (
+                                <tr key={item.id} className="group border-b border-gray-50 transition hover:bg-[#FAFBF8]">
+                                    <td className="px-5 py-5">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F3F5EE] text-[#55624A]"><Package size={20} /></div>
+                                            <div className="min-w-0">
+                                                <p className="font-semibold text-[#2F3B2A]">{item.orderNumber}</p>
+                                                <p className="mt-1 text-xs text-gray-400">ID interno: {item.id}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-5 py-5">
+                                        <div className="flex items-center gap-2 text-sm font-medium text-[#2F3B2A]"><CalendarDays size={15} className="shrink-0 text-[#77836B]" />{formatDate(item.deliveryDate)}</div>
+                                        <p className="mt-1 pl-[23px] text-xs text-gray-400">{TIME_SLOT_LABELS[item.deliveryTimeSlot] ?? item.deliveryTimeSlot}</p>
+                                    </td>
+                                    <td className="px-5 py-5">
+                                        <div className="flex items-center gap-2 text-sm font-medium text-[#2F3B2A]"><MapPin size={15} className="shrink-0 text-[#77836B]" />{item.deliveryCity || "—"}</div>
+                                        <p className="mt-1 pl-[23px] text-xs text-gray-400">{item.deliveryDistrict || "—"}</p>
+                                    </td>
+                                    <td className="px-5 py-5 font-semibold text-[#2F3B2A]">{formatPrice(item.price)}</td>
+                                    <td className="px-5 py-5">
+                                        <span className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold ${STATUS_STYLES[item.status]}`}>{STATUS_LABELS[item.status] ?? item.status}</span>
+                                    </td>
+                                    <td className="px-5 py-5 text-sm text-gray-500">{formatDate(item.createdAt.toString(), true)}</td>
+                                    <td className="px-5 py-5">
+                                        <div className="flex justify-end">
+                                            <Link href={`/florist/orders/${item.id}`} title={`Consultar encomenda ${item.orderNumber}`} aria-label={`Consultar encomenda ${item.orderNumber}`} className="flex h-9 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold text-[#55624A] transition hover:bg-[#F3F5EE]">
+                                                Ver <ArrowRight size={16} />
+                                            </Link>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                {!isLoading && pages > 0 && (
+                    <div className="flex flex-col gap-4 border-t border-gray-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p className="text-sm text-gray-500">A mostrar <span className="font-semibold text-gray-700">{orders.length}</span> de <span className="font-semibold text-gray-700">{total}</span> encomendas</p>
+                            <p className="mt-1 text-xs text-gray-400">Página {page} de {pages}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button type="button" disabled={page <= 1} onClick={() => void loadOrders(page - 1)} aria-label="Página anterior" className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition hover:bg-[#F5F7F2] disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={18} /></button>
+                            <span className="flex h-10 min-w-10 items-center justify-center rounded-xl bg-[#55624A] px-3 text-sm font-semibold text-white">{page}</span>
+                            <span className="text-sm text-gray-400">/ {pages}</span>
+                            <button type="button" disabled={page >= pages} onClick={() => void loadOrders(page + 1)} aria-label="Página seguinte" className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition hover:bg-[#F5F7F2] disabled:cursor-not-allowed disabled:opacity-40"><ChevronRight size={18} /></button>
+                        </div>
+                    </div>
+                )}
+            </DataTable>
         </div>
     );
+}
+
+function SortButton({
+    label,
+    field,
+    currentSort,
+    order,
+    onSort,
+}: {
+    label: string;
+    field: string;
+    currentSort: string;
+    order: SortOrder;
+    onSort: (field: string) => void;
+}) {
+    const active = currentSort === field;
+    return (
+        <button type="button" onClick={() => onSort(field)} className="inline-flex items-center gap-2 font-semibold text-[#2F3B2A] transition hover:text-[#55624A]">
+            {label}
+            {active ? order === "asc" ? <ArrowUp size={15} className="text-[#55624A]" /> : <ArrowDown size={15} className="text-[#55624A]" /> : <ArrowUpDown size={15} className="text-gray-400" />}
+        </button>
+    );
+}
+
+function LoadingRows() {
+    return <>{Array.from({ length: 5 }).map((_, row) => <tr key={row} className="border-b border-gray-50">{Array.from({ length: 7 }).map((_, cell) => <td key={cell} className="px-5 py-5"><div className="h-5 animate-pulse rounded-lg bg-gray-100" /></td>)}</tr>)}</>;
 }

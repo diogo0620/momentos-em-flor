@@ -1,3 +1,6 @@
+import { AdminOrderOfferDeclineReason } from "./admin-order-offer-detail";
+
 export type AdminDeclineOrderOffer = {
-    declineReason: string;
-}
+    declineReason: AdminOrderOfferDeclineReason;
+    declineReasonDetails: string;
+};

@@ -1,6 +1,6 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { OrderOfferStatus } from '@prisma/client';
+import { OrderOfferStatus,OrderOfferDeclineReason,OrderOfferCancellationReason } from '@prisma/client';
 
 export class AdminOrderOfferFloristResponseDto {
     @ApiProperty({ example: 5 })
@@ -65,8 +65,23 @@ export class AdminOrderOfferResponseDto {
     @ApiPropertyOptional({ nullable: true, type: String })
     expiresAt?: Date | null;
 
+    @ApiPropertyOptional({
+        enum: OrderOfferDeclineReason,
+        nullable: true,
+    })
+    declineReason?: OrderOfferDeclineReason | null;
+
     @ApiPropertyOptional({ nullable: true })
-    declineReason?: string | null;
+    declineReasonDetails?: string | null;
+
+    @ApiPropertyOptional({ nullable: true, type: String })
+    cancelledAt?: Date | null;
+
+    @ApiPropertyOptional({
+        enum: OrderOfferCancellationReason,
+        nullable: true,
+    })
+    cancellationReason?: OrderOfferCancellationReason | null;
 
     @ApiProperty({ type: String, format: 'date-time' })
     createdAt?: Date;
@@ -74,5 +89,5 @@ export class AdminOrderOfferResponseDto {
     @ApiProperty({ type: String, format: 'date-time' })
     updatedAt?: Date;
 
-    
+
 }

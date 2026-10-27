@@ -50,7 +50,10 @@ export class AdminOrderOffersMapper extends BaseMapper<
             acceptedAt: offer.acceptedAt ?? null,
             declinedAt: offer.declinedAt ?? null,
             expiresAt: offer.expiresAt ?? null,
+            cancelledAt: offer.cancelledAt ?? null,
+            cancellationReason: offer.cancellationReason ?? null,
             declineReason: offer.declineReason ?? null,
+            declineReasonDetails: offer.declineReasonDetails ?? null,
             createdAt: offer.createdAt,
             updatedAt: offer.updatedAt,
         };

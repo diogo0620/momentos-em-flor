@@ -42,6 +42,7 @@ import type {
     AdminOrderCancellationReason,
     AdminOrderItemType,
     AdminOrderOfferStatus,
+    AdminOrderOfferDeclineReason,
     AdminOrderStatus,
     AdminProductVariantType,
 } from "@/types/orders/admin/admin-order-status";
@@ -112,10 +113,63 @@ const CANCELLATION_REASON_LABELS: Record<
     string
 > = {
     NO_FLORIST_AVAILABLE: "Nenhuma florista disponível",
+    DELIVERY_AREA_NOT_COVERED: "Morada fora da zona de entrega",
+    DELIVERY_DATE_UNAVAILABLE: "Data de entrega indisponível",
     CUSTOMER_REQUEST: "Pedido do cliente",
-    ADMIN_REQUEST: "Pedido do administrador",
+    DUPLICATE_ORDER: "Encomenda duplicada",
     PAYMENT_FAILED: "Falha no pagamento",
+    ADMIN_REQUEST: "Pedido do administrador",
     OTHER: "Outro motivo",
+};
+
+type StatusAction =
+    | "startProduction"
+    | "setReadyForDelivery"
+    | "deliver";
+
+const STATUS_ACTIONS: Partial<
+    Record<AdminOrderStatus, { label: string; action: StatusAction }>
+> = {
+    ASSIGNED: {
+        label: "Iniciar preparação",
+        action: "startProduction",
+    },
+    IN_PRODUCTION: {
+        label: "Marcar como pronta para entrega",
+        action: "setReadyForDelivery",
+    },
+    READY_FOR_DELIVERY: {
+        label: "Marcar como entregue",
+        action: "deliver",
+    },
+};
+
+const OFFER_DECLINE_REASON_LABELS: Record<
+    AdminOrderOfferDeclineReason,
+    string
+> = {
+    PRICE_TOO_LOW: "Valor proposto insuficiente",
+    DELIVERY_AREA_NOT_COVERED: "Zona de entrega não coberta",
+    DELIVERY_DATE_UNAVAILABLE: "Data ou horário indisponível",
+    PRODUCT_UNAVAILABLE: "Produto indisponível",
+    PRODUCT_SPECIFICATION_UNAVAILABLE:
+        "Não é possível cumprir a especificação do produto",
+    OTHER: "Outro motivo",
+};
+
+const OFFER_DECLINE_REASON_DEFAULT_DETAILS: Partial<
+    Record<AdminOrderOfferDeclineReason, string>
+> = {
+    PRICE_TOO_LOW:
+        "O valor proposto não cobre os custos necessários para executar esta encomenda.",
+    DELIVERY_AREA_NOT_COVERED:
+        "A morada de entrega encontra-se fora da zona atualmente coberta.",
+    DELIVERY_DATE_UNAVAILABLE:
+        "Não existe disponibilidade para cumprir a data ou o período de entrega solicitado.",
+    PRODUCT_UNAVAILABLE:
+        "Os produtos ou flores necessários para esta encomenda não estão disponíveis.",
+    PRODUCT_SPECIFICATION_UNAVAILABLE:
+        "Não é possível garantir a composição ou personalização solicitada para esta encomenda.",
 };
 
 const ITEM_TYPE_LABELS: Record<AdminOrderItemType, string> = {
@@ -436,7 +490,16 @@ function OfferCard({
                 {offer.declineReason && (
                     <div className="mt-4 flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-800">
                         <CircleX size={17} className="mt-0.5 shrink-0" />
-                        <p><span className="font-semibold">Motivo da recusa:</span> {offer.declineReason}</p>
+                        <div>
+                            <p className="font-semibold">
+                                Motivo da recusa: {OFFER_DECLINE_REASON_LABELS[offer.declineReason]}
+                            </p>
+                            {offer.declineReasonDetails && (
+                                <p className="mt-1 whitespace-pre-wrap">
+                                    {offer.declineReasonDetails}
+                                </p>
+                            )}
+                        </div>
                     </div>
                 )}
                 {offer.status === "CANCELLED" && (
@@ -483,9 +546,21 @@ export default function EditOrderPage() {
     const [offerError, setOfferError] = useState<string | null>(null);
     const [offerActionLoadingId, setOfferActionLoadingId] = useState<number | null>(null);
     const [decliningOffer, setDecliningOffer] = useState<AdminOrderOffer | null>(null);
-    const [declineReason, setDeclineReason] = useState("");
+    const [declineReason, setDeclineReason] =
+        useState<AdminOrderOfferDeclineReason>("PRICE_TOO_LOW");
+    const [declineReasonDetails, setDeclineReasonDetails] = useState(
+        OFFER_DECLINE_REASON_DEFAULT_DETAILS.PRICE_TOO_LOW ?? "",
+    );
+    const [statusActionSaving, setStatusActionSaving] = useState(false);
+    const [statusActionError, setStatusActionError] = useState<string | null>(null);
+    const [cancelModalOpen, setCancelModalOpen] = useState(false);
+    const [cancellationReason, setCancellationReason] =
+        useState<AdminOrderCancellationReason>("ADMIN_REQUEST");
+    const [cancellationReasonDetails, setCancellationReasonDetails] = useState("");
 
     const canCreateOffer = order?.status === "WAITING_FOR_FLORISTS";
+    const nextStatusAction = order ? STATUS_ACTIONS[order.status] : undefined;
+    const canCancelOrder = order?.status !== "DELIVERED" && order?.status !== "CANCELLED";
     const minimumExpiry = useMemo(() => toDateTimeLocal(new Date().toISOString()), []);
 
     const loadFlorists = useCallback(async (search: string) => {
@@ -652,18 +727,24 @@ export default function EditOrderPage() {
     const submitDecline = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (!decliningOffer) return;
-        const reason = declineReason.trim();
-        if (!reason) {
-            setOfferError("Indica o motivo da recusa.");
+        const details = declineReasonDetails.trim();
+        if (!details) {
+            setOfferError("Indica os detalhes do motivo da recusa.");
             return;
         }
 
         setOfferActionLoadingId(decliningOffer.id);
         setOfferError(null);
         try {
-            await adminOrderOffersApi.decline(decliningOffer.id, {declineReason: reason});
+            await adminOrderOffersApi.decline(decliningOffer.id, {
+                declineReason,
+                declineReasonDetails: details,
+            });
             setDecliningOffer(null);
-            setDeclineReason("");
+            setDeclineReason("PRICE_TOO_LOW");
+            setDeclineReasonDetails(
+                OFFER_DECLINE_REASON_DEFAULT_DETAILS.PRICE_TOO_LOW ?? "",
+            );
             const refreshedOrder = await adminOrdersApi.getById(id);
             if (refreshedOrder) setOrder(refreshedOrder);
         } catch (err) {
@@ -707,6 +788,71 @@ export default function EditOrderPage() {
     useEffect(() => {
         void loadOrder();
     }, [loadOrder]);
+
+    const refreshOrder = async () => {
+        const refreshedOrder = await adminOrdersApi.getById(id);
+        setOrder(refreshedOrder);
+    };
+
+    const runStatusAction = async (action: StatusAction) => {
+        if (!order) return;
+
+        try {
+            setStatusActionSaving(true);
+            setStatusActionError(null);
+
+            switch (action) {
+                case "startProduction":
+                    await adminOrdersApi.startProduction(order.id);
+                    break;
+                case "setReadyForDelivery":
+                    await adminOrdersApi.setReadyForDelivery(order.id);
+                    break;
+                case "deliver":
+                    await adminOrdersApi.deliver(order.id);
+                    break;
+            }
+
+            await refreshOrder();
+        } catch (err) {
+            setStatusActionError(
+                err instanceof Error
+                    ? err.message
+                    : "Não foi possível atualizar o estado da encomenda.",
+            );
+        } finally {
+            setStatusActionSaving(false);
+        }
+    };
+
+    const cancelOrder = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        if (!order || !cancellationReasonDetails.trim()) return;
+
+        try {
+            setStatusActionSaving(true);
+            setStatusActionError(null);
+
+            await adminOrdersApi.cancel(order.id, {
+                cancellationReason,
+                cancellationReasonDetails: cancellationReasonDetails.trim(),
+            });
+
+            await refreshOrder();
+            setCancelModalOpen(false);
+            setCancellationReason("ADMIN_REQUEST");
+            setCancellationReasonDetails("");
+        } catch (err) {
+            setStatusActionError(
+                err instanceof Error
+                    ? err.message
+                    : "Não foi possível cancelar a encomenda.",
+            );
+        } finally {
+            setStatusActionSaving(false);
+        }
+    };
 
     return (
         <div className="mx-auto w-full max-w-5xl space-y-8 pb-10">
@@ -791,6 +937,45 @@ export default function EditOrderPage() {
                                 </p>
                             </div>
                         </div>
+
+                        <div className="mt-5 flex flex-wrap gap-3 border-t border-[#EEF0EB] pt-5">
+                            {nextStatusAction && (
+                                <button
+                                    type="button"
+                                    onClick={() => void runStatusAction(nextStatusAction.action)}
+                                    disabled={statusActionSaving}
+                                    className="inline-flex items-center gap-2 rounded-full bg-[#55624A] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#435039] disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {statusActionSaving ? (
+                                        <LoaderCircle size={16} className="animate-spin" />
+                                    ) : (
+                                        <Check size={16} />
+                                    )}
+                                    {nextStatusAction.label}
+                                </button>
+                            )}
+
+                            {canCancelOrder && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setStatusActionError(null);
+                                        setCancelModalOpen(true);
+                                    }}
+                                    disabled={statusActionSaving}
+                                    className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    <CircleX size={16} />
+                                    Cancelar encomenda
+                                </button>
+                            )}
+                        </div>
+
+                        {statusActionError && (
+                            <p role="alert" className="mt-4 text-sm text-red-700">
+                                {statusActionError}
+                            </p>
+                        )}
                     </section>
 
                     <Section
@@ -852,6 +1037,11 @@ export default function EditOrderPage() {
                                     <DetailField
                                         label="Data do cancelamento"
                                         value={formatDateTime(order.cancelledAt)}
+                                    />
+                                    <DetailField
+                                        label="Detalhes"
+                                        value={order.cancellationReasonDetails ?? "Não indicado"}
+                                        className="sm:col-span-2"
                                     />
                                 </div>
                             </div>
@@ -1125,10 +1315,13 @@ export default function EditOrderPage() {
                         <div className="relative ml-2 space-y-5 border-l-2 border-[#E8EBE4] pl-6">
                             {[
                                 { label: "Encomenda criada", date: order.createdAt, detail: "A encomenda foi registada no sistema.", tone: "bg-[#55624A]" },
-                                { label: "Florista atribuída", date: order.assignedAt, detail: order.assignedFlorist?.name ? `Atribuída a ${order.assignedFlorist.name}.` : "Ainda não foi atribuída uma florista.", tone: "bg-green-500" },
-                                { label: "Encomenda cancelada", date: order.cancelledAt, detail: order.cancellationReason ? CANCELLATION_REASON_LABELS[order.cancellationReason] : "Sem cancelamento registado.", tone: "bg-red-500" },
-                                { label: "Última atualização", date: order.updatedAt, detail: "Última alteração registada na encomenda.", tone: "bg-blue-500" },
-                            ].map((event) => (
+                                { label: "Pagamento confirmado", date: order.paidAt, detail: "A encomenda ficou disponível para propostas de floristas.", tone: "bg-amber-500" },
+                                { label: "Florista atribuída", date: order.assignedAt, detail: order.assignedFlorist?.name ? `Atribuída a ${order.assignedFlorist.name}.` : "Florista associada à encomenda.", tone: "bg-green-500" },
+                                { label: "Em preparação", date: order.inProductionAt, detail: "A florista iniciou a preparação da encomenda.", tone: "bg-indigo-500" },
+                                { label: "Pronta para entrega", date: order.readyForDeliveryAt, detail: "A encomenda ficou pronta para ser entregue.", tone: "bg-violet-500" },
+                                { label: "Entregue", date: order.deliveredAt, detail: "A entrega foi confirmada.", tone: "bg-green-600" },
+                                { label: "Encomenda cancelada", date: order.cancelledAt, detail: order.cancellationReason ? `${CANCELLATION_REASON_LABELS[order.cancellationReason]}${order.cancellationReasonDetails ? ` — ${order.cancellationReasonDetails}` : ""}` : "Encomenda cancelada.", tone: "bg-red-500" },
+                            ].filter((event) => Boolean(event.date)).map((event) => (
                                 <div key={event.label} className="relative flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
                                     <span className={`absolute -left-[33px] top-1 flex h-4 w-4 items-center justify-center rounded-full ring-4 ring-white ${event.tone}`} />
                                     <div>
@@ -1141,7 +1334,7 @@ export default function EditOrderPage() {
                         </div>
                         <div className="mt-6 flex items-start gap-3 rounded-2xl border border-[#E8EBE4] bg-[#FAFBF8] p-4">
                             <History size={18} className="mt-0.5 shrink-0 text-[#7A8474]" />
-                            <p className="text-sm leading-6 text-[#7A8474]">O histórico apresenta as datas disponíveis no registo atual da encomenda. As ações das propostas são apresentadas nos respetivos cartões.</p>
+                            <p className="text-sm leading-6 text-[#7A8474]">São apresentadas apenas as transições já efetuadas. A atribuição da florista é registada quando uma proposta é aceite.</p>
                         </div>
                     </Section>
                 </div>
@@ -1164,6 +1357,104 @@ export default function EditOrderPage() {
                 </Link>
             </div>
 
+            {cancelModalOpen && order && (
+                <div
+                    className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget && !statusActionSaving) {
+                            setCancelModalOpen(false);
+                        }
+                    }}
+                >
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="cancel-order-title"
+                        className="my-auto w-full max-w-lg rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)] sm:p-8"
+                    >
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-red-100 text-red-700">
+                                <CircleX size={22} />
+                            </div>
+                            <div>
+                                <h2 id="cancel-order-title" className="text-xl font-semibold text-[#2F3B2A]">
+                                    Cancelar encomenda
+                                </h2>
+                                <p className="mt-1 text-sm text-[#7A8474]">
+                                    Esta ação cancela a encomenda {order.orderNumber} e as propostas que ainda estejam pendentes.
+                                </p>
+                            </div>
+                        </div>
+
+                        <form onSubmit={cancelOrder} className="mt-6 space-y-5">
+                            <div>
+                                <label htmlFor="cancellation-reason" className="mb-2 block text-sm font-medium text-[#374132]">
+                                    Motivo do cancelamento *
+                                </label>
+                                <select
+                                    id="cancellation-reason"
+                                    value={cancellationReason}
+                                    onChange={(event) => setCancellationReason(event.target.value as AdminOrderCancellationReason)}
+                                    disabled={statusActionSaving}
+                                    className="w-full rounded-xl border border-[#E2E6DD] bg-white px-4 py-3 text-sm text-[#2F3B2A] outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100 disabled:bg-[#F3F5EE]"
+                                >
+                                    {Object.entries(CANCELLATION_REASON_LABELS).map(([value, label]) => (
+                                        <option key={value} value={value}>
+                                            {label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label htmlFor="cancellation-details" className="mb-2 block text-sm font-medium text-[#374132]">
+                                    Detalhes *
+                                </label>
+                                <textarea
+                                    id="cancellation-details"
+                                    value={cancellationReasonDetails}
+                                    onChange={(event) => setCancellationReasonDetails(event.target.value)}
+                                    rows={4}
+                                    maxLength={1000}
+                                    required
+                                    disabled={statusActionSaving}
+                                    placeholder="Explica o motivo do cancelamento..."
+                                    className="w-full resize-y rounded-xl border border-[#E2E6DD] bg-white px-4 py-3 text-sm text-[#2F3B2A] outline-none transition placeholder:text-[#A0A89A] focus:border-red-400 focus:ring-4 focus:ring-red-100 disabled:bg-[#F3F5EE]"
+                                />
+                                <p className="mt-1 text-right text-xs text-[#7A8474]">
+                                    {cancellationReasonDetails.length}/1000
+                                </p>
+                            </div>
+
+                            {statusActionError && (
+                                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                    {statusActionError}
+                                </div>
+                            )}
+
+                            <div className="flex flex-col-reverse gap-3 border-t border-[#EEF0EA] pt-5 sm:flex-row sm:justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => setCancelModalOpen(false)}
+                                    disabled={statusActionSaving}
+                                    className="rounded-full border border-[#DDE2D7] px-5 py-3 text-sm font-medium text-[#55624A] transition hover:bg-[#F3F5EE] disabled:opacity-50"
+                                >
+                                    Voltar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={statusActionSaving || !cancellationReasonDetails.trim()}
+                                    className="inline-flex items-center justify-center gap-2 rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {statusActionSaving ? <LoaderCircle size={16} className="animate-spin" /> : <CircleX size={16} />}
+                                    Confirmar cancelamento
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {decliningOffer && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget && offerActionLoadingId === null) { setDecliningOffer(null); setDeclineReason(""); setOfferError(null); } }}>
                     <div role="dialog" aria-modal="true" aria-labelledby="decline-offer-title" className="my-auto w-full max-w-lg rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)] sm:p-8">
@@ -1177,13 +1468,36 @@ export default function EditOrderPage() {
                         <form onSubmit={submitDecline} className="mt-6 space-y-4">
                             <div>
                                 <label htmlFor="decline-reason" className="mb-2 block text-sm font-medium text-[#374132]">Motivo da recusa *</label>
-                                <textarea id="decline-reason" value={declineReason} onChange={(event) => setDeclineReason(event.target.value)} rows={4} maxLength={1000} required disabled={offerActionLoadingId !== null} placeholder="Explica por que motivo estás a recusar esta proposta..." className="w-full resize-y rounded-xl border border-[#E2E6DD] bg-white px-4 py-3 text-sm text-[#2F3B2A] outline-none transition placeholder:text-[#A0A89A] focus:border-red-400 focus:ring-4 focus:ring-red-100 disabled:bg-[#F3F5EE]" />
-                                <p className="mt-1 text-right text-xs text-[#7A8474]">{declineReason.length}/1000</p>
+                                <select
+                                    id="decline-reason"
+                                    value={declineReason}
+                                    onChange={(event) => {
+                                        const reason = event.target.value as AdminOrderOfferDeclineReason;
+                                        setDeclineReason(reason);
+                                        setDeclineReasonDetails(
+                                            reason === "OTHER"
+                                                ? ""
+                                                : OFFER_DECLINE_REASON_DEFAULT_DETAILS[reason] ?? "",
+                                        );
+                                    }}
+                                    required
+                                    disabled={offerActionLoadingId !== null}
+                                    className="w-full rounded-xl border border-[#E2E6DD] bg-white px-4 py-3 text-sm text-[#2F3B2A] outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100 disabled:bg-[#F3F5EE]"
+                                >
+                                    {Object.entries(OFFER_DECLINE_REASON_LABELS).map(([value, label]) => (
+                                        <option key={value} value={value}>{label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label htmlFor="decline-reason-details" className="mb-2 block text-sm font-medium text-[#374132]">Detalhes da recusa *</label>
+                                <textarea id="decline-reason-details" value={declineReasonDetails} onChange={(event) => setDeclineReasonDetails(event.target.value)} rows={4} maxLength={1000} required disabled={offerActionLoadingId !== null} placeholder="Explica por que motivo estás a recusar esta proposta..." className="w-full resize-y rounded-xl border border-[#E2E6DD] bg-white px-4 py-3 text-sm text-[#2F3B2A] outline-none transition placeholder:text-[#A0A89A] focus:border-red-400 focus:ring-4 focus:ring-red-100 disabled:bg-[#F3F5EE]" />
+                                <p className="mt-1 text-right text-xs text-[#7A8474]">{declineReasonDetails.length}/1000</p>
                             </div>
                             {offerError && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{offerError}</div>}
                             <div className="flex flex-col-reverse gap-3 border-t border-[#EEF0EA] pt-5 sm:flex-row sm:justify-end">
-                                <button type="button" onClick={() => { setDecliningOffer(null); setDeclineReason(""); setOfferError(null); }} disabled={offerActionLoadingId !== null} className="rounded-full border border-[#DDE2D7] px-5 py-3 text-sm font-medium text-[#55624A] transition hover:bg-[#F3F5EE] disabled:opacity-50">Cancelar</button>
-                                <button type="submit" disabled={offerActionLoadingId !== null || !declineReason.trim()} className="inline-flex items-center justify-center gap-2 rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60">{offerActionLoadingId !== null ? <LoaderCircle size={16} className="animate-spin" /> : <X size={16} />} Confirmar recusa</button>
+                                <button type="button" onClick={() => { setDecliningOffer(null); setDeclineReason("PRICE_TOO_LOW"); setDeclineReasonDetails(OFFER_DECLINE_REASON_DEFAULT_DETAILS.PRICE_TOO_LOW ?? ""); setOfferError(null); }} disabled={offerActionLoadingId !== null} className="rounded-full border border-[#DDE2D7] px-5 py-3 text-sm font-medium text-[#55624A] transition hover:bg-[#F3F5EE] disabled:opacity-50">Cancelar</button>
+                                <button type="submit" disabled={offerActionLoadingId !== null || !declineReasonDetails.trim()} className="inline-flex items-center justify-center gap-2 rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60">{offerActionLoadingId !== null ? <LoaderCircle size={16} className="animate-spin" /> : <X size={16} />} Confirmar recusa</button>
                             </div>
                         </form>
                     </div>
@@ -1429,3 +1743,5 @@ function FinancialRow({
         </div>
     );
 }
+
+

@@ -100,6 +100,18 @@ export const ERROR_MESSAGES = {
         code: 'ORDER_ALREADY_PAID',
         message: 'This order is already paid'
     },
+    INVALID_ORDER_STATUS_TRANSITION: {
+        code: 'INVALID_ORDER_STATUS_TRANSITION',
+        message: 'The requested order status transition is not allowed.',
+    },
+    ORDER_CANNOT_BE_CANCELLED: {
+        code: 'ORDER_CANNOT_BE_CANCELLED',
+        message: 'A delivered or cancelled order cannot be cancelled.',
+    },
+    ADDRESS_NOT_FOUND: {
+        code: 'ADDRESS_NOT_FOUND',
+        message: 'Address not found in Google Geocoding API'
+    },
     UNAUTHORIZED: {
         code: 'UNAUTHORIZED',
         message: 'Unauthorized.',

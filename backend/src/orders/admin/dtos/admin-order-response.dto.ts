@@ -362,6 +362,18 @@ export class AdminOrderResponseDto {
     assignedAt!: Date | null;
 
     @ApiPropertyOptional({ nullable: true })
+    paidAt!: Date | null;
+
+    @ApiPropertyOptional({ nullable: true })
+    inProductionAt!: Date | null;
+
+    @ApiPropertyOptional({ nullable: true })
+    readyForDeliveryAt!: Date | null;
+
+    @ApiPropertyOptional({ nullable: true })
+    deliveredAt!: Date | null;
+
+    @ApiPropertyOptional({ nullable: true })
     cancelledAt!: Date | null;
 
     @ApiPropertyOptional({
@@ -369,6 +381,9 @@ export class AdminOrderResponseDto {
         nullable: true,
     })
     cancellationReason!: OrderCancellationReason | null;
+
+    @ApiPropertyOptional({ nullable: true })
+    cancellationReasonDetails!: string | null;
 
     // Related records
     @ApiProperty({ type: [AdminOrderItemResponseDto] })

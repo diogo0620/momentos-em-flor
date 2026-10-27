@@ -4,6 +4,9 @@ import { PrismaModule } from '@/prisma/prisma.module';
 import { AdminOrderOffersController } from './admin/admin-order-offers.controller';
 import { AdminOrderOffersService } from './admin/admin-order-offers.service';
 import { AdminOrderOffersMapper } from './admin/mappers/admin-order-offers.mapper';
+import { FloristOrderOffersController } from './florist/florist-order-offers.controller';
+import { FloristOrderOffersService } from './florist/florist-order-offers.service';
+import { FloristOrderOffersMapper } from './florist/mappers/florist-order-offers.mapper';
 
 
 
@@ -13,13 +16,14 @@ import { AdminOrderOffersMapper } from './admin/mappers/admin-order-offers.mappe
     PrismaModule,
   ],
   controllers: [
-    AdminOrderOffersController
+    AdminOrderOffersController,
+    FloristOrderOffersController
   ],
   providers: [
-
-    
     AdminOrderOffersService,
-    AdminOrderOffersMapper
+    AdminOrderOffersMapper,
+    FloristOrderOffersService,
+    FloristOrderOffersMapper
   ]
 })
 export class OrderOffersModule {}

@@ -65,9 +65,9 @@ export class AdminOrdersMapper extends BaseMapper<
 
             assignedFlorist: order.assignedFlorist
                 ? {
-                      id: order.assignedFlorist.id,
-                      name: order.assignedFlorist.name,
-                  }
+                    id: order.assignedFlorist.id,
+                    name: order.assignedFlorist.name,
+                }
                 : null,
 
             recipientFirstName: order.recipientFirstName,
@@ -98,6 +98,12 @@ export class AdminOrdersMapper extends BaseMapper<
             assignedAt: order.assignedAt,
             cancelledAt: order.cancelledAt,
             cancellationReason: order.cancellationReason,
+            cancellationReasonDetails: order.cancellationReasonDetails,
+
+            paidAt: order.paidAt,
+            inProductionAt: order.inProductionAt,
+            readyForDeliveryAt: order.readyForDeliveryAt,
+            deliveredAt: order.deliveredAt,
 
             items: order.items.map((item) => ({
                 id: item.id,
@@ -120,15 +126,15 @@ export class AdminOrdersMapper extends BaseMapper<
                     item.taxRate === null ? null : Number(item.taxRate),
                 taxCode: item.taxCode
                     ? {
-                          id: item.taxCode.id,
-                          name: item.taxCode.name,
-                      }
+                        id: item.taxCode.id,
+                        name: item.taxCode.name,
+                    }
                     : null,
                 product: item.product
                     ? {
-                          id: item.product.id,
-                          name: item.product.name,
-                      }
+                        id: item.product.id,
+                        name: item.product.name,
+                    }
                     : null,
                 components: item.components.map((component) => ({
                     id: component.id,

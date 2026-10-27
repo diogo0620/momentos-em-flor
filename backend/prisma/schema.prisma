@@ -89,9 +89,27 @@ enum Occasion {
 
 enum OrderCancellationReason {
   NO_FLORIST_AVAILABLE
+  DELIVERY_AREA_NOT_COVERED
+  DELIVERY_DATE_UNAVAILABLE
   CUSTOMER_REQUEST
+  DUPLICATE_ORDER
   ADMIN_REQUEST
   PAYMENT_FAILED
+  OTHER
+}
+
+enum OrderOfferCancellationReason {
+  ANOTHER_OFFER_ACCEPTED
+  ORDER_CANCELLED
+}
+
+enum OrderOfferDeclineReason {
+  PRICE_TOO_LOW
+  DELIVERY_AREA_NOT_COVERED
+  DELIVERY_DATE_UNAVAILABLE
+  PRODUCT_UNAVAILABLE
+  PRODUCT_SPECIFICATION_UNAVAILABLE
+
   OTHER
 }
 
@@ -529,12 +547,16 @@ model Order {
   taxTotals OrderTaxTotal[]
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  paidAt      DateTime?
   assignedAt DateTime?
+  inProductionAt        DateTime?
+  readyForDeliveryAt    DateTime?
+  deliveredAt           DateTime?
+  updatedAt DateTime @updatedAt
 
   cancelledAt        DateTime?
   cancellationReason OrderCancellationReason?
+  cancellationReasonDetails   String?
 
   @@index([customerId])
   @@index([assignedFloristId])
@@ -700,8 +722,12 @@ model OrderOffer {
   acceptedAt DateTime?
   declinedAt DateTime?
   expiresAt  DateTime
+  cancelledAt DateTime?
 
-  declineReason String?
+  declineReason         OrderOfferDeclineReason?
+  declineReasonDetails  String?
+
+  cancellationReason          OrderOfferCancellationReason?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

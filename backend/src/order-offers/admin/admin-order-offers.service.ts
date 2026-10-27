@@ -5,7 +5,7 @@ import { AdminUpdateOrderOfferDto } from './dtos/admin-update-order-offer.dto';
 import { PrismaService } from '@/prisma/prisma.service';
 import { Exceptions } from '@/common/exceptions/exceptions';
 import { ERROR_MESSAGES } from '@/common/errors/error-messages';
-import { OrderOfferStatus, OrderStatus, Prisma } from '@prisma/client';
+import { OrderOfferStatus, OrderOfferCancellationReason, OrderStatus, Prisma } from '@prisma/client';
 import { ApiResponse } from '@/common/responses/api-response';
 import { EntityIdResponseDto } from '@/common/responses/dto/entity-id-response.dto';
 import { getPagination } from '@/common/database/pagination';
@@ -291,6 +291,8 @@ export class AdminOrderOffersService {
                 },
                 data: {
                     status: OrderOfferStatus.CANCELLED,
+                    cancelledAt: now,
+                    cancellationReason: OrderOfferCancellationReason.ANOTHER_OFFER_ACCEPTED
                 },
             });
 
@@ -338,6 +340,7 @@ export class AdminOrderOffersService {
                     status: OrderOfferStatus.DECLINED,
                     declinedAt: new Date(),
                     declineReason: dto.declineReason,
+                    declineReasonDetails: dto.declineReasonDetails,
                 },
             });
         } catch (error) {

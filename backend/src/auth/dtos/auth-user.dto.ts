@@ -24,6 +24,9 @@ export class AuthUserDto {
   @ApiProperty({ example: true })
   active!: boolean;
 
+  @ApiPropertyOptional({ example: 1 })
+  floristId?: number | null;
+
   @ApiProperty({ example: 'diogo@example.com' })
   passwordHash!: string;
 

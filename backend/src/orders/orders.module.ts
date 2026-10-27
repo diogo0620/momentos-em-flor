@@ -10,6 +10,9 @@ import { AdminOrdersController } from './admin/admin-orders.controller';
 import { AdminOrdersService } from './admin/admin-orders.service';
 import { AdminOrdersMapper } from './admin/mappers/admin-orders.mapper';
 import { StorageModule } from '@/storage/storage.module';
+import { FloristOrdersController } from './florist/florist-orders.controller';
+import { FloristOrdersService } from './florist/florist-orders.service';
+import { FloristOrdersMapper } from './florist/mappers/florist-orders.mapper';
 
 
 
@@ -21,7 +24,8 @@ import { StorageModule } from '@/storage/storage.module';
   ],
   controllers: [
     CustomerOrdersController,
-    AdminOrdersController
+    AdminOrdersController,
+    FloristOrdersController
   ],
   providers: [
     CustomerOrdersService,
@@ -29,7 +33,9 @@ import { StorageModule } from '@/storage/storage.module';
     AdminStoreSettingsService,
     AdminStoreSettingsMapper,
     AdminOrdersService,
-    AdminOrdersMapper
+    AdminOrdersMapper,
+    FloristOrdersService,
+    FloristOrdersMapper
   ]
 })
 export class OrdersModule {}

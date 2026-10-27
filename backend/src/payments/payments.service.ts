@@ -11,7 +11,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { StripeService } from './stripe.service';
 import { Exceptions } from '@/common/exceptions/exceptions';
 import { ERROR_MESSAGES } from '@/common/errors/error-messages';
-import { PaymentStatus } from '@prisma/client';
+import { OrderStatus, PaymentStatus } from '@prisma/client';
 
 @Injectable()
 export class PaymentsService {
@@ -169,6 +169,8 @@ export class PaymentsService {
                     );
                 }
 
+                const paidAt = new Date();
+
                 // Stripe can send the same webhook more than once.
                 if (payment.status === 'PAID') {
                     return {
@@ -188,7 +190,7 @@ export class PaymentsService {
                             stripePaymentIntentId:
                                 paymentIntent.id,
 
-                            paidAt: new Date(),
+                            paidAt
                         },
                     }),
 
@@ -198,8 +200,8 @@ export class PaymentsService {
                         },
 
                         data: {
-                            status:
-                                'WAITING_FOR_FLORISTS',
+                            status: OrderStatus.WAITING_FOR_FLORISTS,
+                            paidAt,
                         },
                     }),
                 ]);

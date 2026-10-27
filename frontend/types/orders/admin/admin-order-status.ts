@@ -24,7 +24,10 @@ export type AdminOccasion =
 
 export type AdminOrderCancellationReason =
     | 'NO_FLORIST_AVAILABLE'
+    | 'DELIVERY_AREA_NOT_COVERED'
+    | 'DELIVERY_DATE_UNAVAILABLE'
     | 'CUSTOMER_REQUEST'
+    | 'DUPLICATE_ORDER'
     | 'ADMIN_REQUEST'
     | 'PAYMENT_FAILED'
     | 'OTHER';
@@ -47,3 +50,11 @@ export type AdminPaymentStatus =
     | 'REFUNDED';
 
 export type AdminProductVariantType = 'SIZE';
+
+  export type AdminOrderOfferDeclineReason =
+    | "PRICE_TOO_LOW"
+    | "DELIVERY_AREA_NOT_COVERED"
+    | "DELIVERY_DATE_UNAVAILABLE"
+    | "PRODUCT_UNAVAILABLE"
+    | "PRODUCT_SPECIFICATION_UNAVAILABLE"
+    | "OTHER";

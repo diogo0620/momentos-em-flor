@@ -22,11 +22,13 @@ import {
 import { adminOrderOffersApi } from "@/lib/api/order-offers/admin-order-offers";
 
 import type {
+    AdminOrderOfferCancellationReason,
+    AdminOrderOfferDeclineReason,
     AdminOrderOfferDetail,
-    OrderOfferStatus,
+    AdminOrderOfferStatus,
 } from "@/types/order-offers/admin/admin-order-offer-detail";
 
-const STATUS_LABELS: Record<OrderOfferStatus, string> = {
+const STATUS_LABELS: Record<AdminOrderOfferStatus, string> = {
     PENDING: "Pendente",
     VIEWED: "Visualizada",
     ACCEPTED: "Aceite",
@@ -35,13 +37,45 @@ const STATUS_LABELS: Record<OrderOfferStatus, string> = {
     CANCELLED: "Cancelada",
 };
 
-const STATUS_STYLES: Record<OrderOfferStatus, string> = {
+const STATUS_STYLES: Record<AdminOrderOfferStatus, string> = {
     PENDING: "bg-amber-50 text-amber-700 ring-amber-200",
     VIEWED: "bg-blue-50 text-blue-700 ring-blue-200",
     ACCEPTED: "bg-green-50 text-green-700 ring-green-200",
     DECLINED: "bg-red-50 text-red-700 ring-red-200",
     EXPIRED: "bg-gray-100 text-gray-600 ring-gray-200",
     CANCELLED: "bg-gray-100 text-gray-600 ring-gray-200",
+};
+
+const DECLINE_REASON_LABELS: Record<AdminOrderOfferDeclineReason, string> = {
+    PRICE_TOO_LOW: "Valor proposto insuficiente",
+    DELIVERY_AREA_NOT_COVERED: "Zona de entrega não coberta",
+    DELIVERY_DATE_UNAVAILABLE: "Data ou horário indisponível",
+    PRODUCT_UNAVAILABLE: "Produto indisponível",
+    PRODUCT_SPECIFICATION_UNAVAILABLE: "Não é possível cumprir a especificação do produto",
+    OTHER: "Outro motivo",
+};
+
+const DECLINE_REASON_DEFAULT_DETAILS: Partial<
+    Record<AdminOrderOfferDeclineReason, string>
+> = {
+    PRICE_TOO_LOW:
+        "O valor proposto não cobre os custos necessários para executar esta encomenda.",
+    DELIVERY_AREA_NOT_COVERED:
+        "A morada de entrega encontra-se fora da zona atualmente coberta.",
+    DELIVERY_DATE_UNAVAILABLE:
+        "Não existe disponibilidade para cumprir a data ou o período de entrega solicitado.",
+    PRODUCT_UNAVAILABLE:
+        "Os produtos ou flores necessários para esta encomenda não estão disponíveis.",
+    PRODUCT_SPECIFICATION_UNAVAILABLE:
+        "Não é possível garantir a composição ou personalização solicitada para esta encomenda.",
+};
+
+const CANCELLATION_REASON_LABELS: Record<
+    AdminOrderOfferCancellationReason,
+    string
+> = {
+    ANOTHER_OFFER_ACCEPTED: "Foi aceite uma proposta de outra florista",
+    ORDER_CANCELLED: "A encomenda associada foi cancelada",
 };
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("pt-PT", {
@@ -69,7 +103,7 @@ function formatPrice(value: number): string {
     }).format(value);
 }
 
-function isActionable(status: OrderOfferStatus): boolean {
+function isActionable(status: AdminOrderOfferStatus): boolean {
     return status === "PENDING" || status === "VIEWED";
 }
 
@@ -87,7 +121,11 @@ export default function AdminOrderOfferDetailPage() {
     const [success, setSuccess] = useState<string | null>(null);
 
     const [showDeclineForm, setShowDeclineForm] = useState(false);
-    const [declineReason, setDeclineReason] = useState("");
+    const [declineReason, setDeclineReason] =
+        useState<AdminOrderOfferDeclineReason>("PRICE_TOO_LOW");
+    const [declineReasonDetails, setDeclineReasonDetails] = useState(
+        DECLINE_REASON_DEFAULT_DETAILS.PRICE_TOO_LOW ?? "",
+    );
 
     const loadOffer = useCallback(async () => {
         if (!Number.isSafeInteger(id) || id <= 0) {
@@ -152,10 +190,10 @@ export default function AdminOrderOfferDetailPage() {
 
         if (!offer || !isActionable(offer.status) || processing) return;
 
-        const reason = declineReason.trim();
+        const details = declineReasonDetails.trim();
 
-        if (!reason) {
-            setError("Indica o motivo da recusa.");
+        if (!details) {
+            setError("Indica os detalhes do motivo da recusa.");
             return;
         }
 
@@ -164,10 +202,16 @@ export default function AdminOrderOfferDetailPage() {
         setSuccess(null);
 
         try {
-            await adminOrderOffersApi.decline(offer.id, {declineReason: reason});
+            await adminOrderOffersApi.decline(offer.id, {
+                declineReason,
+                declineReasonDetails: details,
+            });
 
             setShowDeclineForm(false);
-            setDeclineReason("");
+            setDeclineReason("PRICE_TOO_LOW");
+            setDeclineReasonDetails(
+                DECLINE_REASON_DEFAULT_DETAILS.PRICE_TOO_LOW ?? "",
+            );
             setSuccess("A proposta foi recusada com sucesso.");
 
             await loadOffer();
@@ -323,7 +367,7 @@ export default function AdminOrderOfferDetailPage() {
                                 value={formatDate(offer.expiresAt)}
                             />
 
-                            {offer.distanceKm !== undefined && (
+                            {offer.distanceKm !== null && (
                                 <InfoCard
                                     icon={<MapPin size={19} />}
                                     label="Distância"
@@ -368,6 +412,13 @@ export default function AdminOrderOfferDetailPage() {
                                 description="A proposta foi recusada."
                                 completed={Boolean(offer.declinedAt)}
                             />
+
+                            <TimelineItem
+                                title="Proposta cancelada"
+                                date={offer.cancelledAt}
+                                description="A proposta foi cancelada automaticamente pelo sistema."
+                                completed={Boolean(offer.cancelledAt)}
+                            />
                         </div>
 
                         {offer.declineReason && (
@@ -376,9 +427,31 @@ export default function AdminOrderOfferDetailPage() {
                                     <MessageSquareWarning size={17} />
                                     Motivo da recusa
                                 </div>
-                                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-red-700">
-                                    {offer.declineReason}
+                                <p className="mt-2 text-sm font-medium text-red-700">
+                                    {DECLINE_REASON_LABELS[offer.declineReason]}
                                 </p>
+                                {offer.declineReasonDetails && (
+                                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-red-700">
+                                        {offer.declineReasonDetails}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
+                        {offer.cancellationReason && (
+                            <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                                    <XCircle size={17} />
+                                    Motivo do cancelamento
+                                </div>
+                                <p className="mt-2 text-sm font-medium text-gray-700">
+                                    {CANCELLATION_REASON_LABELS[offer.cancellationReason]}
+                                </p>
+                                {offer.cancellationReasonDetails && (
+                                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-700">
+                                        {offer.cancellationReasonDetails}
+                                    </p>
+                                )}
                             </div>
                         )}
                     </section>
@@ -441,13 +514,44 @@ export default function AdminOrderOfferDetailPage() {
                                         >
                                             Motivo da recusa *
                                         </label>
-                                        <textarea
+                                        <select
                                             id="decline-reason"
                                             value={declineReason}
+                                            onChange={(event) => {
+                                                const reason = event.target.value as AdminOrderOfferDeclineReason;
+                                                setDeclineReason(reason);
+                                                setDeclineReasonDetails(
+                                                    reason === "OTHER"
+                                                        ? ""
+                                                        : DECLINE_REASON_DEFAULT_DETAILS[reason] ?? "",
+                                                );
+                                            }}
+                                            required
+                                            disabled={processing}
+                                            className="w-full rounded-xl border border-[#E2E6DD] bg-white px-4 py-3 text-sm text-[#2F3B2A] outline-none transition focus:border-[#55624A] focus:ring-4 focus:ring-[#55624A]/10 disabled:bg-[#F3F5EE]"
+                                        >
+                                            {Object.entries(DECLINE_REASON_LABELS).map(([value, label]) => (
+                                                <option key={value} value={value}>
+                                                    {label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            htmlFor="decline-reason-details"
+                                            className="mb-2 block text-sm font-medium text-[#374132]"
+                                        >
+                                            Detalhes da recusa *
+                                        </label>
+                                        <textarea
+                                            id="decline-reason-details"
+                                            value={declineReasonDetails}
                                             onChange={(event) =>
-                                                setDeclineReason(event.target.value)
+                                                setDeclineReasonDetails(event.target.value)
                                             }
-                                            placeholder="Indica o motivo pelo qual estás a recusar esta proposta..."
+                                            placeholder="Explica o motivo pelo qual estás a recusar esta proposta..."
                                             rows={4}
                                             required
                                             maxLength={1000}
@@ -455,7 +559,7 @@ export default function AdminOrderOfferDetailPage() {
                                             className="w-full resize-y rounded-xl border border-[#E2E6DD] bg-white px-4 py-3 text-sm text-[#2F3B2A] outline-none transition placeholder:text-[#A0A89A] focus:border-[#55624A] focus:ring-4 focus:ring-[#55624A]/10 disabled:bg-[#F3F5EE]"
                                         />
                                         <p className="mt-1 text-right text-xs text-[#7A8474]">
-                                            {declineReason.length}/1000
+                                            {declineReasonDetails.length}/1000
                                         </p>
                                     </div>
 
@@ -464,7 +568,10 @@ export default function AdminOrderOfferDetailPage() {
                                             type="button"
                                             onClick={() => {
                                                 setShowDeclineForm(false);
-                                                setDeclineReason("");
+                                                setDeclineReason("PRICE_TOO_LOW");
+                                                setDeclineReasonDetails(
+                                                    DECLINE_REASON_DEFAULT_DETAILS.PRICE_TOO_LOW ?? "",
+                                                );
                                                 setError(null);
                                             }}
                                             disabled={processing}
@@ -477,7 +584,7 @@ export default function AdminOrderOfferDetailPage() {
                                             type="submit"
                                             disabled={
                                                 processing ||
-                                                !declineReason.trim()
+                                                !declineReasonDetails.trim()
                                             }
                                             className="inline-flex items-center justify-center gap-2 rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                                         >
@@ -628,3 +735,4 @@ function TimelineItem({
         </div>
     );
 }
+

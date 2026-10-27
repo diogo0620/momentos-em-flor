@@ -121,6 +121,7 @@ export type AdminOrder = {
     assignedAt: string | null;
     cancelledAt: string | null;
     cancellationReason: AdminOrderCancellationReason | null;
+    cancellationReasonDetails: string | null;
 
     items: AdminOrderItem[];
     offers: AdminOrderOffer[];
@@ -128,6 +129,13 @@ export type AdminOrder = {
 
     createdAt: string;
     updatedAt: string;
+
+    paidAt: string | null;
+    inProductionAt: string | null;
+    readyForDeliveryAt: string | null;
+    deliveredAt: string | null;
+
+    
 };
 
 export type AdminOrderDetail = AdminOrder;
