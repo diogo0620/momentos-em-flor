@@ -16,22 +16,26 @@ import { publicProductsApi } from "@/lib/api/products/public-products";
 
 const reels = [
     {
-        video: "/social/reel-1.mp4",
+        id: "agradecer",
+        poster: "/hero.png",
         label: "Um bouquet para dizer obrigado",
         tag: "Inspiração",
     },
     {
-        video: "/social/reel-2.mp4",
+        id: "bastidores",
+        poster: "/rental-equipment.jpg",
         label: "Por dentro da Momentos em Flor",
         tag: "Bastidores",
     },
     {
-        video: "/social/reel-3.mp4",
+        id: "surpreender",
+        poster: "/hero.png",
         label: "Ideias para surpreender",
         tag: "Ideias para oferecer",
     },
     {
-        video: "/social/reel-4.mp4",
+        id: "gestos",
+        poster: "/rental-equipment.jpg",
         label: "Flores que falam por si",
         tag: "Pequenos gestos",
     },
@@ -55,6 +59,8 @@ const reviews = [
 export default function HomePage() {
     const [collections, setCollections] = useState<PublicCategoryList[]>([]);
     const [featuredProducts, setFeaturedProducts] = useState<PublicProductList[]>([]);
+    const [isLoadingFeatured, setIsLoadingFeatured] = useState(true);
+    const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL;
 
     useEffect(() => {
         let cancelled = false;
@@ -92,6 +98,8 @@ export default function HomePage() {
                     productsResponse.reason,
                 );
             }
+
+            setIsLoadingFeatured(false);
         }
 
         void loadFeaturedContent();
@@ -111,7 +119,7 @@ export default function HomePage() {
         <div className="bg-[#F8F9F5] text-[#2F3B2A]">
 
             {/* HERO */}
-            <section className="relative min-h-[600px] overflow-hidden sm:min-h-[660px]">
+            <section className="relative min-h-[540px] overflow-hidden sm:min-h-[660px]">
                 <img
                     src="/hero.png"
                     alt="Composição floral da Momentos em Flor"
@@ -122,14 +130,14 @@ export default function HomePage() {
                 <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/25 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/25 to-transparent" />
 
-                <div className="relative mx-auto flex min-h-[600px] max-w-7xl items-end px-5 pb-14 pt-24 sm:min-h-[660px] sm:px-8 sm:pb-16 lg:px-10">
+                <div className="relative mx-auto flex min-h-[540px] max-w-7xl items-end px-5 pb-12 pt-20 sm:min-h-[660px] sm:px-8 sm:pb-16 lg:px-10">
                     <div className="max-w-2xl text-white">
                         <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-[0.25em] text-white/75">
                             <span className="h-px w-8 bg-white/60" />
                             Momentos em Flor
                         </div>
 
-                        <h1 className="mt-6 max-w-2xl text-5xl font-medium leading-[0.96] tracking-[-0.05em] sm:text-6xl lg:text-[68px]">
+                        <h1 className="mt-6 max-w-2xl text-4xl font-medium leading-[1] tracking-[-0.045em] min-[420px]:text-5xl sm:text-6xl lg:text-[68px]">
                             Há coisas que se dizem melhor com flores.
                         </h1>
 
@@ -199,7 +207,9 @@ export default function HomePage() {
                     </div>
 
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        {collections.map((collection, index) => (
+                        {isLoadingFeatured ? Array.from({ length: 4 }, (_, index) => (
+                            <div key={index} className="aspect-[0.82] animate-pulse rounded-[1.75rem] bg-[#E7EBE2]" />
+                        )) : collections.map((collection, index) => (
                             <Link
                                 key={collection.id}
                                 href={`/products?categoryId=${collection.id}`}
@@ -207,7 +217,7 @@ export default function HomePage() {
                             >
                                 <div className="aspect-[0.82] overflow-hidden bg-[#E7EBE2]">
                                     <img
-                                        src={collection.image || "/categories/default.jpg"}
+                                        src={collection.image || "/images/floral-placeholder.svg"}
                                         alt={collection.name}
                                         className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.045]"
                                     />
@@ -265,8 +275,13 @@ export default function HomePage() {
                         </Link>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-9 md:grid-cols-4">
-                        {featuredProducts.map((product) => (
+                    <div className="grid grid-cols-1 gap-x-4 gap-y-9 min-[420px]:grid-cols-2 md:grid-cols-4">
+                        {isLoadingFeatured ? Array.from({ length: 4 }, (_, index) => (
+                            <div key={index} className="overflow-hidden rounded-[1.5rem] bg-white">
+                                <div className="aspect-[0.82] animate-pulse bg-[#EEF1EB]" />
+                                <div className="space-y-3 px-1 pt-4"><div className="h-4 w-2/3 animate-pulse rounded bg-[#E7EBE2]" /><div className="h-3 w-1/2 animate-pulse rounded bg-[#EEF1EB]" /></div>
+                            </div>
+                        )) : featuredProducts.map((product) => (
                             <Link
                                 key={product.id}
                                 href={`/products/${product.slug}`}
@@ -275,7 +290,7 @@ export default function HomePage() {
                                 <div className="relative aspect-[0.82] overflow-hidden rounded-[1.5rem] bg-[#EEF1EB] shadow-[0_10px_28px_rgba(47,59,42,0.06)]">
 
                                     <img
-                                        src={product.image || "/products/default.jpg"}
+                                        src={product.image || "/images/floral-placeholder.svg"}
                                         alt={product.name}
                                         className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.045]"
                                     />
@@ -314,7 +329,7 @@ export default function HomePage() {
                 <div className="mx-auto grid max-w-7xl overflow-hidden rounded-[2.25rem] bg-[#E6EBE0] lg:grid-cols-2">
                     <div className="relative min-h-[430px] lg:min-h-[600px]">
                         <img
-                            src="/flower-detail.jpg"
+                            src="/hero.png"
                             alt="Detalhe de uma composição floral"
                             className="absolute inset-0 h-full w-full object-cover"
                         />
@@ -433,44 +448,33 @@ export default function HomePage() {
                             </p>
                         </div>
 
-                        <a
-                            href="#"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="group inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-[#394633] px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#46523D] hover:shadow-md"
-                        >
-                            Seguir no Instagram
-                            <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
-                        </a>
+                        {instagramUrl && (
+                            <a
+                                href={instagramUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="group inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-[#394633] px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#46523D] hover:shadow-md"
+                            >
+                                Seguir no Instagram
+                                <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
+                            </a>
+                        )}
                     </div>
 
                     <div className="mt-10 grid grid-cols-2 gap-3 sm:mt-12 sm:gap-5 lg:grid-cols-4">
                         {reels.map((reel, index) => (
                             <article
-                                key={reel.video ?? reel.image}
+                                key={reel.id}
                                 className={`group relative isolate aspect-[0.72] overflow-hidden rounded-[1.6rem] bg-[#DDE4D5] shadow-[0_14px_40px_rgba(47,59,42,0.10)] transition duration-500 hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(47,59,42,0.18)] ${
                                     index === 0 ? "ring-2 ring-white ring-offset-2 ring-offset-[#F0F3EB]" : ""
                                 }`}
                             >
-                                {reel.video ? (
-                                    <video
-                                        src={reel.video}
-                                        autoPlay
-                                        muted
-                                        loop
-                                        playsInline
-                                        preload="metadata"
-                                        aria-label={reel.label}
-                                        className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
-                                    />
-                                ) : (
-                                    <img
-                                        src={reel.image}
-                                        alt={reel.label}
-                                        loading="lazy"
-                                        className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
-                                    />
-                                )}
+                                <img
+                                    src={reel.poster}
+                                    alt={reel.label}
+                                    loading="lazy"
+                                    className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
+                                />
 
                                 <div className="absolute inset-0 bg-gradient-to-t from-[#172015]/85 via-[#172015]/10 to-black/10" />
 

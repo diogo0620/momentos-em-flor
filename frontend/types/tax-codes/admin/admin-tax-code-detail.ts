@@ -4,6 +4,6 @@ export type AdminTaxCodeDetail = {
     description: string;
     rate: number;
     active: boolean;
-    createdAt: boolean;
-    updateAt: boolean;
+    createdAt: string;
+    updatedAt: string;
 }

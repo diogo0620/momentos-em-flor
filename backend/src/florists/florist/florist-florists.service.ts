@@ -8,6 +8,8 @@ import { ApiResponse } from '@/common/responses/api-response';
 import { FloristFloristsMapper } from './mappers/florist-florists.mapper';
 import { FloristUpdateFloristDto } from './dtos/florist-update-florist.dto';
 import { FloristFloristResponseDto } from './dtos/florist-florist-response.dto';
+import { normalizePhoneNumber } from '@/common/phone/phone-number';
+import { GeocodingService } from '@/geocoding/geocoding.service';
 
 
 @Injectable()
@@ -16,6 +18,7 @@ export class FloristFloristsService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly mapper: FloristFloristsMapper,
+        private readonly geocoding: GeocodingService,
     ) { }
 
 
@@ -40,6 +43,30 @@ export class FloristFloristsService {
         dto: FloristUpdateFloristDto,
     ): Promise<void> {
         try {
+            const current = await this.prisma.florist.findUnique({ where: { id } });
+            if (!current) {
+                Exceptions.notFound(ERROR_MESSAGES.FLORIST_NOT_FOUND);
+            }
+            const addressChanged = [
+                dto.addressStreet,
+                dto.addressStreetNumber,
+                dto.addressStreet2,
+                dto.addressPostalCode,
+                dto.addressCity,
+                dto.addressDistrict,
+                dto.addressCountryCode,
+            ].some((value) => value !== undefined);
+            const coordinates = addressChanged
+                ? await this.geocoding.coordinates({
+                    street: dto.addressStreet ?? current.addressStreet,
+                    streetNumber: dto.addressStreetNumber ?? current.addressStreetNumber,
+                    street2: dto.addressStreet2 ?? current.addressStreet2,
+                    postalCode: dto.addressPostalCode ?? current.addressPostalCode,
+                    city: dto.addressCity ?? current.addressCity,
+                    district: dto.addressDistrict ?? current.addressDistrict,
+                    countryCode: dto.addressCountryCode ?? current.addressCountryCode,
+                })
+                : null;
             await this.prisma.florist.update({
                 where: { id },
                 data: {
@@ -53,10 +80,10 @@ export class FloristFloristsService {
                         taxNumber: dto.taxNumber,
                     }),
                     ...(dto.email !== undefined && {
-                        email: dto.email,
+                        email: dto.email.trim().toLowerCase(),
                     }),
                     ...(dto.phone !== undefined && {
-                        phone: dto.phone,
+                        phone: normalizePhoneNumber(dto.phone),
                     }),
                     ...(dto.website !== undefined && {
                         website: dto.website,
@@ -84,6 +111,10 @@ export class FloristFloristsService {
                     }),
                     ...(dto.addressCountryCode !== undefined && {
                         addressCountryCode: dto.addressCountryCode,
+                    }),
+                    ...(coordinates && {
+                        addressLatitude: coordinates.latitude,
+                        addressLongitude: coordinates.longitude,
                     }),
                     ...(dto.deliveryRadiusKm !== undefined && {
                         deliveryRadiusKm: dto.deliveryRadiusKm,

@@ -15,6 +15,8 @@ import {
     LogOut,
     Tags,
     Handshake,
+    Banknote,
+    ReceiptText,
 } from "lucide-react";
 
 const links = [
@@ -32,6 +34,16 @@ const links = [
         href: "/admin/order-offers",
         label: "Propostas a floristas",
         icon: Handshake,
+    },
+    {
+        href: "/admin/compensations",
+        label: "Compensações",
+        icon: Banknote,
+    },
+    {
+        href: "/admin/fiscal-documents",
+        label: "Faturação",
+        icon: ReceiptText,
     },
     {
         href: "/admin/categories",

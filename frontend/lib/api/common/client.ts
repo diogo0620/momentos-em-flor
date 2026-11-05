@@ -1,3 +1,5 @@
+import { createApiError } from "@/lib/errors/api-errors";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 if (!API_URL) {
@@ -96,21 +98,19 @@ export async function apiUpload<T>(
     }
 
     if (!response.ok) {
-        let message = "Ocorreu um erro no upload do ficheiro.";
+        let errorPayload = null;
 
         try {
-            const error = await response.json();
-
-            if (typeof error.message === "string") {
-                message = error.message;
-            } else if (Array.isArray(error.message)) {
-                message = error.message.join(", ");
-            }
+            errorPayload = await response.json();
         } catch {
-            // Mantém a mensagem genérica.
+            // A resposta pode não ter conteúdo JSON.
         }
 
-        throw new Error(message);
+        throw createApiError(
+            errorPayload,
+            response.status,
+            "Ocorreu um erro no upload do ficheiro.",
+        );
     }
 
     if (response.status === 204) {
@@ -126,9 +126,6 @@ export async function apiFetch<T>(
     endpoint: string,
     options: ApiOptions = {},
 ): Promise<T> {
-    console.log("API FETCH:", endpoint);
-    console.log("ACCESS TOKEN:", accessToken);
-
     const {
         skipRefresh = false,
         ...fetchOptions
@@ -149,11 +146,6 @@ export async function apiFetch<T>(
             `Bearer ${accessToken}`,
         );
     }
-
-    console.log(
-    "ABOUT TO FETCH:",
-    `${API_URL}${endpoint}`,
-);
 
     let response = await fetch(
         `${API_URL}${endpoint}`,
@@ -191,24 +183,19 @@ export async function apiFetch<T>(
     
 
     if (!response.ok) {
-        let message =
-            "Ocorreu um erro na comunicação com o servidor.";
+        let errorPayload = null;
 
         try {
-            const error = await response.json();
-
-            if (typeof error.message === "string") {
-                message = error.message;
-            } else if (
-                Array.isArray(error.message)
-            ) {
-                message = error.message.join(", ");
-            }
+            errorPayload = await response.json();
         } catch {
-            // Mantém a mensagem genérica.
+            // A resposta pode não ter conteúdo JSON.
         }
 
-        throw new Error(message);
+        throw createApiError(
+            errorPayload,
+            response.status,
+            "Ocorreu um erro na comunicação com o servidor.",
+        );
     }
 
     if (response.status === 204) {

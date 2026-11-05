@@ -11,7 +11,8 @@ import {
     AlertCircle,
 } from "lucide-react";
 
-import { getTaxCode, deleteTaxCode, TaxCode } from "@/lib/api/tax-codes";
+import { adminTaxCodesApi } from "@/lib/api/tax-codes/admin-tax-codes";
+import type { AdminTaxCodeDetail as TaxCode } from "@/types/tax-codes/admin/admin-tax-code-detail";
 
 export default function TaxCodeViewPage() {
     const params = useParams();
@@ -33,14 +34,8 @@ export default function TaxCodeViewPage() {
             }
 
             try {
-                const response = await getTaxCode(id);
-
-                if (!response?.success || !response.data) {
-                    setInvalid(true);
-                    return;
-                }
-
-                setTaxCode(response.data);
+                const response = await adminTaxCodesApi.getById(id);
+                setTaxCode(response);
             } catch (error) {
                 console.error("Error loading :", error);
                 setInvalid(true);
@@ -56,7 +51,7 @@ export default function TaxCodeViewPage() {
         if (!taxCode) return;
 
         const confirmed = window.confirm(
-            `Tem a certeza que pretende eliminar a Taxa de IVA "${taxCode.code}"?`
+            `Tem a certeza que pretende eliminar a Taxa de IVA "${taxCode.name}"?`
         );
 
         if (!confirmed) return;
@@ -64,7 +59,7 @@ export default function TaxCodeViewPage() {
         try {
             setDeleting(true);
 
-            await deleteTaxCode(taxCode.id);
+            await adminTaxCodesApi.delete(taxCode.id);
 
             router.push("/admin/tax-codes");
         } catch (error) {
@@ -141,7 +136,7 @@ export default function TaxCodeViewPage() {
                     </button>
 
                     <h1 className="text-2xl font-semibold text-gray-900">
-                        Taxa de IVA {taxCode.code}
+                        Taxa de IVA {taxCode.name}
                     </h1>
 
                     <p className="mt-1 text-sm text-gray-500">
@@ -208,7 +203,7 @@ export default function TaxCodeViewPage() {
                         </p>
 
                         <p className="mt-1 text-lg font-semibold text-gray-900">
-                            {taxCode.code}
+                            {taxCode.name}
                         </p>
                     </div>
 
@@ -223,7 +218,7 @@ export default function TaxCodeViewPage() {
                         </p>
 
                         <p className="mt-1 text-lg font-semibold text-gray-900">
-                            {taxCode.name}
+                            {taxCode.description}
                         </p>
                     </div>
 

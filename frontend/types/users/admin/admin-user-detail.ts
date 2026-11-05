@@ -10,7 +10,7 @@ export type AdminUserDetail = {
     florist?: UserFlorist | null;
     lastLoginAt?: Date | null;
     createdAt: Date;
-    updateAt: Date
+    updatedAt: Date
 }
 
 export type UserFlorist = {

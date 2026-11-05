@@ -12,10 +12,8 @@ import {
 
 import TaxCodeForm from "@/components/admin/tax-codes/TaxCodeForm";
 
-import {
-    getTaxCode,
-    type TaxCode,
-} from "@/lib/api/tax-codes";
+import { adminTaxCodesApi } from "@/lib/api/tax-codes/admin-tax-codes";
+import type { AdminTaxCodeDetail as TaxCode } from "@/types/tax-codes/admin/admin-tax-code-detail";
 
 export default function EditTaxCodePage() {
     const params = useParams();
@@ -49,12 +47,12 @@ export default function EditTaxCodePage() {
                 setError(null);
 
                 const response =
-                    await getTaxCode(
+                    await adminTaxCodesApi.getById(
                         taxCodeId,
                     );
 
                 setTaxCode(
-                    response.data,
+                    response,
                 );
             } catch (err) {
                 setError(

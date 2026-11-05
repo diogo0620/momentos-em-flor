@@ -11,7 +11,9 @@ import {
     Package,
     UserCircle,
     ClipboardList,
+    WalletCards,
 } from "lucide-react";
+import { floristOrderOffersApi } from "@/lib/api/order-offers/florist-order-offers";
 
 
 const links = [
@@ -29,6 +31,11 @@ const links = [
         href: "/florist/orders",
         label: "Encomendas",
         icon: ShoppingCart,
+    },
+    {
+        href: "/florist/compensations",
+        label: "Pagamentos",
+        icon: WalletCards,
     },
     {
         href: "/florist/products",
@@ -51,11 +58,13 @@ export default function FloristSidebar() {
     useEffect(() => {
         async function loadPendingOffers() {
             try {
-                const offers =
-                    await getOrderOffers();
+                const response = await floristOrderOffersApi.getAll({
+                    page: 1,
+                    pageSize: 100,
+                });
 
                 const pending =
-                    offers.filter(
+                    response.items.filter(
                         (offer) =>
                             offer.status ===
                                 "PENDING" ||

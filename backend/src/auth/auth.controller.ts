@@ -8,6 +8,7 @@ import type { Response, Request } from 'express';
 import { Exceptions } from '@/common/exceptions/exceptions';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
+import { getRefreshCookieOptions } from './refresh-cookie';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -53,11 +54,7 @@ export class AuthController {
         const refreshToken = request.cookies?.refreshToken;
 
         if (!refreshToken) {
-            response.clearCookie('refreshToken', {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
-            });
+            response.clearCookie('refreshToken', getRefreshCookieOptions());
 
             return;
         }

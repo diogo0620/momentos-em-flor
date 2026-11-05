@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
@@ -53,11 +53,10 @@ export default function CheckoutPaymentPage() {
     const [clientSecret, setClientSecret] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [verifyingPayment, setVerifyingPayment] = useState(false);
 
     useEffect(() => {
         if (!orderNumber) {
-            setError("Encomenda inválida.");
-            setLoading(false);
             return;
         }
 
@@ -78,7 +77,7 @@ export default function CheckoutPaymentPage() {
 
                 setOrder(orderData);
 
-    
+
                 if (orderData.status !== "PENDING_PAYMENT") {
                     router.replace(`/account/orders/${orderNumber}`);
                     return;
@@ -117,6 +116,49 @@ export default function CheckoutPaymentPage() {
         };
     }, [orderNumber, router]);
 
+    const handlePaymentSuccess = useCallback(async () => {
+        setVerifyingPayment(true);
+        setError(null);
+
+        // O webhook do Stripe pode demorar alguns instantes a atualizar a encomenda.
+        // Consultamos o backend até confirmar que o estado é PAID.
+        const maxAttempts = 10;
+        const delayMs = 1500;
+
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+            try {
+                const latestOrder = await customerOrdersApi.getByOrderNumber(orderNumber);
+
+                const successfulOrderStatuses = [
+                    "WAITING_FOR_FLORISTS",
+                    "ASSIGNED",
+                    "IN_PRODUCTION",
+                    "READY_FOR_DELIVERY",
+                    "DELIVERED",
+                ] as const;
+
+                if (
+                    latestOrder?.orderNumber === orderNumber &&
+                    successfulOrderStatuses.some((status) => status === latestOrder.status)
+                ) {
+                    router.push("/checkout/success");
+                    return;
+                }
+            } catch (err) {
+                console.error("Erro ao verificar o estado do pagamento:", err);
+            }
+
+            if (attempt < maxAttempts - 1) {
+                await new Promise((resolve) => setTimeout(resolve, delayMs));
+            }
+        }
+
+        setVerifyingPayment(false);
+        setError(
+            "O pagamento foi submetido, mas ainda não conseguimos confirmar que a encomenda está paga. Aguarda alguns instantes e consulta o estado da encomenda antes de tentares pagar novamente."
+        );
+    }, [orderNumber, router]);
+
     const appearance = useMemo(
         () => ({
             theme: "stripe" as const,
@@ -147,6 +189,20 @@ export default function CheckoutPaymentPage() {
         );
     }
 
+    if (verifyingPayment) {
+        return (
+            <main className="min-h-screen bg-[#F7F8F4] px-4 py-16">
+                <div className="mx-auto flex max-w-xl items-center justify-center">
+                    <div className="w-full rounded-[2rem] bg-white px-10 py-12 text-center shadow-sm">
+                        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#D6DEC8] border-t-[#55624A]" />
+                        <h1 className="mt-5 text-xl font-bold text-[#2F3B2A]">A confirmar o pagamento</h1>
+                        <p className="mt-3 text-sm leading-6 text-gray-500">Estamos a confirmar com o servidor que a encomenda ficou paga. Não feches esta página.</p>
+                    </div>
+                </div>
+            </main>
+        );
+    }
+
     if (error || !order || !clientSecret) {
         return (
             <main className="min-h-screen bg-[#F7F8F4] px-4 py-16">
@@ -156,7 +212,7 @@ export default function CheckoutPaymentPage() {
                     </div>
 
                     <h1 className="mt-6 text-2xl font-bold text-[#2F3B2A]">
-                        Não foi possível preparar o pagamento
+                        Não foi possível confirmar o pagamento
                     </h1>
 
                     <p className="mt-3 text-sm leading-6 text-gray-500">
@@ -179,7 +235,7 @@ export default function CheckoutPaymentPage() {
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
                 <div className="mb-8">
                     <Link
-                        href={`/account/orders/${order.id}`}
+                        href={`/account/orders/${order.orderNumber}`}
                         className="text-sm font-medium text-[#55624A] transition hover:text-[#2F3B2A]"
                     >
                         ← Voltar à encomenda
@@ -227,7 +283,8 @@ export default function CheckoutPaymentPage() {
                             options={{ clientSecret, appearance }}
                         >
                             <StripePaymentForm
-                                onSuccess={() => router.push("/checkout/success")}
+                                onSuccess={handlePaymentSuccess}
+                                amount={formatCurrency(order.total)}
                             />
                         </Elements>
                     </section>
@@ -253,10 +310,10 @@ export default function CheckoutPaymentPage() {
                                 {order.items.map((item) => (
                                     <div key={item.id} className="flex gap-3">
                                         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-[#F1F3EC]">
-                                            {item.image ? (
+                                            {item.type === "DELIVERY_FEE" || item.image ? (
                                                 <Image
-                                                    src={item.image}
-                                                    alt={item.productName}
+                                                    src={item.type === "DELIVERY_FEE" ? "/images/delivery-fee.svg" : item.image!}
+                                                    alt={item.type === "DELIVERY_FEE" ? "Taxa de entrega" : item.productName}
                                                     fill
                                                     sizes="64px"
                                                     className="object-cover"
@@ -301,15 +358,6 @@ export default function CheckoutPaymentPage() {
                                     <span className="text-gray-500">Subtotal</span>
                                     <span className="font-medium text-[#2F3B2A]">
                                         {formatCurrency(order.subtotal)}
-                                    </span>
-                                </div>
-
-                                <div className="flex justify-between gap-4">
-                                    <span className="text-gray-500">Entrega</span>
-                                    <span className="font-medium text-[#2F3B2A]">
-                                        {order.deliveryFee > 0
-                                            ? formatCurrency(order.deliveryFee)
-                                            : "Grátis"}
                                     </span>
                                 </div>
 

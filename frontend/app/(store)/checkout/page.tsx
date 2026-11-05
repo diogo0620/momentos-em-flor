@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 import { useRouter } from "next/navigation";
 
@@ -10,6 +11,9 @@ import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { CustomerCreateOrder } from "@/types/orders/customer/customer-create-order";
 import { customerOrdersApi } from "@/lib/api/orders/customer-orders";
+import { storeSettingsApi } from "@/lib/api/store-settings/store-settings";
+import PhoneInput from "@/components/forms/PhoneInput";
+import { isValidPhone } from "@/lib/validation/auth";
 
 
 const PORTUGAL_DISTRICTS = [
@@ -116,7 +120,22 @@ export default function CheckoutPage() {
     const [isLoadingDeliveryFee, setIsLoadingDeliveryFee] =
         useState(false);
 
+    const [deliveryAreaName, setDeliveryAreaName] =
+        useState("Santa Maria da Feira e arredores");
+
+    const [deliveryAvailable, setDeliveryAvailable] =
+        useState<boolean | null>(null);
+
+    const [isCheckingDeliveryArea, setIsCheckingDeliveryArea] =
+        useState(false);
+
     const [isSubmitting, setIsSubmitting] =
+        useState(false);
+
+    const [acceptedTerms, setAcceptedTerms] =
+        useState(false);
+
+    const [isRedirectingToPayment, setIsRedirectingToPayment] =
         useState(false);
 
     const [error, setError] =
@@ -137,23 +156,18 @@ export default function CheckoutPage() {
         deliveryDistrict.trim() !== "";
 
     useEffect(() => {
-
-        if (!hasCompleteDeliveryAddress) {
-            setDeliveryFee(null);
-            return;
-        }
-
         async function loadDeliveryFee() {
 
             try {
 
                 setIsLoadingDeliveryFee(true);
 
-                const response = {data:{deliveryFee: 0}}//await getStoreSettings();
+                const response = await storeSettingsApi.getPublic();
 
                 setDeliveryFee(
-                    response.data.deliveryFee,
+                    response.deliveryFee,
                 );
+                setDeliveryAreaName(response.deliveryAreaName);
 
             } catch {
 
@@ -169,7 +183,52 @@ export default function CheckoutPage() {
 
         loadDeliveryFee();
 
-    }, [hasCompleteDeliveryAddress]);
+    }, []);
+
+    useEffect(() => {
+        if (!hasCompleteDeliveryAddress) {
+            setDeliveryAvailable(null);
+            setIsCheckingDeliveryArea(false);
+            return;
+        }
+
+        let cancelled = false;
+        const timeout = window.setTimeout(async () => {
+            try {
+                setIsCheckingDeliveryArea(true);
+                const result = await storeSettingsApi.checkDeliveryAvailability({
+                    street: deliveryStreet.trim(),
+                    streetNumber: deliveryStreetNumber.trim(),
+                    street2: deliveryStreet2.trim() || undefined,
+                    postalCode: deliveryPostalCode.trim(),
+                    city: deliveryCity.trim(),
+                    district: deliveryDistrict,
+                    countryCode: deliveryCountryCode,
+                });
+                if (!cancelled) {
+                    setDeliveryAvailable(result.available);
+                    setDeliveryAreaName(result.areaName);
+                }
+            } catch {
+                if (!cancelled) setDeliveryAvailable(null);
+            } finally {
+                if (!cancelled) setIsCheckingDeliveryArea(false);
+            }
+        }, 650);
+
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timeout);
+        };
+    }, [
+        hasCompleteDeliveryAddress,
+        deliveryStreet,
+        deliveryStreetNumber,
+        deliveryStreet2,
+        deliveryPostalCode,
+        deliveryCity,
+        deliveryDistrict,
+    ]);
 
     const grandTotal =
         deliveryFee !== null
@@ -198,6 +257,33 @@ export default function CheckoutPage() {
 
         }
 
+        if (!acceptedTerms) {
+            setError("Para continuar, confirma que leste e aceitas os Termos e Condições e a Política de Privacidade.");
+            return;
+        }
+
+        if (!recipientFirstName.trim()) {
+            setError("Indica o nome da pessoa que vai receber a encomenda.");
+            return;
+        }
+
+        if (recipientPhone && !isValidPhone(recipientPhone)) {
+            setError("Introduz um número de telemóvel válido para o destinatário.");
+            return;
+        }
+
+        if (!deliveryDate || !deliveryTimeSlot) {
+            setError("Seleciona a data e o período de entrega.");
+            return;
+        }
+
+        const today = new Date();
+        const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+        if (deliveryDate < localToday) {
+            setError("A data de entrega não pode estar no passado.");
+            return;
+        }
+
         if (
             !hasCompleteDeliveryAddress ||
             !deliveryCountryCode
@@ -209,6 +295,16 @@ export default function CheckoutPage() {
 
             return;
 
+        }
+
+        if (isCheckingDeliveryArea) {
+            setError("Aguarde enquanto confirmamos a disponibilidade da entrega.");
+            return;
+        }
+
+        if (deliveryAvailable === false) {
+            setError(`Ainda não fazemos entregas nesta morada. A zona atual é ${deliveryAreaName}.`);
+            return;
         }
 
         if (
@@ -343,6 +439,7 @@ export default function CheckoutPage() {
              * the cart. Clear the cart before navigating
              * to the shared payment page.
              */
+            setIsRedirectingToPayment(true);
             clearCart();
 
             
@@ -400,6 +497,20 @@ export default function CheckoutPage() {
 
         );
 
+    }
+
+    if (isRedirectingToPayment) {
+        return (
+            <div className="min-h-screen bg-[#F7F8F4] px-4 py-16">
+                <div className="mx-auto flex max-w-7xl items-center justify-center">
+                    <div className="w-full max-w-md rounded-[2rem] border border-[#E6EAE1] bg-white px-8 py-12 text-center shadow-[0_20px_60px_rgba(47,59,42,0.08)]">
+                        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-[3px] border-[#D6DEC8] border-t-[#55624A]" />
+                        <h1 className="mt-6 text-xl font-semibold text-[#2F3B2A]">A preparar o pagamento</h1>
+                        <p className="mt-2 text-sm leading-6 text-[#7A8373]">A sua encomenda foi criada. Aguarde enquanto abrimos a página de pagamento seguro.</p>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     if (!isAuthenticated || !user) {
@@ -713,16 +824,9 @@ export default function CheckoutPage() {
                                         Telefone
                                     </label>
 
-                                    <input
-                                        type="tel"
+                                    <PhoneInput
                                         value={recipientPhone}
-                                        onChange={(e) =>
-                                            setRecipientPhone(
-                                                e.target.value,
-                                            )
-                                        }
-                                        placeholder="Telefone do destinatário"
-                                        className={fieldClass}
+                                        onValueChange={setRecipientPhone}
                                     />
 
                                 </div>
@@ -1092,6 +1196,18 @@ export default function CheckoutPage() {
 
                                 </div>
 
+                                {hasCompleteDeliveryAddress && (
+                                    <div role="status" className={`mt-4 rounded-xl border px-4 py-3 text-sm ${isCheckingDeliveryArea ? "border-[#E6E1D3] bg-[#FBF9F2] text-[#7E735B]" : deliveryAvailable === true ? "border-green-200 bg-green-50 text-green-700" : deliveryAvailable === false ? "border-red-200 bg-red-50 text-red-700" : "border-[#E3E7DE] bg-white text-[#747D6E]"}`}>
+                                        {isCheckingDeliveryArea
+                                            ? "A confirmar a disponibilidade da entrega..."
+                                            : deliveryAvailable === true
+                                                ? `Esta morada está abrangida pela zona ${deliveryAreaName}.`
+                                                : deliveryAvailable === false
+                                                    ? `Ainda não fazemos entregas nesta morada. Neste momento entregamos em ${deliveryAreaName}.`
+                                                    : "Não foi possível confirmar automaticamente a zona. A morada será validada ao continuar."}
+                                    </div>
+                                )}
+
                             </div>
 
                             <div className="mt-5">
@@ -1312,6 +1428,35 @@ export default function CheckoutPage() {
 
                                     })}
 
+                                    <div className="overflow-hidden rounded-2xl border border-[#E7EBE2] bg-[#FBFCFA]">
+                                        <div className="flex gap-4 p-4">
+                                            <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-[#F0F3EC]">
+                                                <Image
+                                                    src="/images/delivery-fee.svg"
+                                                    alt="Taxa de entrega"
+                                                    fill
+                                                    sizes="96px"
+                                                    className="object-cover"
+                                                />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-sm font-bold text-[#2F3B2A]">Taxa de entrega</p>
+                                                        <p className="mt-1 text-xs text-gray-500">Calculada a partir da morada de entrega</p>
+                                                    </div>
+                                                    <p className="whitespace-nowrap text-sm font-bold text-[#2F3B2A]">
+                                                        {!hasCompleteDeliveryAddress || isLoadingDeliveryFee
+                                                            ? "A calcular..."
+                                                            : deliveryFee !== null
+                                                                ? formatPrice(deliveryFee)
+                                                                : "Indisponível"}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                 </div>
 
                                 <div className="my-6 border-t border-dashed border-[#DDE2D8]" />
@@ -1326,33 +1471,6 @@ export default function CheckoutPage() {
 
                                         <span>
                                             {formatPrice(total)}
-                                        </span>
-
-                                    </div>
-
-                                    <div className="flex justify-between text-gray-500">
-
-                                        <span>
-                                            Entrega
-                                        </span>
-
-                                        <span>
-
-                                            {!hasCompleteDeliveryAddress
-
-                                                ? "A calcular..."
-
-                                                : isLoadingDeliveryFee
-
-                                                    ? "A calcular..."
-
-                                                    : deliveryFee !==
-                                                        null
-
-                                                        ? formatPrice(deliveryFee)
-
-                                                        : "Indisponível"}
-
                                         </span>
 
                                     </div>
@@ -1392,9 +1510,27 @@ export default function CheckoutPage() {
 
                                 </div>
 
+                                <div className="mt-6 rounded-2xl border border-[#E2E7DD] bg-[#F8F9F5] p-4">
+                                    <label className="flex cursor-pointer items-start gap-3 text-xs leading-5 text-[#626B5D]">
+                                        <input
+                                            type="checkbox"
+                                            checked={acceptedTerms}
+                                            onChange={(event) => setAcceptedTerms(event.target.checked)}
+                                            className="mt-0.5 h-4 w-4 shrink-0 accent-[#55624A]"
+                                        />
+                                        <span>
+                                            Li e aceito os <Link href="/terms" target="_blank" className="font-semibold text-[#55624A] underline">Termos e Condições</Link> e a <Link href="/privacy" target="_blank" className="font-semibold text-[#55624A] underline">Política de Privacidade</Link>. Confirmo a área e condições de entrega e compreendo que os produtos naturais podem variar face às imagens ilustrativas.
+                                        </span>
+                                    </label>
+                                </div>
+
+                                <p className="mt-4 rounded-xl bg-[#FFF9EC] px-4 py-3 text-xs leading-5 text-[#7D6841]">
+                                    Em caso de indisponibilidade operacional excecional após o pagamento, entraremos em contacto e será efetuado o reembolso integral sem demora injustificada.
+                                </p>
+
                                 <button
                                     type="submit"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || isCheckingDeliveryArea || deliveryAvailable === false || !acceptedTerms}
                                     className="mt-7 w-full rounded-2xl bg-[#55624A] px-5 py-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#46523D] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                                 >
 
@@ -1405,7 +1541,7 @@ export default function CheckoutPage() {
                                 </button>
 
                                 <p className="mt-4 text-center text-xs leading-5 text-gray-400">
-                                    Ao continuar, a sua encomenda será criada e poderá efetuar o pagamento de forma segura.
+                                    Ao continuar, a encomenda será criada. O pagamento só é efetuado no passo seguinte.
                                 </p>
 
                             </div>

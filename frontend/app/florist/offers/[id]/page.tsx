@@ -224,7 +224,7 @@ export default function FloristOfferDetailPage() {
     }
 
     const order = offer.order;
-    const items = offer.items ?? order?.items ?? [];
+    const items = order.items ?? [];
     const location = [order?.deliveryCity, order?.deliveryDistrict].filter(Boolean).join(", ") || "Localidade não indicada";
 
     return (

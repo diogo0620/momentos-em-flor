@@ -50,6 +50,16 @@ class AdminOrdersApi extends BaseApi<
         );
     }
 
+    refund(id: number, reason: string): Promise<{ status: string }> {
+        return apiFetch<{ status: string }>(
+            `/admin/payments/orders/${id}/refund`,
+            {
+                method: "POST",
+                body: JSON.stringify({ reason }),
+            },
+        );
+    }
+
 }
 
 

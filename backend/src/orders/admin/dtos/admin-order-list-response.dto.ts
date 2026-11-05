@@ -27,6 +27,9 @@ export class AdminOrderListResponseDto {
   @ApiProperty()
   total! : number;
 
+  @ApiProperty()
+  expectedFloristTotal!: number;
+
   @ApiProperty({
     enum: OrderStatus,
   })

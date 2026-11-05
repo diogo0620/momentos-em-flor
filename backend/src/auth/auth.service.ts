@@ -19,6 +19,7 @@ import { ConfigService } from '@nestjs/config';
 import { EmailService } from '@/email/email.service';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
+import { getRefreshCookieOptions } from './refresh-cookie';
 
 @Injectable()
 export class AuthService {
@@ -56,10 +57,6 @@ export class AuthService {
             Exceptions.unauthorized();
         }
 
-        if (!user.active) {
-            Exceptions.unauthorized();
-        }
-
         await this.prisma.user.update({
             where: {
                 id: user.id,
@@ -83,20 +80,7 @@ export class AuthService {
         response.cookie(
             'refreshToken',
             refreshToken,
-            {
-                httpOnly: true,
-                secure:
-                    process.env.NODE_ENV ===
-                    'production',
-                sameSite: 'lax',
-                maxAge:
-                    AUTH_CONSTANTS
-                        .REFRESH_TOKEN_EXPIRES_IN_DAYS *
-                    24 *
-                    60 *
-                    60 *
-                    1000,
-            },
+            getRefreshCookieOptions(true),
         );
 
         return {
@@ -193,20 +177,7 @@ export class AuthService {
         response.cookie(
             'refreshToken',
             newRefreshToken,
-            {
-                httpOnly: true,
-                secure:
-                    process.env.NODE_ENV ===
-                    'production',
-                sameSite: 'lax',
-                maxAge:
-                    AUTH_CONSTANTS
-                        .REFRESH_TOKEN_EXPIRES_IN_DAYS *
-                    24 *
-                    60 *
-                    60 *
-                    1000,
-            },
+            getRefreshCookieOptions(true),
         );
 
         return {
@@ -261,13 +232,7 @@ export class AuthService {
 
         response.clearCookie(
             'refreshToken',
-            {
-                httpOnly: true,
-                secure:
-                    process.env.NODE_ENV ===
-                    'production',
-                sameSite: 'lax',
-            },
+            getRefreshCookieOptions(),
         );
     }
 
@@ -279,7 +244,7 @@ export class AuthService {
 
         const user = await this.prisma.user.findUnique({
             where: {
-                email: dto.email,
+                email: dto.email.trim().toLowerCase(),
             },
         });
 
@@ -326,7 +291,7 @@ export class AuthService {
         resetUrl.searchParams.set('token', token);
 
         await this.emailService.sendEmail({
-            to: 'diogomicael6@gmail.com',
+            to: user.email,
             templateId: 'password-reset',
             variables: {
                 RESET_URL: resetUrl.toString(),
@@ -411,7 +376,7 @@ export class AuthService {
 
     private async findByEmail(email: string): Promise<AuthUserDto> {
         const user = await this.prisma.user.findUnique({
-            where: { email },
+            where: { email: email.trim().toLowerCase() },
         });
 
         if (!user) {

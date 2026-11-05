@@ -14,6 +14,9 @@ import { Roles } from '@/auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
 import { UserRole } from '@prisma/client';
+import { CurrentUser } from '@/auth/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '@/auth/interfaces/authenticated-user.interface';
+import { CustomerCreatePaymentIntentDto } from './dtos/customer-create-payment-intent.dto';
 
 
 type RawBodyRequest = Request & {
@@ -39,9 +42,13 @@ export class PaymentsController {
     }
 
     @Post('intent')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.CUSTOMER)
+    @ApiBearerAuth('JWT')
     async createPaymentIntent(
-        @Body('orderNumber') orderNumber: string,
+        @CurrentUser() user: AuthenticatedUser,
+        @Body() dto: CustomerCreatePaymentIntentDto,
     ) {
-        return await this.paymentsService.createPaymentIntent(orderNumber);
+        return this.paymentsService.createPaymentIntent(user, dto.orderNumber);
     }
 }

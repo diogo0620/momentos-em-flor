@@ -1,4 +1,4 @@
-import { AdminDeliveryTimeSlot, AdminOccasion, AdminOrderCancellationReason, AdminOrderItemType, AdminOrderOfferStatus, AdminOrderStatus, AdminProductVariantType } from "./admin-order-status";
+import { AdminDeliveryTimeSlot, AdminOccasion, AdminOrderCancellationReason, AdminOrderItemType, AdminOrderOfferDeclineReason, AdminOrderOfferStatus, AdminOrderStatus, AdminProductVariantType } from "./admin-order-status";
 
 
 export type AdminOrderFlorist = {
@@ -61,7 +61,8 @@ export type AdminOrderOffer = {
     acceptedAt: string | null;
     declinedAt: string | null;
     expiresAt: string;
-    declineReason: string | null;
+    declineReason: AdminOrderOfferDeclineReason | null;
+    declineReasonDetails: string | null;
     createdAt: string;
     updatedAt: string;
     florist: AdminOrderFlorist;
@@ -117,6 +118,7 @@ export type AdminOrder = {
     deliveryFee: number;
     discount: number;
     total: number;
+    expectedFloristTotal: number;
 
     assignedAt: string | null;
     cancelledAt: string | null;
@@ -126,6 +128,29 @@ export type AdminOrder = {
     items: AdminOrderItem[];
     offers: AdminOrderOffer[];
     taxTotals: AdminOrderTaxTotal[];
+
+    payment: {
+        id: number;
+        status: "PENDING" | "PAID" | "FAILED" | "CANCELLED" | "REFUNDED";
+        amount: number;
+        currency: string;
+        paidAt: string | null;
+        refund: {
+            id: number;
+            status: "PENDING" | "SUCCEEDED" | "FAILED" | "CANCELLED";
+            amount: number;
+            currency: string;
+            reason: string;
+            failureReason: string | null;
+            requestedAt: string;
+            completedAt: string | null;
+        } | null;
+    } | null;
+    moloniFiscalDocument: {
+        creditNoteRequiredAt: string | null;
+        creditNoteId: string | null;
+        creditNoteRecordedAt: string | null;
+    } | null;
 
     createdAt: string;
     updatedAt: string;

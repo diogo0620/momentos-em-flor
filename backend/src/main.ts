@@ -4,7 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ConfigService } from '@nestjs/config';
 import { createSwaggerConfig } from '@/config/swagger.config';
-import { corsConfig } from '@/config/cors.config';
+import { createCorsConfig } from '@/config/cors.config';
 
 import { NestExpressApplication } from '@nestjs/platform-express';
 
@@ -27,36 +27,46 @@ async function bootstrap() {
     }),
   );
 
-  /*
   app.useGlobalFilters(
     new HttpExceptionFilter(),
   );
-  */
 
-  app.enableCors(corsConfig);
+  app.enableCors(createCorsConfig());
 
-  const document =
-    SwaggerModule.createDocument(
+  if (
+    process.env.NODE_ENV !== 'production' ||
+    process.env.ENABLE_SWAGGER === 'true'
+  ) {
+    const document = SwaggerModule.createDocument(
       app,
       createSwaggerConfig(),
     );
 
-  SwaggerModule.setup('api/docs', app, document);
+    SwaggerModule.setup('api/docs', app, document);
+  }
 
   app.use(cookieParser());
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('app.port')!;
+  const host = process.env.HOST ?? '0.0.0.0';
 
-  await app.listen(port);
+  app.enableShutdownHooks();
 
-  console.log(
-    `🚀 Backend running on http://localhost:${port}/api`,
-  );
+  await app.listen(port, host);
 
-  console.log(
-    `📚 Swagger available at http://localhost:${port}/api/docs`,
-  );
+  const publicApiUrl = process.env.BACKEND_URL
+    ? process.env.BACKEND_URL.replace(/\/$/, '')
+    : `http://${host}:${port}/api`;
+
+  console.log(`🚀 Backend running on ${publicApiUrl}`);
+
+  if (
+    process.env.NODE_ENV !== 'production' ||
+    process.env.ENABLE_SWAGGER === 'true'
+  ) {
+    console.log(`📚 Swagger available at http://${host}:${port}/api/docs`);
+  }
 }
 
 bootstrap();

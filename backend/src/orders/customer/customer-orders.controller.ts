@@ -26,6 +26,7 @@ import { UserRole } from '@prisma/client';
 import { CustomerUpdateOrderDto } from './dtos/customer-update-order.dto';
 import { CurrentUser } from '@/auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/interfaces/authenticated-user.interface';
+import { CustomerCreateOrderReviewDto } from './dtos/customer-create-order-review.dto';
 
 
 @ApiTags('Orders (Customer)')
@@ -67,6 +68,25 @@ export class CustomerOrdersController {
         @Body() dto: CustomerUpdateOrderDto,
     ) {
         return await this.service.update(user, orderNumber, dto);
+    }
+
+    @Post(':orderNumber/cancel')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async cancelPendingPayment(
+        @CurrentUser() user: AuthenticatedUser,
+        @Param('orderNumber') orderNumber: string,
+    ): Promise<void> {
+        await this.service.cancelPendingPayment(user, orderNumber);
+    }
+
+    @Post(':orderNumber/review')
+    @HttpCode(HttpStatus.CREATED)
+    createReview(
+        @CurrentUser() user: AuthenticatedUser,
+        @Param('orderNumber') orderNumber: string,
+        @Body() dto: CustomerCreateOrderReviewDto,
+    ) {
+        return this.service.createReview(user, orderNumber, dto);
     }
 
 }

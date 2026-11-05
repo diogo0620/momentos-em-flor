@@ -7,12 +7,31 @@ import {
     DeliveryTimeSlot,
     Occasion,
     OrderStatus,
-    OrderCancellationReason
+    OrderCancellationReason,
+    OrderItemType,
+    ReviewCategory,
 } from '@prisma/client';
+
+class CustomerOrderReviewRatingResponseDto {
+    @ApiProperty({ enum: ReviewCategory }) category!: ReviewCategory;
+    @ApiProperty() rating!: number;
+}
+
+class CustomerOrderReviewResponseDto {
+    @ApiProperty() id!: number;
+    @ApiPropertyOptional() comment!: string | null;
+    @ApiProperty() averageRating!: number;
+    @ApiProperty({ type: [CustomerOrderReviewRatingResponseDto] })
+    ratings!: CustomerOrderReviewRatingResponseDto[];
+    @ApiProperty() createdAt!: Date;
+}
 
 
 
 class CustomerOrderItemResponseDto {
+    @ApiProperty({ enum: OrderItemType })
+    type!: OrderItemType;
+
     @ApiProperty()
     id!: number;
 
@@ -21,6 +40,9 @@ class CustomerOrderItemResponseDto {
 
     @ApiProperty()
     productName!: string;
+
+    @ApiPropertyOptional()
+    variantName?: string | null;
 
     @ApiPropertyOptional()
     image?: string | null;
@@ -148,6 +170,9 @@ export class CustomerOrderResponseDto {
         type: [CustomerOrderItemResponseDto],
     })
     items!: CustomerOrderItemResponseDto[];
+
+    @ApiPropertyOptional({ type: CustomerOrderReviewResponseDto, nullable: true })
+    review!: CustomerOrderReviewResponseDto | null;
 
     @ApiProperty()
     createdAt!: Date;

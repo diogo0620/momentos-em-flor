@@ -13,6 +13,7 @@ import {
 
 import { customerUsersApi } from "@/lib/api/users/customer-users";
 import { CustomerChangePassword } from "@/types/users/customer/customer-user-change-password";
+import { PASSWORD_REQUIREMENTS, validateStrongPassword } from "@/lib/validation/auth";
 
 export default function AccountSecurityPage() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -32,8 +33,9 @@ export default function AccountSecurityPage() {
     setSuccess(null);
     setError(null);
 
-    if (newPassword.length < 8) {
-      setError("A nova palavra-passe deve ter pelo menos 8 caracteres.");
+    const passwordError = validateStrongPassword(newPassword);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 
@@ -103,7 +105,7 @@ export default function AccountSecurityPage() {
               Alterar palavra-passe
             </h3>
             <p className="mt-1 text-sm leading-6 text-[#858A7F]">
-              Utilize uma palavra-passe única, com pelo menos 8 caracteres.
+              {PASSWORD_REQUIREMENTS}
             </p>
           </div>
         </div>

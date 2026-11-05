@@ -15,6 +15,8 @@ export type AdminFloristDetail = {
     addressDistrict: string;
     addressCountryCode: string;
     deliveryRadiusKm: number;
+    averageRating: number;
+    reviewCount: number;
     acceptingOrders: boolean;
     active: boolean;
     admins: FloristAdmin[];

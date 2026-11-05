@@ -16,6 +16,7 @@ import { AdminUsersMapper } from './mappers/admin-users.mapper';
 import { AdminUserQueryDto } from './dtos/admin-user-query.dto';
 import { AdminCreateUserDto } from './dtos/admin-create-user.dto';
 import { EntityIdResponseDto } from '@/common/responses/dto/entity-id-response.dto';
+import { normalizePhoneNumber } from '@/common/phone/phone-number';
 
 @Injectable()
 export class AdminUsersService {
@@ -86,9 +87,9 @@ export class AdminUsersService {
                 data: {
                     firstName: dto.firstName,
                     lastName: dto.lastName,
-                    email: dto.email,
+                    email: dto.email.trim().toLowerCase(),
                     passwordHash,
-                    phone: dto.phone,
+                    phone: normalizePhoneNumber(dto.phone),
                     role: dto.role,
                     floristId: dto.floristId,
                     active: dto.active ?? true,

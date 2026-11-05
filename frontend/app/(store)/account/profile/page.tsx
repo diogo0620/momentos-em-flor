@@ -5,7 +5,6 @@ import { useEffect, useState, type FormEvent } from "react";
 import {
   CheckCircle2,
   Mail,
-  Phone,
   Save,
   UserRound,
 } from "lucide-react";
@@ -13,6 +12,7 @@ import {
 import { customerUsersApi } from "@/lib/api/users/customer-users";
 import type { CustomerUserDetail } from "@/types/users/customer/customer-user-detail";
 import type { CustomerUpdateUser } from "@/types/users/customer/customer-update-user";
+import PhoneInput from "@/components/forms/PhoneInput";
 
 export default function AccountProfilePage() {
   const [user, setUser] = useState<CustomerUserDetail | null>(null);
@@ -279,22 +279,12 @@ export default function AccountProfilePage() {
               Telefone
             </span>
 
-            <div className="relative mt-2">
-              <Phone
-                size={17}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9AA091]"
-              />
-
-              <input
-                type="tel"
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-                autoComplete="tel"
-                disabled={isSaving}
-                className={`${inputClass} pl-11`}
-                placeholder="+351 912 345 678"
-              />
-            </div>
+            <PhoneInput
+              value={phone}
+              onValueChange={setPhone}
+              disabled={isSaving}
+              className="mt-2"
+            />
 
             <span className="mt-2 block text-xs leading-5 text-[#92978C]">
               Pode ser utilizado para contactos relacionados com as suas

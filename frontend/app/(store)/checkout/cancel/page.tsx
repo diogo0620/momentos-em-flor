@@ -122,9 +122,9 @@ export default function CheckoutCancelPage() {
                                         </h2>
 
                                         <p className="mt-1.5 text-sm leading-6 text-gray-500">
-                                            A confirmação da encomenda será
-                                            enviada para o endereço de email
-                                            associado à sua conta.
+                                            Este é o endereço associado à sua
+                                            conta e usado nas comunicações da
+                                            encomenda.
                                         </p>
 
                                         {user?.email && (

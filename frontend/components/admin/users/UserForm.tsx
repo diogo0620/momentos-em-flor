@@ -20,6 +20,8 @@ import type { AdminUserDetail } from "@/types/users/admin/admin-user-detail";
 import type { AdminCreateUser, UserRole } from "@/types/users/admin/admin-create-user";
 import type { AdminUpdateUser } from "@/types/users/admin/admin-update-user";
 import type { AdminFloristList } from "@/types/florists/admin/admin-florist-list";
+import PhoneInput from "@/components/forms/PhoneInput";
+import { isValidEmail, validateStrongPassword } from "@/lib/validation/auth";
 
 type UserFormProps = {
     user?: AdminUserDetail;
@@ -34,12 +36,25 @@ const labelClassName =
 function generatePassword(length = 14): string {
     const chars =
         "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*";
-    const randomValues = new Uint32Array(length);
+    const safeLength = Math.max(length, 8);
+    const randomValues = new Uint32Array(safeLength - 4);
 
     crypto.getRandomValues(randomValues);
 
-    return Array.from(randomValues)
-        .map((value) => chars[value % chars.length])
+    const password = [
+        "A",
+        "a",
+        "2",
+        "!",
+        ...Array.from(randomValues).map((value) => chars[value % chars.length]),
+    ];
+    const shuffleValues = new Uint32Array(password.length);
+    crypto.getRandomValues(shuffleValues);
+
+    return password
+        .map((character, index) => ({ character, order: shuffleValues[index] }))
+        .sort((a, b) => a.order - b.order)
+        .map(({ character }) => character)
         .join("");
 }
 
@@ -139,14 +154,17 @@ export default function UserForm({ user }: UserFormProps) {
             return;
         }
 
-        if (!isEditing && !email.trim()) {
-            setError("O email é obrigatório.");
+        if (!isEditing && !isValidEmail(email)) {
+            setError("Introduz um endereço de email válido.");
             return;
         }
 
-        if (!isEditing && password.length < 8) {
-            setError("A password deve ter pelo menos 8 caracteres.");
-            return;
+        if (!isEditing) {
+            const passwordError = validateStrongPassword(password);
+            if (passwordError) {
+                setError(passwordError);
+                return;
+            }
         }
 
         if (role === "FLORIST" && !floristId) {
@@ -266,12 +284,10 @@ export default function UserForm({ user }: UserFormProps) {
                         <label htmlFor="phone" className={labelClassName}>
                             Telefone
                         </label>
-                        <input
+                        <PhoneInput
                             id="phone"
-                            type="tel"
                             value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            className={inputClassName}
+                            onValueChange={setPhone}
                             disabled={saving}
                         />
                     </div>
@@ -297,7 +313,7 @@ export default function UserForm({ user }: UserFormProps) {
                     <div>
                         <label className={labelClassName}>Perfil</label>
                         <div className={`${inputClassName} flex items-center`}>
-                            {user?.role === "SYSTEM_ADMIN"
+                            {user?.role === "ADMIN"
                                 ? "Administrador"
                                 : user?.role === "FLORIST"
                                   ? "Florista"

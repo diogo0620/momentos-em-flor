@@ -56,8 +56,6 @@ export class GoogleGeocodingService {
 
         let response: Response;
 
-        Logger.log("url", url)
-
         try {
             response = await fetch(url);
         } catch (error) {
@@ -92,11 +90,7 @@ export class GoogleGeocodingService {
             );
         }
 
-        Logger.log("Payload", payload)
-
         const location = payload.results[0]?.geometry?.location;
-
-        Logger.log("Location", location)
 
         if (
             !location ||
@@ -111,8 +105,9 @@ export class GoogleGeocodingService {
             );
         }
 
-        if (location.lat && location.lng)
+        if(location.lat && location.lng) {
             return { latitude: location.lat, longitude: location.lng };
+        }
 
         return null;
     }

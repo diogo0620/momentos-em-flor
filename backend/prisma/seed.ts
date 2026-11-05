@@ -57,7 +57,7 @@ async function createTaxCode() {
   return prisma.taxCode.upsert({
     where: { name: 'IVA Normal 23%' },
     update: { description: 'Taxa normal de IVA para Portugal continental.', rate: 23 },
-    create: { name: 'IVA Normal 23%', description: 'Taxa normal de IVA para Portugal continental.', rate: 23 },
+    create: { name: 'IVA Normal 23%', description: 'Taxa normal de IVA para Portugal continental.', rate: 23},
   });
 }
 
@@ -232,8 +232,56 @@ async function createProducts(taxCodeId: number, c: Awaited<ReturnType<typeof cr
   return result;
 }
 
+async function clearDatabase(): Promise<void> {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "❌ Não é permitido limpar a base de dados em produção.",
+    );
+  }
+
+  console.log("🧹 A limpar a base de dados...");
+
+  await prisma.$transaction(async (tx) => {
+    // Avaliações
+    await tx.orderReviewRating.deleteMany();
+    await tx.orderReview.deleteMany();
+
+    // Encomendas e pagamentos
+    await tx.orderOffer.deleteMany();
+    await tx.payment.deleteMany();
+    await tx.orderTaxTotal.deleteMany();
+    await tx.orderItemComponent.deleteMany();
+    await tx.orderItem.deleteMany();
+    await tx.order.deleteMany();
+
+    // Autenticação
+    await tx.passwordResetToken.deleteMany();
+    await tx.refreshToken.deleteMany();
+
+    // Utilizadores e floristas
+    await tx.user.deleteMany();
+    await tx.florist.deleteMany();
+
+    // Catálogo
+    await tx.productVariant.deleteMany();
+    await tx.productComponent.deleteMany();
+    await tx.product.deleteMany();
+    await tx.category.deleteMany();
+    await tx.taxCode.deleteMany();
+
+    // Configurações da loja
+    await tx.storeSettings.deleteMany();
+  });
+
+  console.log("✅ Base de dados limpa.");
+}
+
 async function main() {
   console.log('🌱 Starting Momentos em Flor development seed...');
+
+  await clearDatabase();
+
+
   const allAssets: Asset[] = [
     ...Object.values(assets.categories), ...Object.values(assets.products), ...Object.values(assets.variants),
   ];

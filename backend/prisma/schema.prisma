@@ -27,10 +27,26 @@ enum UserRole {
   CUSTOMER
 }
 
-enum PricingMarginType {
-  FIXED_AMOUNT
-  PERCENTAGE
-  FIXED_PRICE
+enum MoloniSyncStatus {
+  NOT_SYNCED
+  PENDING
+  SYNCED
+  FAILED
+}
+
+enum MoloniDocumentStatus {
+  QUEUED
+  PROCESSING
+  ISSUED
+  FAILED
+  NOT_REQUIRED
+}
+
+enum FloristCompensationStatus {
+  PENDING_DELIVERY
+  DUE
+  PAID
+  CANCELLED
 }
 
 enum PaymentStatus {
@@ -39,6 +55,13 @@ enum PaymentStatus {
     FAILED
     CANCELLED
     REFUNDED
+}
+
+enum PaymentRefundStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
 }
 
 //
@@ -182,12 +205,15 @@ model Florist {
   addressLongitude Decimal? @db.Decimal(9, 6)
 
   deliveryRadiusKm Decimal @db.Decimal(5, 2)
+  averageRating Decimal @default(0) @db.Decimal(3, 2)
+  reviewCount Int @default(0)
 
   users User[]
 
   orderOffers                       OrderOffer[]
   orderReviews                      OrderReview[]
   assignedOrders                    Order[]                            @relation("OrderAssignedFlorist")
+  compensations                     FloristCompensation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -215,33 +241,25 @@ model PasswordResetToken {
 
 model User {
   id Int @id @default(autoincrement())
-
   firstName String
   lastName  String
-
   email        String @unique
   passwordHash String
-
   phone String
   taxNumber String?
-
   role UserRole
-
-  active        Boolean @default(true)
   emailVerified Boolean @default(false)
-
   lastLoginAt DateTime?
-
   refreshTokens RefreshToken[]
   passwordResetTokens PasswordResetToken[]
-
   floristId Int?
   florist   Florist? @relation(fields: [floristId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-
   orderReviews       OrderReview[]
-
   orders Order[]
 
+  moloniSync MoloniSync?
+
+  active        Boolean @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -278,18 +296,17 @@ model RefreshToken {
 
 model TaxCode {
   id Int @id @default(autoincrement())
-
   name String @unique
   description String
-
   rate Decimal @db.Decimal(5, 2)
-
-  active Boolean @default(true)
-
   products Product[]
   orderItems OrderItem[]
   orderTaxTotals OrderTaxTotal[]
+  deliveryStoreSettings StoreSettings[]
 
+  moloniSync MoloniSync?
+
+  active Boolean @default(true)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
   
@@ -307,43 +324,22 @@ model Product {
   name        String @unique
   slug        String @unique
   description String?
-
-  active        Boolean     @default(true)
+  imagePath String?
   type          ProductType @default(SALE)
   featured      Boolean     @default(false)
   rentalDeposit Decimal?    @db.Decimal(10, 2)
-
   customerPrice Decimal @db.Decimal(10, 2)
   floristPrice  Decimal @db.Decimal(10, 2)
-
-  //
-  // TAX
-  //
-
   taxCodeId Int
   taxCode   TaxCode @relation(fields: [taxCodeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-
-  //
-  // CATEGORY
-  //
-
   categories Category[] @relation("ProductCategories")
-
-  /**
-   * A product can have:
-   * - zero components and zero variants
-   * - components and no variants
-   * - variants and no components
-   * Components + variants are mutually exclusive
-   * and must be validated by the service layer.
-   */
   components ProductComponent[]
   variants   ProductVariant[]
-
-  imagePath String?
-
   orderItems OrderItem[]
 
+  moloniSync MoloniSync?
+
+  active        Boolean     @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -532,8 +528,11 @@ model Order {
   deliveryFee Decimal @db.Decimal(10, 2)
   discount    Decimal @db.Decimal(10, 2)
   total       Decimal @db.Decimal(10, 2)
+  expectedFloristTotal Decimal @default(0) @db.Decimal(10, 2)
 
   payment Payment?
+  floristCompensation FloristCompensation?
+  moloniFiscalDocument MoloniFiscalDocument?
 
 
   status OrderStatus @default(CREATED)
@@ -689,6 +688,7 @@ model OrderItemComponent {
 
 model OrderOffer {
   id Int @id @default(autoincrement())
+  automationKey String? @unique
 
   //
   // Order
@@ -722,12 +722,17 @@ model OrderOffer {
   acceptedAt DateTime?
   declinedAt DateTime?
   expiresAt  DateTime
+  notificationSentAt DateTime?
+  notificationAttempts Int @default(0)
+  notificationLastAttemptAt DateTime?
+  notificationLastError String?
   cancelledAt DateTime?
 
   declineReason         OrderOfferDeclineReason?
   declineReasonDetails  String?
 
   cancellationReason          OrderOfferCancellationReason?
+  compensation               FloristCompensation?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -736,6 +741,38 @@ model OrderOffer {
   @@index([floristId])
   @@index([status])
   @@index([expiresAt])
+  @@index([notificationSentAt, expiresAt])
+}
+
+model FloristCompensation {
+  id Int @id @default(autoincrement())
+
+  orderId Int @unique
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  orderOfferId Int @unique
+  orderOffer   OrderOffer @relation(fields: [orderOfferId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  floristId Int
+  florist   Florist @relation(fields: [floristId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  amount Decimal @db.Decimal(10, 2)
+  status FloristCompensationStatus @default(PENDING_DELIVERY)
+
+  dueAt DateTime?
+  paidAt DateTime?
+  paymentReference String?
+  paymentNotes String?
+
+  cancelledAt DateTime?
+  cancellationReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([floristId, status])
+  @@index([status, dueAt])
+  @@index([paidAt])
 }
 
 //
@@ -784,9 +821,119 @@ model OrderReviewRating {
 model StoreSettings {
   id          Int      @id @default(1)
   deliveryFee Decimal  @db.Decimal(10, 2)
+  deliveryTaxCodeId Int?
+  deliveryTaxCode TaxCode? @relation(fields: [deliveryTaxCodeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  deliveryAreaEnabled Boolean @default(true)
+  deliveryAreaName String @default("Santa Maria da Feira e arredores")
+  deliveryCenterLatitude Decimal @default(40.924574) @db.Decimal(9, 6)
+  deliveryCenterLongitude Decimal @default(-8.543956) @db.Decimal(9, 6)
+  deliveryRadiusKm Decimal @default(15) @db.Decimal(8, 2)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([deliveryTaxCodeId])
 }
+
+
+model MoloniSettings {
+  id Int @id @default(1)
+
+  companyId    String
+  clientId     String
+  clientSecret String
+
+  username String
+  password String
+
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+
+  lastConnectionCheckAt DateTime?
+  lastConnectionError    String?
+  connected              Boolean @default(false)
+
+  invoiceDocumentSetId String?
+  creditNoteDocumentSetId String?
+  receiptDocumentSetId String?
+  paymentMethodId      String?
+  defaultCustomerId    String?
+  defaultProductId     String?
+  defaultTaxId         String?
+  defaultTaxRate       Decimal? @db.Decimal(5, 2)
+  issueReceiptAfterPayment Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MoloniFiscalDocument {
+  id Int @id @default(autoincrement())
+
+  orderId Int @unique
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  moloniCustomerId String?
+
+  invoiceStatus MoloniDocumentStatus @default(QUEUED)
+  invoiceId     String? @unique
+  invoiceIssuedAt DateTime?
+  invoiceEmailId String?
+  invoiceEmailSentAt DateTime?
+  invoiceEmailLastError String?
+
+  receiptStatus MoloniDocumentStatus @default(NOT_REQUIRED)
+  receiptId     String? @unique
+  receiptIssuedAt DateTime?
+
+  creditNoteRequiredAt DateTime?
+  creditNoteStatus     MoloniDocumentStatus @default(NOT_REQUIRED)
+  creditNoteId         String? @unique
+  creditNoteRecordedAt DateTime?
+
+  attempts      Int @default(0)
+  lastAttemptAt DateTime?
+  lastError     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([invoiceStatus])
+  @@index([invoiceEmailSentAt])
+  @@index([receiptStatus])
+  @@index([creditNoteStatus])
+}
+
+model MoloniSync {
+  id Int @id @default(autoincrement())
+
+  // Moloni record identification
+  moloniId String?
+
+  // Synchronization state
+  status MoloniSyncStatus @default(NOT_SYNCED)
+  message String?
+  lastAttemptAt DateTime?
+  syncedAt DateTime?
+
+  // Related entities (one-to-one)
+  productId Int? @unique
+  product Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  taxCodeId Int? @unique
+  taxCode TaxCode? @relation(fields: [taxCodeId], references: [id], onDelete: Cascade)
+
+  userId Int? @unique
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([moloniId])
+}
+
+
 
 model Payment {
     id                    Int           @id @default(autoincrement())
@@ -803,9 +950,28 @@ model Payment {
     stripePaymentIntentId String?       @unique
 
     paidAt                DateTime?
+    refund                PaymentRefund?
 
     createdAt             DateTime      @default(now())
     updatedAt             DateTime      @updatedAt
+
+    @@index([status])
+}
+
+model PaymentRefund {
+    id                    Int                 @id @default(autoincrement())
+    paymentId             Int                 @unique
+    payment               Payment             @relation(fields: [paymentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+    stripeRefundId        String?             @unique
+    status                PaymentRefundStatus @default(PENDING)
+    amount                Decimal             @db.Decimal(10, 2)
+    currency              String              @default("EUR")
+    reason                String
+    requestedByUserId     Int
+    failureReason         String?
+    requestedAt           DateTime            @default(now())
+    completedAt           DateTime?
+    updatedAt             DateTime            @updatedAt
 
     @@index([status])
 }

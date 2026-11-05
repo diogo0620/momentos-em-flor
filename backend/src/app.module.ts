@@ -17,12 +17,17 @@ import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
 import { OrderOffersModule } from './order-offers/order-offers.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { EventsModule } from './events/events.module';
+import { MoloniModule } from './moloni/moloni.module';
+import { FloristCompensationsModule } from './florist-compensations/florist-compensations.module';
+import { validateEnvironment } from '@/config/environment.validation';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       load: [appConfig],
+      validate: validateEnvironment,
     }),
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
@@ -38,6 +43,9 @@ import { UploadsModule } from './uploads/uploads.module';
     OrderOffersModule,
     PaymentsModule,
     UploadsModule,
+    EventsModule,
+    MoloniModule,
+    FloristCompensationsModule,
     LoggerModule
   ],
 })

@@ -13,6 +13,8 @@ import { AdminFloristsMapper } from './mappers/admin-florists.mapper';
 import { EntityIdResponseDto } from '@/common/responses/dto/entity-id-response.dto';
 import { getPagination } from '@/common/database/pagination';
 import { getPaginationResponse } from '@/common/database/pagination-response';
+import { normalizePhoneNumber } from '@/common/phone/phone-number';
+import { GeocodingService } from '@/geocoding/geocoding.service';
 
 
 @Injectable()
@@ -21,6 +23,7 @@ export class AdminFloristsService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly mapper: AdminFloristsMapper,
+        private readonly geocoding: GeocodingService,
     ) { }
 
 
@@ -91,13 +94,22 @@ export class AdminFloristsService {
         dto: AdminCreateFloristDto,
     ): Promise<EntityIdResponseDto> {
         try {
+            const coordinates = await this.geocoding.coordinates({
+                street: dto.addressStreet,
+                streetNumber: dto.addressStreetNumber,
+                street2: dto.addressStreet2,
+                postalCode: dto.addressPostalCode,
+                city: dto.addressCity,
+                district: dto.addressDistrict,
+                countryCode: dto.addressCountryCode,
+            });
             const florist = await this.prisma.florist.create({
                 data: {
                     name: dto.name,
                     legalName: dto.legalName,
                     taxNumber: dto.taxNumber,
-                    email: dto.email,
-                    phone: dto.phone,
+                    email: dto.email.trim().toLowerCase(),
+                    phone: normalizePhoneNumber(dto.phone),
                     website: dto.website,
                     description: dto.description,
                     addressStreet: dto.addressStreet,
@@ -107,6 +119,8 @@ export class AdminFloristsService {
                     addressCity: dto.addressCity,
                     addressDistrict: dto.addressDistrict,
                     addressCountryCode: dto.addressCountryCode,
+                    addressLatitude: coordinates.latitude,
+                    addressLongitude: coordinates.longitude,
                     deliveryRadiusKm: dto.deliveryRadiusKm,
                     acceptingOrders: dto.acceptingOrders ?? true,
                     active: dto.active ?? true
@@ -136,6 +150,30 @@ export class AdminFloristsService {
         dto: AdminUpdateFloristDto,
     ): Promise<void> {
         try {
+            const current = await this.prisma.florist.findUnique({ where: { id } });
+            if (!current) {
+                Exceptions.notFound(ERROR_MESSAGES.FLORIST_NOT_FOUND);
+            }
+            const addressChanged = [
+                dto.addressStreet,
+                dto.addressStreetNumber,
+                dto.addressStreet2,
+                dto.addressPostalCode,
+                dto.addressCity,
+                dto.addressDistrict,
+                dto.addressCountryCode,
+            ].some((value) => value !== undefined);
+            const coordinates = addressChanged
+                ? await this.geocoding.coordinates({
+                    street: dto.addressStreet ?? current.addressStreet,
+                    streetNumber: dto.addressStreetNumber ?? current.addressStreetNumber,
+                    street2: dto.addressStreet2 ?? current.addressStreet2,
+                    postalCode: dto.addressPostalCode ?? current.addressPostalCode,
+                    city: dto.addressCity ?? current.addressCity,
+                    district: dto.addressDistrict ?? current.addressDistrict,
+                    countryCode: dto.addressCountryCode ?? current.addressCountryCode,
+                })
+                : null;
             await this.prisma.florist.update({
                 where: { id },
                 data: {
@@ -149,10 +187,10 @@ export class AdminFloristsService {
                         taxNumber: dto.taxNumber,
                     }),
                     ...(dto.email !== undefined && {
-                        email: dto.email,
+                        email: dto.email.trim().toLowerCase(),
                     }),
                     ...(dto.phone !== undefined && {
-                        phone: dto.phone,
+                        phone: normalizePhoneNumber(dto.phone),
                     }),
                     ...(dto.website !== undefined && {
                         website: dto.website,
@@ -180,6 +218,10 @@ export class AdminFloristsService {
                     }),
                     ...(dto.addressCountryCode !== undefined && {
                         addressCountryCode: dto.addressCountryCode,
+                    }),
+                    ...(coordinates && {
+                        addressLatitude: coordinates.latitude,
+                        addressLongitude: coordinates.longitude,
                     }),
                     ...(dto.deliveryRadiusKm !== undefined && {
                         deliveryRadiusKm: dto.deliveryRadiusKm,

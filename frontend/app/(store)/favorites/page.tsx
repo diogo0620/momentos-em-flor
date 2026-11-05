@@ -92,7 +92,6 @@ export default function FavoritesPage() {
                                                     src={item.image}
                                                     alt={item.name}
                                                     fill
-                                                    unoptimized
                                                     className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
                                                     sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
                                                 />

@@ -14,6 +14,7 @@ type OrderWithItems = Prisma.OrderGetPayload<{
                 components: true;
             };
         };
+        review: { include: { ratings: true } };
     };
 }>;
 
@@ -70,6 +71,7 @@ export class CustomerOrdersMapper extends BaseMapper<
                 type: item.type,
                 productId: item.productId,
                 productName: item.name,
+                variantName: item.variantName,
                 description: item.description,
                 image: item.imagePath ? this.storageService.getPublicUrl(item.imagePath) : "",
 
@@ -84,6 +86,19 @@ export class CustomerOrdersMapper extends BaseMapper<
 
                 taxCodeId: item.taxCodeId
             })),
+            review: order.review ? {
+                id: order.review.id,
+                comment: order.review.comment,
+                averageRating: Number((
+                    order.review.ratings.reduce((sum, rating) => sum + rating.rating, 0) /
+                    order.review.ratings.length
+                ).toFixed(2)),
+                ratings: order.review.ratings.map((rating) => ({
+                    category: rating.category,
+                    rating: rating.rating,
+                })),
+                createdAt: order.review.createdAt,
+            } : null,
             createdAt: order.createdAt,
             cancelledAt: order.cancelledAt,
             cancellationReason: order.cancellationReason

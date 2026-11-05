@@ -5,5 +5,7 @@ export type AdminFloristList = {
     addressDistrict: string;
     acceptingOrders: boolean;
     active: boolean;
+    averageRating: number;
+    reviewCount: number;
 }
 

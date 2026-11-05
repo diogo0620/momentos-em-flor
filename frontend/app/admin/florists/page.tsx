@@ -14,6 +14,7 @@ import {
     Plus,
     Search,
     SlidersHorizontal,
+    Star,
 } from "lucide-react";
 
 import PageHeader from "@/components/admin/common/PageHeader";
@@ -343,6 +344,10 @@ export default function AdminFloristsPage() {
                                 </th>
 
                                 <th className="px-5 py-4 font-semibold text-[#2F3B2A]">
+                                    Avaliação
+                                </th>
+
+                                <th className="px-5 py-4 font-semibold text-[#2F3B2A]">
                                     Aceita encomendas
                                 </th>
 
@@ -362,7 +367,7 @@ export default function AdminFloristsPage() {
                             ) : florists.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={5}
+                                        colSpan={6}
                                         className="px-6 py-20 text-center"
                                     >
                                         <Flower2
@@ -491,6 +496,14 @@ function FloristRow({
                     <p className="mt-1 text-xs text-gray-400">
                         {florist.addressDistrict || "—"}
                     </p>
+                </div>
+            </td>
+
+            <td className="px-5 py-5">
+                <div className="flex items-center gap-2 font-semibold text-[#2F3B2A]">
+                    <Star size={16} className={florist.reviewCount > 0 ? "fill-[#D6A84B] text-[#D6A84B]" : "text-gray-300"} />
+                    <span>{florist.reviewCount > 0 ? florist.averageRating.toFixed(1) : "—"}</span>
+                    <span className="text-xs font-normal text-gray-400">({florist.reviewCount})</span>
                 </div>
             </td>
 
@@ -630,7 +643,7 @@ function LoadingRows() {
                     key={rowIndex}
                     className="border-b border-gray-50"
                 >
-                    {Array.from({ length: 5 }).map((_, cellIndex) => (
+                    {Array.from({ length: 6 }).map((_, cellIndex) => (
                         <td
                             key={cellIndex}
                             className="px-5 py-5"

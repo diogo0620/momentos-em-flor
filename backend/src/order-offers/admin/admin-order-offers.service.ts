@@ -14,6 +14,10 @@ import { AdminOrderOffersMapper } from './mappers/admin-order-offers.mapper';
 import { AdminOrderOfferQueryDto } from './dtos/admin-order-offer-query.dto';
 import { AdminOrderOfferResponseDto } from './dtos/admin-order-offer-response.dto';
 import { AdminDeclineOrderOfferDto } from './dtos/admin-decline-order-offer.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { OrderOfferCreatedEvent } from '@/events/order-offers/order-offer-created.event';
+import { FloristCompensationLifecycleService } from '@/florist-compensations/florist-compensation-lifecycle.service';
+import { GeocodingService } from '@/geocoding/geocoding.service';
 
 
 @Injectable()
@@ -22,11 +26,15 @@ export class AdminOrderOffersService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly mapper: AdminOrderOffersMapper,
+        private readonly eventEmitter: EventEmitter2,
+        private readonly compensationLifecycle: FloristCompensationLifecycleService,
+        private readonly geocoding: GeocodingService,
     ) { }
 
 
 
     async findAll(query: AdminOrderOfferQueryDto) {
+        await this.expireOpenOffers();
         const { page, pageSize, status, orderId, floristId, sort, order } = query;
 
         const where: Prisma.OrderOfferWhereInput = {
@@ -66,6 +74,7 @@ export class AdminOrderOffersService {
 
 
     async findOne(id: number): Promise<AdminOrderOfferResponseDto> {
+        await this.expireOpenOffers(id);
         const orderOffer = await this.prisma.orderOffer.findUnique({
             where: { id },
             include: {
@@ -96,19 +105,46 @@ export class AdminOrderOffersService {
     async create(
         dto: AdminCreateOrderOfferDto,
     ): Promise<EntityIdResponseDto> {
-        const order = await this.prisma.order.findUnique({
-            where: {
-                id: dto.orderId,
-            },
-            select: {
-                id: true,
-                status: true,
-                total: true,
-            },
-        });
+        const [order, florist] = await Promise.all([
+            this.prisma.order.findUnique({
+                where: { id: dto.orderId },
+                select: {
+                    id: true,
+                    status: true,
+                    total: true,
+                    deliveryStreet: true,
+                    deliveryStreetNumber: true,
+                    deliveryStreet2: true,
+                    deliveryPostalCode: true,
+                    deliveryCity: true,
+                    deliveryDistrict: true,
+                    deliveryCountryCode: true,
+                    deliveryLatitude: true,
+                    deliveryLongitude: true,
+                },
+            }),
+            this.prisma.florist.findUnique({
+                where: { id: dto.floristId },
+                select: {
+                    id: true,
+                    addressStreet: true,
+                    addressStreetNumber: true,
+                    addressStreet2: true,
+                    addressPostalCode: true,
+                    addressCity: true,
+                    addressDistrict: true,
+                    addressCountryCode: true,
+                    addressLatitude: true,
+                    addressLongitude: true,
+                },
+            }),
+        ]);
 
         if (!order)
             Exceptions.notFound(ERROR_MESSAGES.ORDER_NOT_FOUND);
+
+        if (!florist)
+            Exceptions.notFound(ERROR_MESSAGES.FLORIST_NOT_FOUND);
 
         if (order.status !== OrderStatus.WAITING_FOR_FLORISTS)
             Exceptions.badRequest(ERROR_MESSAGES.ORDER_NOT_WAITING_FOR_FLORIST);
@@ -137,6 +173,60 @@ export class AdminOrderOffersService {
             );
         }
 
+        const deliveryCoordinates = order.deliveryLatitude !== null && order.deliveryLongitude !== null
+            ? {
+                latitude: Number(order.deliveryLatitude),
+                longitude: Number(order.deliveryLongitude),
+            }
+            : await this.geocoding.coordinates({
+                street: order.deliveryStreet,
+                streetNumber: order.deliveryStreetNumber,
+                street2: order.deliveryStreet2,
+                postalCode: order.deliveryPostalCode,
+                city: order.deliveryCity,
+                district: order.deliveryDistrict,
+                countryCode: order.deliveryCountryCode,
+            });
+        const floristCoordinates = florist.addressLatitude !== null && florist.addressLongitude !== null
+            ? {
+                latitude: Number(florist.addressLatitude),
+                longitude: Number(florist.addressLongitude),
+            }
+            : await this.geocoding.coordinates({
+                street: florist.addressStreet,
+                streetNumber: florist.addressStreetNumber,
+                street2: florist.addressStreet2,
+                postalCode: florist.addressPostalCode,
+                city: florist.addressCity,
+                district: florist.addressDistrict,
+                countryCode: florist.addressCountryCode,
+            });
+        const distanceKm = this.geocoding.distanceKm(
+            floristCoordinates,
+            deliveryCoordinates,
+        );
+
+        await Promise.all([
+            order.deliveryLatitude === null || order.deliveryLongitude === null
+                ? this.prisma.order.update({
+                    where: { id: order.id },
+                    data: {
+                        deliveryLatitude: deliveryCoordinates.latitude,
+                        deliveryLongitude: deliveryCoordinates.longitude,
+                    },
+                })
+                : Promise.resolve(),
+            florist.addressLatitude === null || florist.addressLongitude === null
+                ? this.prisma.florist.update({
+                    where: { id: florist.id },
+                    data: {
+                        addressLatitude: floristCoordinates.latitude,
+                        addressLongitude: floristCoordinates.longitude,
+                    },
+                })
+                : Promise.resolve(),
+        ]);
+
         try {
             const orderOffer = await this.prisma.orderOffer.create({
                 data: {
@@ -144,9 +234,14 @@ export class AdminOrderOffersService {
                     floristId: dto.floristId,
                     price: dto.price,
                     expiresAt: dto.expiresAt,
-                    distanceKm: 999
+                    distanceKm,
                 },
             });
+
+            this.eventEmitter.emit(
+                'order-offer.created',
+                new OrderOfferCreatedEvent(orderOffer.id),
+            );
 
             return ApiResponse.success(
                 this.mapper.toCreatedResponse(orderOffer),
@@ -177,6 +272,7 @@ export class AdminOrderOffersService {
         id: number,
         dto: AdminUpdateOrderOfferDto,
     ): Promise<void> {
+        await this.expireOpenOffers(id);
         const orderOffer = await this.prisma.orderOffer.findUnique({
             where: { id },
             select: {
@@ -229,6 +325,7 @@ export class AdminOrderOffersService {
 
     async accept(id: number): Promise<void> {
         const now = new Date();
+        await this.expireOpenOffers(id, now);
 
         await this.prisma.$transaction(async (tx) => {
             const offer = await tx.orderOffer.findUnique({
@@ -237,7 +334,9 @@ export class AdminOrderOffersService {
                     id: true,
                     orderId: true,
                     floristId: true,
+                    price: true,
                     status: true,
+                    expiresAt: true,
                     order: {
                         select: {
                             status: true,
@@ -250,6 +349,9 @@ export class AdminOrderOffersService {
                 Exceptions.notFound(ERROR_MESSAGES.ORDER_OFFER_NOT_FOUND);
 
             if (offer.status !== OrderOfferStatus.PENDING && offer.status !== OrderOfferStatus.VIEWED)
+                Exceptions.badRequest(ERROR_MESSAGES.ORDER_OFFER_CANNOT_BE_UPDATED);
+
+            if (offer.expiresAt <= now)
                 Exceptions.badRequest(ERROR_MESSAGES.ORDER_OFFER_CANNOT_BE_UPDATED);
 
             if (offer.order.status !== OrderStatus.WAITING_FOR_FLORISTS)
@@ -312,6 +414,8 @@ export class AdminOrderOffersService {
             if (updatedOrder.count !== 1) {
                 Exceptions.badRequest(ERROR_MESSAGES.ORDER_ALREADY_ASSIGNED);
             }
+
+            await this.compensationLifecycle.createForAcceptedOffer(tx, offer);
         });
     }
 
@@ -319,6 +423,7 @@ export class AdminOrderOffersService {
         id: number,
         dto: AdminDeclineOrderOfferDto
     ): Promise<void> {
+        await this.expireOpenOffers(id);
         const orderOffer = await this.prisma.orderOffer.findUnique({
             where: { id },
             select: {
@@ -355,6 +460,22 @@ export class AdminOrderOffersService {
 
             throw error;
         }
+    }
+
+    private async expireOpenOffers(
+        id?: number,
+        now: Date = new Date(),
+    ): Promise<void> {
+        await this.prisma.orderOffer.updateMany({
+            where: {
+                ...(id !== undefined && { id }),
+                status: {
+                    in: [OrderOfferStatus.PENDING, OrderOfferStatus.VIEWED],
+                },
+                expiresAt: { lte: now },
+            },
+            data: { status: OrderOfferStatus.EXPIRED },
+        });
     }
 
 }

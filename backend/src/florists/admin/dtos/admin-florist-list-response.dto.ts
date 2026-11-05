@@ -19,4 +19,7 @@ export class AdminFloristListResponseDto {
 
   @ApiProperty({ example: true })
   active!: boolean;
+
+  @ApiProperty() averageRating!: number;
+  @ApiProperty() reviewCount!: number;
 }

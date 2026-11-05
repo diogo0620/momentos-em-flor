@@ -15,6 +15,8 @@ import {
   Package,
   Phone,
   UserRound,
+  XCircle,
+  Star,
 } from "lucide-react";
 
 import { customerOrdersApi } from "@/lib/api/orders/customer-orders";
@@ -59,6 +61,12 @@ export default function AccountOrderDetailPage() {
   const [order, setOrder] = useState<CustomerOrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [reviewRatings, setReviewRatings] = useState({ flowerQuality: 0, presentation: 0, delivery: 0, service: 0 });
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -158,10 +166,60 @@ export default function AccountOrderDetailPage() {
 
   const isPendingPayment = order.status === "PENDING_PAYMENT";
 
+  async function handleCancelPendingPayment() {
+    if (
+      !window.confirm(
+        "Pretende cancelar esta encomenda? Depois de cancelada, não poderá retomar o pagamento.",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setIsCancelling(true);
+      setCancelError(null);
+      await customerOrdersApi.cancelPendingPayment(order.orderNumber);
+      setOrder({
+        ...order,
+        status: "CANCELLED",
+        cancelledAt: new Date().toISOString(),
+        cancellationReason: "CUSTOMER_REQUEST",
+      });
+    } catch (err) {
+      setCancelError(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível cancelar a encomenda.",
+      );
+    } finally {
+      setIsCancelling(false);
+    }
+  }
+
   const totalQuantity = (order.items ?? []).reduce(
-    (sum, item) => sum + item.quantity,
+    (sum, item) => sum + (item.type === "PRODUCT" ? item.quantity : 0),
     0,
   );
+
+  async function handleReviewSubmit() {
+    if (Object.values(reviewRatings).some((rating) => rating < 1)) {
+      setReviewError("Avalia todas as categorias antes de enviar.");
+      return;
+    }
+    try {
+      setIsSubmittingReview(true);
+      setReviewError(null);
+      const review = await customerOrdersApi.createReview(order.orderNumber, {
+        ...reviewRatings,
+        comment: reviewComment.trim() || undefined,
+      });
+      setOrder({ ...order, review });
+    } catch (err) {
+      setReviewError(err instanceof Error ? err.message : "Não foi possível guardar a avaliação.");
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  }
 
   return (
     <div className="space-y-6 pb-4">
@@ -211,13 +269,24 @@ export default function AccountOrderDetailPage() {
             </div>
 
             {isPendingPayment && (
-              <Link
-                href={`/checkout/payment/${order.orderNumber}`}
-                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-[#55624A] px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#394633]"
-              >
-                <CreditCard size={17} />
-                Pagar
-              </Link>
+              <div className="flex flex-col gap-2 sm:items-end">
+                <Link
+                  href={`/checkout/payment/${order.orderNumber}`}
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-[#55624A] px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#394633]"
+                >
+                  <CreditCard size={17} />
+                  Pagar
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => void handleCancelPendingPayment()}
+                  disabled={isCancelling}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold text-[#965A49] transition hover:bg-[#F9E9E4] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <XCircle size={16} />
+                  {isCancelling ? "A cancelar..." : "Cancelar encomenda"}
+                </button>
+              </div>
             )}
           </div>
 
@@ -230,6 +299,11 @@ export default function AccountOrderDetailPage() {
                 Para podermos processar a sua encomenda, conclua o pagamento
                 através do botão acima.
               </p>
+              {cancelError && (
+                <p className="mt-3 text-sm font-medium text-red-700">
+                  {cancelError}
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -258,6 +332,47 @@ export default function AccountOrderDetailPage() {
         </div>
       </section>
 
+      {order.status === "DELIVERED" && (
+        <section className="rounded-3xl border border-[#E8EBE2] bg-white p-5 sm:p-7">
+          <div className="flex items-center gap-2">
+            <Star size={19} className="text-[#71805F]" />
+            <h3 className="text-lg font-semibold text-[#2F3B2A]">Avaliar a encomenda</h3>
+          </div>
+          {order.review ? (
+            <div className="mt-5 rounded-2xl bg-[#F6F8F2] p-5">
+              <p className="font-semibold text-[#394633]">Obrigado pela sua avaliação · {order.review.averageRating.toFixed(1)} / 5</p>
+              <div className="mt-3 grid gap-2 text-sm text-[#73796D] sm:grid-cols-2">
+                {order.review.ratings.map((rating) => <p key={rating.category}>{({ FLOWER_QUALITY: "Qualidade das flores", PRESENTATION: "Apresentação", DELIVERY: "Entrega", SERVICE: "Serviço" } as Record<string, string>)[rating.category]}: {rating.rating}/5</p>)}
+              </div>
+              {order.review.comment && <p className="mt-4 text-sm leading-6 text-[#73796D]">“{order.review.comment}”</p>}
+            </div>
+          ) : (
+            <div className="mt-5 space-y-5">
+              {([
+                ["flowerQuality", "Qualidade das flores"],
+                ["presentation", "Apresentação"],
+                ["delivery", "Entrega"],
+                ["service", "Serviço"],
+              ] as const).map(([key, label]) => (
+                <div key={key} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-sm font-medium text-[#394633]">{label}</span>
+                  <div className="flex gap-1" role="radiogroup" aria-label={label}>
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <button key={value} type="button" onClick={() => setReviewRatings((current) => ({ ...current, [key]: value }))} aria-label={`${value} estrelas`} className="p-1">
+                        <Star size={24} className={value <= reviewRatings[key] ? "fill-[#D6A84B] text-[#D6A84B]" : "text-gray-300"} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <textarea value={reviewComment} onChange={(event) => setReviewComment(event.target.value)} maxLength={1000} rows={4} placeholder="Comentário opcional" className="w-full rounded-2xl border border-[#E2E6DC] px-4 py-3 text-sm outline-none focus:border-[#71805F]" />
+              {reviewError && <p className="text-sm text-red-700">{reviewError}</p>}
+              <button type="button" onClick={() => void handleReviewSubmit()} disabled={isSubmittingReview} className="rounded-2xl bg-[#55624A] px-6 py-3 text-sm font-semibold text-white disabled:opacity-50">{isSubmittingReview ? "A enviar..." : "Enviar avaliação"}</button>
+            </div>
+          )}
+        </section>
+      )}
+
       {/* Artigos e valores */}
       <section className="rounded-3xl border border-[#E8EBE2] bg-white p-5 sm:p-7">
         <h3 className="text-lg font-semibold text-[#2F3B2A]">
@@ -271,10 +386,10 @@ export default function AccountOrderDetailPage() {
               className="flex gap-4 py-4 first:pt-0 last:pb-0"
             >
               <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-[#F5F6F1]">
-                {item.image ? (
+                {item.type === "DELIVERY_FEE" || item.image ? (
                   <img
-                    src={item.image}
-                    alt={item.productName}
+                    src={item.type === "DELIVERY_FEE" ? "/images/delivery-fee.svg" : item.image!}
+                    alt={item.type === "DELIVERY_FEE" ? "Taxa de entrega" : item.productName}
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -334,13 +449,6 @@ export default function AccountOrderDetailPage() {
             />
           )}
 
-          {order.deliveryFee > 0 && (
-            <PriceRow
-              label="Entrega"
-              value={money(order.deliveryFee)}
-            />
-          )}
-
           <div className="mt-3 flex items-center justify-between border-t border-[#EEF0EA] pt-4">
             <span className="font-semibold text-[#2F3B2A]">
               Total
@@ -365,7 +473,7 @@ export default function AccountOrderDetailPage() {
               </div>
 
               <Link
-                href={`/checkout/payment/${order.id}`}
+                href={`/checkout/payment/${order.orderNumber}`}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#55624A] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#394633]"
               >
                 <CreditCard size={16} />

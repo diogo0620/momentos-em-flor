@@ -163,12 +163,6 @@ export default function PublicProductDetailPage() {
             ),
         ].join("-");
 
-        console.log("ARTIGO A ADICIONAR AO CARRINHO", {
-    productId: product.id,
-    selectedVariant,
-    selectedComponents,
-});
-
         addItem({
             cartItemId,
             id: product.id,

@@ -10,13 +10,19 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { FloristDeclineOrderOfferDto } from './dtos/florist-decline-order-offer.dto';
 import { FloristOrderOfferQueryDto } from './dtos/florist-order-offer-query.dto';
 import { FloristOrderOffersMapper } from './mappers/florist-order-offers.mapper';
+import { FloristCompensationLifecycleService } from '@/florist-compensations/florist-compensation-lifecycle.service';
 
 @Injectable()
 export class FloristOrderOffersService {
-    constructor(private readonly prisma: PrismaService, private readonly mapper: FloristOrderOffersMapper) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly mapper: FloristOrderOffersMapper,
+        private readonly compensationLifecycle: FloristCompensationLifecycleService,
+    ) { }
 
     async findAll(user: AuthenticatedUser, query: FloristOrderOfferQueryDto) {
         const floristId = this.getFloristId(user);
+        await this.expireOpenOffers(floristId);
         const where: Prisma.OrderOfferWhereInput = { floristId, ...(query.status !== undefined && { status: query.status }) };
         const [offers, total] = await Promise.all([
             this.prisma.orderOffer.findMany({ where, orderBy: { [query.sort]: query.order }, ...getPagination(query.page, query.pageSize), include: { order: { include: { items: true } } } }),
@@ -27,6 +33,7 @@ export class FloristOrderOffersService {
 
     async findOne(user: AuthenticatedUser, id: number) {
         const floristId = this.getFloristId(user);
+        await this.expireOpenOffers(floristId, id);
         await this.prisma.orderOffer.updateMany({ where: { id, floristId, status: OrderOfferStatus.PENDING }, data: { status: OrderOfferStatus.VIEWED, viewedAt: new Date() } });
         const offer = await this.prisma.orderOffer.findFirst({
             where: {
@@ -48,6 +55,7 @@ export class FloristOrderOffersService {
     async accept(user: AuthenticatedUser, id: number): Promise<void> {
         const floristId = this.getFloristId(user);
         const now = new Date();
+        await this.expireOpenOffers(floristId, id, now);
         await this.prisma.$transaction(async (tx) => {
             const offer = await tx.orderOffer.findFirst({ where: { id, floristId }, include: { order: { select: { status: true } } } });
             if (!offer) Exceptions.notFound(ERROR_MESSAGES.ORDER_OFFER_NOT_FOUND);
@@ -56,12 +64,14 @@ export class FloristOrderOffersService {
             if (accepted.count !== 1) Exceptions.badRequest(ERROR_MESSAGES.ORDER_OFFER_CANNOT_BE_UPDATED);
             const orderUpdated = await tx.order.updateMany({ where: { id: offer.orderId, status: OrderStatus.WAITING_FOR_FLORISTS }, data: { status: OrderStatus.ASSIGNED, assignedFloristId: floristId, assignedAt: now } });
             if (orderUpdated.count !== 1) Exceptions.badRequest(ERROR_MESSAGES.ORDER_ALREADY_ASSIGNED);
+            await this.compensationLifecycle.createForAcceptedOffer(tx, offer);
             await tx.orderOffer.updateMany({ where: { orderId: offer.orderId, id: { not: id }, status: { in: [OrderOfferStatus.PENDING, OrderOfferStatus.VIEWED] } }, data: { status: OrderOfferStatus.CANCELLED, cancelledAt: now, cancellationReason: OrderOfferCancellationReason.ANOTHER_OFFER_ACCEPTED } });
         });
     }
 
     async decline(user: AuthenticatedUser, id: number, dto: FloristDeclineOrderOfferDto): Promise<void> {
         const floristId = this.getFloristId(user);
+        await this.expireOpenOffers(floristId, id);
         const declined = await this.prisma.orderOffer.updateMany({ where: { id, floristId, status: { in: [OrderOfferStatus.PENDING, OrderOfferStatus.VIEWED] } }, data: { status: OrderOfferStatus.DECLINED, declinedAt: new Date(), declineReason: dto.declineReason, declineReasonDetails: dto.declineReasonDetails } });
         if (declined.count === 1) return;
         const offer = await this.prisma.orderOffer.findFirst({ where: { id, floristId }, select: { id: true } });
@@ -72,5 +82,23 @@ export class FloristOrderOffersService {
     private getFloristId(user: AuthenticatedUser): number {
         if (!user.floristId) Exceptions.forbidden();
         return user.floristId;
+    }
+
+    private async expireOpenOffers(
+        floristId: number,
+        id?: number,
+        now: Date = new Date(),
+    ): Promise<void> {
+        await this.prisma.orderOffer.updateMany({
+            where: {
+                floristId,
+                ...(id !== undefined && { id }),
+                status: {
+                    in: [OrderOfferStatus.PENDING, OrderOfferStatus.VIEWED],
+                },
+                expiresAt: { lte: now },
+            },
+            data: { status: OrderOfferStatus.EXPIRED },
+        });
     }
 }

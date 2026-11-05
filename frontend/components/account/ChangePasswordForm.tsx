@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Eye, EyeOff, Lock } from "lucide-react";
 
-import { changePassword } from "@/lib/api/users";
+import { customerUsersApi } from "@/lib/api/users/customer-users";
+import { PASSWORD_REQUIREMENTS, validateStrongPassword } from "@/lib/validation/auth";
 
 export default function ChangePasswordForm() {
     const [currentPassword, setCurrentPassword] =
@@ -48,10 +49,9 @@ export default function ChangePasswordForm() {
             return;
         }
 
-        if (newPassword.length < 8) {
-            setError(
-                "A nova password deve ter pelo menos 8 caracteres.",
-            );
+        const passwordError = validateStrongPassword(newPassword);
+        if (passwordError) {
+            setError(passwordError);
             return;
         }
 
@@ -72,7 +72,7 @@ export default function ChangePasswordForm() {
         try {
             setLoading(true);
 
-            await changePassword({
+            await customerUsersApi.changePassword({
                 currentPassword,
                 newPassword,
             });
@@ -276,7 +276,7 @@ export default function ChangePasswordForm() {
                 </div>
 
                 <p className="mt-2 text-xs text-gray-400">
-                    Mínimo de 8 caracteres.
+                    {PASSWORD_REQUIREMENTS}
                 </p>
             </div>
 

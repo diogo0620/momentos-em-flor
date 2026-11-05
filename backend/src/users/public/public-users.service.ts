@@ -8,8 +8,8 @@ import { Prisma, UserRole } from '@prisma/client';
 import { ApiResponse } from '@/common/responses/api-response';
 import { EntityIdResponseDto } from '@/common/responses/dto/entity-id-response.dto';
 import { PublicCreateUserDto } from './dtos/public-create-user.dto';
-import { use } from 'passport';
 import { PublicUsersMapper } from './mappers/public-users.mapper';
+import { normalizePhoneNumber } from '@/common/phone/phone-number';
 
 
 @Injectable()
@@ -28,10 +28,10 @@ export class PublicUsersService {
             const passwordHash = await bcrypt.hash(dto.password,10);
             const user = await this.prisma.user.create({
                 data: {
-                    firstName: dto.firstName,
-                    lastName: dto.lastName,
-                    email: dto.email,
-                    phone: dto.phone,
+                    firstName: dto.firstName.trim(),
+                    lastName: dto.lastName.trim(),
+                    email: dto.email.trim().toLowerCase(),
+                    phone: normalizePhoneNumber(dto.phone),
                     passwordHash,
                     role: UserRole.CUSTOMER,
                     active: true,

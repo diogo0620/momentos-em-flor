@@ -1,8 +1,6 @@
 
-import { PublicProductDetail } from "@/types/products/public/public-product-detail";
 import { BaseApi } from "../common/base-api";
-import { PublicProductList } from "@/types/products/public/public-product-list";
-import { StoreSettings } from "@/types/store-settings/store-settings";
+import { DeliveryAvailability, DeliveryAvailabilityInput, StoreSettings } from "@/types/store-settings/store-settings";
 import { apiFetch } from "../common/client";
 
 
@@ -35,6 +33,20 @@ class StoreSettingsApi extends BaseApi<
         return apiFetch(
             `${this.endpoint}`,
         );
+    }
+
+    async getPublic(): Promise<StoreSettings> {
+        return apiFetch<StoreSettings>("/store-settings");
+    }
+
+    async checkDeliveryAvailability(
+        data: DeliveryAvailabilityInput,
+    ): Promise<DeliveryAvailability> {
+        return apiFetch<DeliveryAvailability>("/store-settings/delivery-availability", {
+            method: "POST",
+            body: JSON.stringify(data),
+            skipRefresh: true,
+        });
     }
 
 

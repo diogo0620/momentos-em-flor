@@ -18,6 +18,8 @@ import { adminFloristsApi } from "@/lib/api/florists/admin-florists";
 import { adminUsersApi } from "@/lib/api/users/admin-users";
 
 import FloristForm from "@/components/admin/florists/FloristForm";
+import PhoneInput from "@/components/forms/PhoneInput";
+import { isValidEmail, validateStrongPassword } from "@/lib/validation/auth";
 
 import type { AdminFloristDetail } from "@/types/florists/admin/admin-florist-detail";
 import type { AdminCreateUser } from "@/types/users/admin/admin-create-user";
@@ -30,12 +32,25 @@ const labelClassName = "mb-2 block text-sm font-medium text-[#374132]";
 function generatePassword(length = 14): string {
     const chars =
         "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*";
-    const values = new Uint32Array(length);
+    const safeLength = Math.max(length, 8);
+    const values = new Uint32Array(safeLength - 4);
 
     crypto.getRandomValues(values);
 
-    return Array.from(values)
-        .map((value) => chars[value % chars.length])
+    const password = [
+        "A",
+        "a",
+        "2",
+        "!",
+        ...Array.from(values).map((value) => chars[value % chars.length]),
+    ];
+    const shuffleValues = new Uint32Array(password.length);
+    crypto.getRandomValues(shuffleValues);
+
+    return password
+        .map((character, index) => ({ character, order: shuffleValues[index] }))
+        .sort((a, b) => a.order - b.order)
+        .map(({ character }) => character)
         .join("");
 }
 
@@ -120,13 +135,14 @@ export default function EditFloristPage() {
             return;
         }
 
-        if (!email.trim()) {
-            setError("O email é obrigatório.");
+        if (!isValidEmail(email)) {
+            setError("Introduz um endereço de email válido.");
             return;
         }
 
-        if (password.length < 8) {
-            setError("A password deve ter pelo menos 8 caracteres.");
+        const passwordError = validateStrongPassword(password);
+        if (passwordError) {
+            setError(passwordError);
             return;
         }
 
@@ -476,14 +492,11 @@ export default function EditFloristPage() {
                                     <label htmlFor="admin-phone" className={labelClassName}>
                                         Telefone
                                     </label>
-                                    <input
+                                    <PhoneInput
                                         id="admin-phone"
-                                        type="tel"
                                         value={phone}
-                                        onChange={(event) => setPhone(event.target.value)}
-                                        className={inputClassName}
+                                        onValueChange={setPhone}
                                         disabled={creatingAdmin}
-                                        autoComplete="tel"
                                     />
                                 </div>
                             </div>

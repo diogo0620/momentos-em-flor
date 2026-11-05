@@ -32,9 +32,16 @@ export class EmailService {
 
     async sendEmail(params: {
         to: string;
-        templateId: string;
-        variables: Record<string, string>;
+        templateId?: string;
+        variables?: Record<string, string>;
+        subject?: string;
+        html?: string;
     }): Promise<{ id: string }> {
+        if (!params.templateId && (!params.subject || !params.html)) {
+            throw new ServiceUnavailableException(
+                'Email content is incomplete.',
+            );
+        }
         try {
             const { data, error } = await this.resend.emails.send({
                 from: this.from,
@@ -42,10 +49,17 @@ export class EmailService {
                 ...(this.replyTo && {
                     replyTo: this.replyTo,
                 }),
-                template: {
-                    id: params.templateId,
-                    variables: params.variables,
-                },
+                ...(params.templateId
+                    ? {
+                        template: {
+                            id: params.templateId,
+                            variables: params.variables ?? {},
+                        },
+                    }
+                    : {
+                        subject: params.subject!,
+                        html: params.html!,
+                    }),
             });
 
             if (error) {

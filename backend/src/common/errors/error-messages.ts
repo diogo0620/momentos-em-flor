@@ -64,6 +64,46 @@ export const ERROR_MESSAGES = {
         code: 'ORDER_ALREADY_EXISTS',
         message: 'An order with this number already exists.',
     },
+    ORDER_ITEMS_REQUIRED: {
+        code: 'ORDER_ITEMS_REQUIRED',
+        message: 'The order must contain at least one item.',
+    },
+    PRODUCT_NOT_AVAILABLE: {
+        code: 'PRODUCT_NOT_AVAILABLE',
+        message: 'One or more selected products are not available.',
+    },
+    INVALID_PRODUCT_VARIANT: {
+        code: 'INVALID_PRODUCT_VARIANT',
+        message: 'The selected product variant is not available for this product.',
+    },
+    PRODUCT_VARIANT_REQUIRED: {
+        code: 'PRODUCT_VARIANT_REQUIRED',
+        message: 'A product variant must be selected for this product.',
+    },
+    INVALID_PRODUCT_COMPONENT: {
+        code: 'INVALID_PRODUCT_COMPONENT',
+        message: 'A selected component is not available for this product.',
+    },
+    INVALID_COMPONENT_QUANTITY: {
+        code: 'INVALID_COMPONENT_QUANTITY',
+        message: 'A selected component quantity is outside the allowed range.',
+    },
+    DUPLICATE_PRODUCT_COMPONENT: {
+        code: 'DUPLICATE_PRODUCT_COMPONENT',
+        message: 'The same product component cannot be selected more than once.',
+    },
+    DELIVERY_DATE_IN_PAST: {
+        code: 'DELIVERY_DATE_IN_PAST',
+        message: 'The delivery date cannot be in the past.',
+    },
+    DELIVERY_TAX_CODE_NOT_CONFIGURED: {
+        code: 'DELIVERY_TAX_CODE_NOT_CONFIGURED',
+        message: 'O código de IVA da taxa de entrega não está configurado.',
+    },
+    DELIVERY_ADDRESS_OUTSIDE_SERVICE_AREA: {
+        code: 'DELIVERY_ADDRESS_OUTSIDE_SERVICE_AREA',
+        message: 'A morada indicada está fora da zona de entrega disponível.',
+    },
     ORDER_OFFER_NOT_FOUND: {
         code: 'ORDER_OFFER_NOT_FOUND',
         message: 'Order Offer not found.',
@@ -106,7 +146,23 @@ export const ERROR_MESSAGES = {
     },
     ORDER_CANNOT_BE_CANCELLED: {
         code: 'ORDER_CANNOT_BE_CANCELLED',
-        message: 'A delivered or cancelled order cannot be cancelled.',
+        message: 'This order cannot be cancelled in its current state.',
+    },
+    PAYMENT_REFUND_REQUIRED: {
+        code: 'PAYMENT_REFUND_REQUIRED',
+        message: 'A encomenda está paga e tem de ser reembolsada antes de ser cancelada.',
+    },
+    MOLONI_CREDIT_NOTE_REQUIRED: {
+        code: 'MOLONI_CREDIT_NOTE_REQUIRED',
+        message: 'Regista a nota de crédito Moloni antes de cancelar esta encomenda faturada.',
+    },
+    FLORIST_COMPENSATION_NOT_FOUND: {
+        code: 'FLORIST_COMPENSATION_NOT_FOUND',
+        message: 'Florist compensation not found.',
+    },
+    FLORIST_COMPENSATION_NOT_DUE: {
+        code: 'FLORIST_COMPENSATION_NOT_DUE',
+        message: 'Only a due florist compensation can be marked as paid.',
     },
     ADDRESS_NOT_FOUND: {
         code: 'ADDRESS_NOT_FOUND',

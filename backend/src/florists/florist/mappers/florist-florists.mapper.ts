@@ -29,6 +29,8 @@ export class FloristFloristsMapper{
             addressLatitude: florist.addressLatitude?.toNumber(),
             addressLongitude: florist.addressLongitude?.toNumber(),
             deliveryRadiusKm: florist.deliveryRadiusKm.toNumber(),
+            averageRating: florist.averageRating.toNumber(),
+            reviewCount: florist.reviewCount,
             acceptingOrders: florist.acceptingOrders,
             active: florist.active,
             createdAt: florist.createdAt,

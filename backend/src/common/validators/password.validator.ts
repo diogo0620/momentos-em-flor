@@ -28,11 +28,7 @@ export function IsStrongPassword(
                     );
                 },
                 defaultMessage(): string {
-                    return (
-                        'Password must contain at least 8 characters, ' +
-                        'one uppercase letter, one lowercase letter, ' +
-                        'one number and one special character.'
-                    );
+                    return 'A password deve ter pelo menos 8 caracteres, incluindo uma maiúscula, uma minúscula, um número e um símbolo.';
                 },
             },
         });

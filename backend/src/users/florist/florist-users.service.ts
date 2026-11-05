@@ -10,6 +10,7 @@ import { FloristUsersMapper } from './mappers/florist-users.mapper';
 import { FloristUserResponseDto } from './dtos/florist-user-response.dto';
 import { FloristUpdateUserDto } from './dtos/florist-update-user.dto';
 import { FloristUserChangePasswordDto } from './dtos/florist-user-change-password.dto';
+import { normalizePhoneNumber } from '@/common/phone/phone-number';
 
 
 @Injectable()
@@ -64,10 +65,10 @@ export class FloristUsersService {
                         lastName: dto.lastName,
                     }),
                     ...(dto.email !== undefined && {
-                        email: dto.email,
+                        email: dto.email.trim().toLowerCase(),
                     }),
                     ...(dto.phone !== undefined && {
-                        phone: dto.phone,
+                        phone: normalizePhoneNumber(dto.phone),
                     })
                 },
             });

@@ -10,6 +10,9 @@ import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { getRedirectPath } from "@/lib/auth/auth";
+import { publicUsersApi } from "@/lib/api/users/public-users";
+import PhoneInput from "@/components/forms/PhoneInput";
+import { isValidEmail, isValidPhone, validateStrongPassword } from "@/lib/validation/auth";
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -68,6 +71,24 @@ export default function RegisterPage() {
 
         setError(null);
 
+        if (!firstName.trim() || !lastName.trim()) {
+            setError("Preenche o nome e o apelido.");
+            return;
+        }
+        if (!isValidEmail(email)) {
+            setError("Introduz um endereço de email válido.");
+            return;
+        }
+        if (!isValidPhone(phone)) {
+            setError("Introduz um número de telemóvel válido.");
+            return;
+        }
+        const passwordError = validateStrongPassword(password);
+        if (passwordError) {
+            setError(passwordError);
+            return;
+        }
+
         if (
             password !==
             confirmPassword
@@ -81,19 +102,15 @@ export default function RegisterPage() {
         setIsSubmitting(true);
 
         try {
-            // TODO:
-            // Ligar ao endpoint de registo
-            // quando tivermos o contrato do backend.
-
-            console.log({
-                firstName,
-                lastName,
-                email,
-                phone,
+            await publicUsersApi.create({
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
+                email: email.trim().toLowerCase(),
+                phone: phone.trim(),
                 password,
             });
 
-            router.push("/login");
+            router.push("/login?registered=1");
         } catch (error) {
             setError(
                 error instanceof Error
@@ -320,36 +337,11 @@ export default function RegisterPage() {
                                 Telefone
                             </label>
 
-                            <input
+                            <PhoneInput
                                 id="phone"
-                                type="tel"
                                 value={phone}
-                                onChange={(event) =>
-                                    setPhone(
-                                        event.target.value,
-                                    )
-                                }
+                                onValueChange={setPhone}
                                 required
-                                autoComplete="tel"
-                                placeholder="912 345 678"
-                                className="
-                                    w-full
-                                    rounded-xl
-                                    border
-                                    border-gray-200
-                                    bg-[#FCFCFB]
-                                    px-4
-                                    py-3.5
-                                    text-sm
-                                    text-gray-800
-                                    outline-none
-                                    transition
-                                    placeholder:text-gray-400
-                                    focus:border-[#879477]
-                                    focus:bg-white
-                                    focus:ring-4
-                                    focus:ring-[#D6DEC8]/50
-                                "
                             />
 
                         </div>

@@ -7,6 +7,7 @@ import {
     OrderOfferStatus,
     OrderStatus,
     PaymentStatus,
+    PaymentRefundStatus,
     ProductType,
     ProductVariantType,
     ReviewCategory,
@@ -195,6 +196,32 @@ export class AdminOrderReviewRatingResponseDto {
 }
 
 
+export class AdminOrderPaymentRefundResponseDto {
+    @ApiProperty()
+    id!: number;
+
+    @ApiProperty({ enum: PaymentRefundStatus })
+    status!: PaymentRefundStatus;
+
+    @ApiProperty({ type: Number })
+    amount!: number;
+
+    @ApiProperty()
+    currency!: string;
+
+    @ApiProperty()
+    reason!: string;
+
+    @ApiPropertyOptional({ nullable: true })
+    failureReason!: string | null;
+
+    @ApiProperty()
+    requestedAt!: Date;
+
+    @ApiPropertyOptional({ nullable: true })
+    completedAt!: Date | null;
+}
+
 export class AdminOrderPaymentResponseDto {
     @ApiProperty()
     id!: number;
@@ -225,6 +252,9 @@ export class AdminOrderPaymentResponseDto {
 
     @ApiProperty()
     updatedAt!: Date;
+
+    @ApiPropertyOptional({ nullable: true })
+    refund!: AdminOrderPaymentRefundResponseDto | null;
 }
 
 export class AdminOrderTaxTotalResponseDto {
@@ -254,6 +284,17 @@ export class AdminOrderTaxTotalResponseDto {
 
     @ApiProperty({ type: AdminOrderTaxCodeResponseDto })
     taxCode!: AdminOrderTaxCodeResponseDto;
+}
+
+export class AdminOrderMoloniFiscalResponseDto {
+    @ApiPropertyOptional({ nullable: true })
+    creditNoteRequiredAt!: Date | null;
+
+    @ApiPropertyOptional({ nullable: true })
+    creditNoteId!: string | null;
+
+    @ApiPropertyOptional({ nullable: true })
+    creditNoteRecordedAt!: Date | null;
 }
 
 export class AdminOrderResponseDto {
@@ -358,6 +399,9 @@ export class AdminOrderResponseDto {
     @ApiProperty({ type: Number })
     total!: number;
 
+    @ApiProperty({ type: Number })
+    expectedFloristTotal!: number;
+
     @ApiPropertyOptional({ nullable: true })
     assignedAt!: Date | null;
 
@@ -394,6 +438,12 @@ export class AdminOrderResponseDto {
 
     @ApiProperty({ type: [AdminOrderTaxTotalResponseDto] })
     taxTotals!: AdminOrderTaxTotalResponseDto[];
+
+    @ApiPropertyOptional({ type: AdminOrderPaymentResponseDto, nullable: true })
+    payment!: AdminOrderPaymentResponseDto | null;
+
+    @ApiPropertyOptional({ type: AdminOrderMoloniFiscalResponseDto, nullable: true })
+    moloniFiscalDocument!: AdminOrderMoloniFiscalResponseDto | null;
 
     // Timestamps
     @ApiProperty()

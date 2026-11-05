@@ -9,10 +9,12 @@ import { FormEvent, useState } from "react";
 
 type StripePaymentFormProps = {
     onSuccess: () => void;
+    amount: string;
 };
 
 export default function StripePaymentForm({
     onSuccess,
+    amount,
 }: StripePaymentFormProps) {
     const stripe = useStripe();
     const elements = useElements();
@@ -47,8 +49,11 @@ export default function StripePaymentForm({
 
         if (error) {
             setError(
-                error.message ??
-                    "Não foi possível processar o pagamento.",
+                error.type === "card_error"
+                    ? "O pagamento foi recusado. Confirma os dados do cartão ou utiliza outro método de pagamento."
+                    : error.type === "validation_error"
+                      ? "Verifica os dados de pagamento introduzidos."
+                      : "Não foi possível processar o pagamento. Tenta novamente.",
             );
 
             setIsSubmitting(false);
@@ -64,6 +69,10 @@ export default function StripePaymentForm({
             className="space-y-5"
         >
             <PaymentElement />
+
+            <p className="rounded-xl bg-[#F8F9F5] px-4 py-3 text-xs leading-5 text-[#626B5D]">
+                Ao selecionar o botão abaixo confirma a compra e o pagamento do total apresentado, sujeito aos Termos e Condições aceites no checkout.
+            </p>
 
             {error && (
                 <p className="text-sm text-red-600">
@@ -82,7 +91,7 @@ export default function StripePaymentForm({
             >
                 {isSubmitting
                     ? "A processar pagamento..."
-                    : "Pagar"}
+                    : `Pagar ${amount}`}
             </button>
         </form>
     );

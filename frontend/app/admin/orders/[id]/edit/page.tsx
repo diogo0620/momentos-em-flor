@@ -557,10 +557,23 @@ export default function EditOrderPage() {
     const [cancellationReason, setCancellationReason] =
         useState<AdminOrderCancellationReason>("ADMIN_REQUEST");
     const [cancellationReasonDetails, setCancellationReasonDetails] = useState("");
+    const [refundModalOpen, setRefundModalOpen] = useState(false);
+    const [refundReason, setRefundReason] = useState("");
+    const [refundSaving, setRefundSaving] = useState(false);
 
     const canCreateOffer = order?.status === "WAITING_FOR_FLORISTS";
     const nextStatusAction = order ? STATUS_ACTIONS[order.status] : undefined;
-    const canCancelOrder = order?.status !== "DELIVERED" && order?.status !== "CANCELLED";
+    const canCancelOrder =
+        order?.status !== "DELIVERED" &&
+        order?.status !== "CANCELLED" &&
+        order?.payment?.status !== "PAID" &&
+        !(
+            order?.moloniFiscalDocument?.creditNoteRequiredAt &&
+            !order.moloniFiscalDocument.creditNoteId
+        );
+    const canRefundOrder =
+        order?.payment?.status === "PAID" &&
+        order.status !== "DELIVERED";
     const minimumExpiry = useMemo(() => toDateTimeLocal(new Date().toISOString()), []);
 
     const loadFlorists = useCallback(async (search: string) => {
@@ -661,7 +674,7 @@ export default function EditOrderPage() {
         setSelectedFloristName("");
         setFlorists([]);
         setShowFloristResults(false);
-        setOfferPrice("");
+        setOfferPrice(order ? String(order.expectedFloristTotal) : "");
         setOfferExpiresAt("");
         setOfferFormOpen(true);
     };
@@ -854,6 +867,26 @@ export default function EditOrderPage() {
         }
     };
 
+    const refundOrder = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!order || !refundReason.trim()) return;
+
+        try {
+            setRefundSaving(true);
+            setStatusActionError(null);
+            await adminOrdersApi.refund(order.id, refundReason.trim());
+            await refreshOrder();
+            setRefundModalOpen(false);
+            setRefundReason("");
+        } catch (err) {
+            setStatusActionError(
+                err instanceof Error ? err.message : "Não foi possível processar o reembolso.",
+            );
+        } finally {
+            setRefundSaving(false);
+        }
+    };
+
     return (
         <div className="mx-auto w-full max-w-5xl space-y-8 pb-10">
             {/* Header: mesmo padrão das páginas de detalhe */}
@@ -935,6 +968,9 @@ export default function EditOrderPage() {
                                 <p className="mt-1 text-3xl font-semibold tracking-tight text-[#2F3B2A]">
                                     {formatPrice(order.total)}
                                 </p>
+                                <p className="mt-2 text-sm text-[#7A8474]">
+                                    Previsto para a florista: <span className="font-semibold text-[#55624A]">{formatPrice(order.expectedFloristTotal)}</span>
+                                </p>
                             </div>
                         </div>
 
@@ -968,6 +1004,41 @@ export default function EditOrderPage() {
                                     <CircleX size={16} />
                                     Cancelar encomenda
                                 </button>
+                            )}
+                            {canRefundOrder && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setStatusActionError(null);
+                                        setRefundModalOpen(true);
+                                    }}
+                                    disabled={refundSaving}
+                                    className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-5 py-2.5 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 disabled:opacity-60"
+                                >
+                                    <RefreshCw size={16} />
+                                    Reembolsar pagamento
+                                </button>
+                            )}
+                            {order.payment?.refund?.status === "PENDING" && (
+                                <p className="flex items-center gap-2 rounded-full bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800">
+                                    <AlertTriangle size={16} />
+                                    Reembolso em processamento. Aguarda a confirmação da Stripe.
+                                </p>
+                            )}
+                            {order.payment?.refund?.status === "FAILED" && order.payment.refund.failureReason && (
+                                <p className="flex items-center gap-2 rounded-full bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">
+                                    <AlertTriangle size={16} /> {order.payment.refund.failureReason}
+                                </p>
+                            )}
+                            {order.payment?.status === "REFUNDED" && (
+                                <p className="flex items-center gap-2 rounded-full bg-green-50 px-4 py-2.5 text-sm font-medium text-green-700">
+                                    <CircleCheck size={16} /> Pagamento reembolsado
+                                </p>
+                            )}
+                            {order.moloniFiscalDocument?.creditNoteRequiredAt && !order.moloniFiscalDocument.creditNoteId && (
+                                <Link href="/admin/fiscal-documents" className="flex items-center gap-2 rounded-full bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800 hover:bg-amber-100">
+                                    <AlertTriangle size={16} /> Emite a nota de crédito Moloni antes de cancelar
+                                </Link>
                             )}
                         </div>
 
@@ -1301,7 +1372,7 @@ export default function EditOrderPage() {
                         )}
 
                         {order.offers.length > 0 ? (
-                            <div className="space-y-4">{order.offers.map((offer) => <OfferCard key={offer.id} offer={offer} onEdit={startEditingOffer} onAccept={acceptOffer} onDecline={(selectedOffer) => { setOfferError(null); setDeclineReason(""); setDecliningOffer(selectedOffer); }} actionLoading={offerActionLoadingId !== null} />)}</div>
+                            <div className="space-y-4">{order.offers.map((offer) => <OfferCard key={offer.id} offer={offer} onEdit={startEditingOffer} onAccept={acceptOffer} onDecline={(selectedOffer) => { setOfferError(null); setDeclineReason("PRICE_TOO_LOW"); setDeclineReasonDetails(OFFER_DECLINE_REASON_DEFAULT_DETAILS.PRICE_TOO_LOW ?? ""); setDecliningOffer(selectedOffer); }} actionLoading={offerActionLoadingId !== null} />)}</div>
                         ) : (
                             <div className="rounded-2xl bg-[#FAFBF8] p-5 text-sm text-[#7A8474]">Ainda não existem propostas de floristas para esta encomenda.</div>
                         )}
@@ -1356,6 +1427,38 @@ export default function EditOrderPage() {
                     Voltar às encomendas
                 </Link>
             </div>
+
+            {refundModalOpen && order && (
+                <div
+                    className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget && !refundSaving) setRefundModalOpen(false);
+                    }}
+                >
+                    <div role="dialog" aria-modal="true" aria-labelledby="refund-order-title" className="my-auto w-full max-w-lg rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)] sm:p-8">
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-800"><RefreshCw size={22} /></div>
+                            <div>
+                                <h2 id="refund-order-title" className="text-xl font-semibold text-[#2F3B2A]">Reembolsar pagamento</h2>
+                                <p className="mt-1 text-sm leading-6 text-[#7A8474]">Será pedido à Stripe o reembolso total de {formatPrice(order.payment?.amount ?? order.total)}. Confirma depois o reembolso antes de cancelar a encomenda.</p>
+                            </div>
+                        </div>
+
+                        <form onSubmit={refundOrder} className="mt-6 space-y-5">
+                            <div>
+                                <label htmlFor="refund-reason" className="mb-2 block text-sm font-medium text-[#374132]">Motivo interno *</label>
+                                <textarea id="refund-reason" value={refundReason} onChange={(event) => setRefundReason(event.target.value)} rows={4} maxLength={1000} required disabled={refundSaving} placeholder="Explica por que motivo o pagamento será reembolsado..." className="w-full resize-y rounded-xl border border-[#E2E6DD] bg-white px-4 py-3 text-sm text-[#2F3B2A] outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100 disabled:bg-[#F3F5EE]" />
+                            </div>
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">Esta ação movimenta dinheiro real quando a aplicação estiver ligada à conta Stripe de produção.</div>
+                            {statusActionError && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{statusActionError}</div>}
+                            <div className="flex flex-col-reverse gap-3 border-t border-[#EEF0EA] pt-5 sm:flex-row sm:justify-end">
+                                <button type="button" onClick={() => setRefundModalOpen(false)} disabled={refundSaving} className="rounded-full border border-[#DDE2D7] px-5 py-3 text-sm font-medium text-[#55624A] hover:bg-[#F3F5EE] disabled:opacity-50">Voltar</button>
+                                <button type="submit" disabled={refundSaving || !refundReason.trim()} className="inline-flex items-center justify-center gap-2 rounded-full bg-amber-700 px-5 py-3 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-50">{refundSaving ? <LoaderCircle size={16} className="animate-spin" /> : <RefreshCw size={16} />}{refundSaving ? "A processar..." : "Confirmar reembolso total"}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {cancelModalOpen && order && (
                 <div
@@ -1456,7 +1559,7 @@ export default function EditOrderPage() {
             )}
 
             {decliningOffer && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget && offerActionLoadingId === null) { setDecliningOffer(null); setDeclineReason(""); setOfferError(null); } }}>
+                <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget && offerActionLoadingId === null) { setDecliningOffer(null); setDeclineReason("PRICE_TOO_LOW"); setDeclineReasonDetails(OFFER_DECLINE_REASON_DEFAULT_DETAILS.PRICE_TOO_LOW ?? ""); setOfferError(null); } }}>
                     <div role="dialog" aria-modal="true" aria-labelledby="decline-offer-title" className="my-auto w-full max-w-lg rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)] sm:p-8">
                         <div className="flex items-start gap-3">
                             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-red-100 text-red-700"><CircleX size={22} /></div>

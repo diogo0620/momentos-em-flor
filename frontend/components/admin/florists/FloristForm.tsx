@@ -14,6 +14,7 @@ import { adminFloristsApi } from "@/lib/api/florists/admin-florists";
 import type { AdminFloristDetail } from "@/types/florists/admin/admin-florist-detail";
 import type { AdminCreateFlorist } from "@/types/florists/admin/admin-create-florist";
 import type { AdminUpdateFlorist } from "@/types/florists/admin/admin-update-florist";
+import PhoneInput from "@/components/forms/PhoneInput";
 
 type FloristFormProps = {
     florist?: AdminFloristDetail;
@@ -254,14 +255,10 @@ export default function FloristForm({ florist, children }: FloristFormProps) {
                         <label htmlFor="phone" className={labelClassName}>
                             Telefone <span className="text-red-500">*</span>
                         </label>
-                        <input
+                        <PhoneInput
                             id="phone"
-                            type="tel"
                             value={phone}
-                            onChange={(event) => setPhone(event.target.value)}
-                            className={inputClassName}
-                            placeholder="+351 912 345 678"
-                            maxLength={30}
+                            onValueChange={setPhone}
                             required
                             disabled={saving}
                         />

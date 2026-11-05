@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 960" role="img" aria-labelledby="title">
+  <title id="title">Momentos em Flor</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#EEF2E9"/>
+      <stop offset="1" stop-color="#D8E1D0"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="960" fill="url(#bg)"/>
+  <circle cx="400" cy="430" r="235" fill="#F7F8F4" opacity=".75"/>
+  <path d="M398 690c-12-114-4-212 25-294" fill="none" stroke="#71805F" stroke-width="18" stroke-linecap="round"/>
+  <path d="M420 532c-76-22-128 15-145 82 79 17 128-13 145-82Z" fill="#9AAA87"/>
+  <path d="M417 466c77-18 126 23 138 91-80 11-127-22-138-91Z" fill="#829273"/>
+  <g transform="translate(405 330)">
+    <ellipse rx="65" ry="125" fill="#E7C9BE" transform="rotate(0)"/>
+    <ellipse rx="65" ry="125" fill="#EFCFC5" transform="rotate(72)"/>
+    <ellipse rx="65" ry="125" fill="#E5BFB2" transform="rotate(144)"/>
+    <ellipse rx="65" ry="125" fill="#F2D8CF" transform="rotate(216)"/>
+    <ellipse rx="65" ry="125" fill="#E8C4B8" transform="rotate(288)"/>
+    <circle r="54" fill="#C99572"/>
+  </g>
+  <text x="400" y="820" text-anchor="middle" fill="#55624A" font-family="Arial, sans-serif" font-size="28" letter-spacing="5">MOMENTOS EM FLOR</text>
+</svg>

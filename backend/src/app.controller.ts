@@ -10,5 +10,12 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  
+  @Get('health')
+  getHealth() {
+    return {
+      status: 'ok',
+      service: 'momentos-em-flor-api',
+      timestamp: new Date().toISOString(),
+    };
+  }
 }

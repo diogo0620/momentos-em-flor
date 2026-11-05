@@ -214,7 +214,8 @@ export default function Navbar() {
                                 aria-label={`Favoritos${wishlistItems.length > 0 ? ` (${wishlistItems.length})` : ""}`}
                                 className="
                                     relative
-                                    flex
+                                    hidden
+                                    sm:flex
                                     h-10
                                     w-10
                                     items-center

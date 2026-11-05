@@ -14,7 +14,7 @@ export type PaginationParams = {
     active?: boolean;
     featured?: boolean;
     acceptingOrders?:boolean;
-    addressDistrict?: boolean;
+    addressDistrict?: string;
     status?: string;
     role?: string;
 };

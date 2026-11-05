@@ -30,6 +30,7 @@ class AdminCategoriesApi extends BaseApi<
         return apiUpload<AdminCategoryImageResponse>(
             `${this.endpoint}/${categoryId}/image`,
             file,
+            { categoryId },
         );
     }
 

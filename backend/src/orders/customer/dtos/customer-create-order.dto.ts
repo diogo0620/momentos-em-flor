@@ -2,14 +2,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DeliveryTimeSlot, Occasion } from '@prisma/client';
 import {
-    IsBoolean,
+    ArrayMaxSize,
+    ArrayMinSize,
+    IsArray,
     IsDateString,
     IsEnum,
-    IsInt,
     IsOptional,
     IsString,
     MaxLength,
-    Min,
     ValidateNested,
 } from 'class-validator';
 import { CustomerCreateOrderItemDto } from './customer-create-order-item.dto';
@@ -157,6 +157,9 @@ export class CustomerCreateOrderDto {
             },
         ],
     })
+    @IsArray()
+    @ArrayMinSize(1)
+    @ArrayMaxSize(50)
     @ValidateNested({ each: true })
     @Type(() => CustomerCreateOrderItemDto)
     items!: CustomerCreateOrderItemDto[];

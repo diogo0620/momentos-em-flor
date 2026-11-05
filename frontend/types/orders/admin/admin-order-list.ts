@@ -10,6 +10,7 @@ export type AdminOrderList = {
     deliveryCity: string;
     deliveryDistrict: string;
     total: number;
+    expectedFloristTotal: number;
     status: AdminOrderStatus;
     createdAt: string;
 };

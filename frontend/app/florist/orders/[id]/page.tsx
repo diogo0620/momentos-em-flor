@@ -25,8 +25,6 @@ import type {
 import type {
     FloristOrderStatus,
     FloristDeliveryTimeSlot,
-    FloristOrderItemType,
-    FloristProductVariantType,
 } from "@/types/orders/florist/florist-order-status";
 
 const STATUS_LABELS: Record<FloristOrderStatus, string> = {
@@ -151,6 +149,8 @@ export default function FloristOrderDetailPage() {
     const [order, setOrder] = useState<FloristOrderDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+    const [statusError, setStatusError] = useState<string | null>(null);
 
     const loadOrder = useCallback(async () => {
         if (!Number.isSafeInteger(orderId) || orderId <= 0) {
@@ -172,10 +172,50 @@ export default function FloristOrderDetailPage() {
     }, [orderId]);
 
     useEffect(() => {
-        void loadOrder();
+        const timeoutId = window.setTimeout(() => {
+            void loadOrder();
+        }, 0);
+
+        return () => window.clearTimeout(timeoutId);
     }, [loadOrder]);
 
     const timeline = useMemo(() => order ? getTimeline(order) : [], [order]);
+
+    const handleAdvanceStatus = async () => {
+        if (!order) return;
+
+        if (
+            order.status === "READY_FOR_DELIVERY" &&
+            !window.confirm("Confirmas que a encomenda foi entregue?")
+        ) {
+            return;
+        }
+
+        setIsUpdatingStatus(true);
+        setStatusError(null);
+
+        try {
+            if (order.status === "ASSIGNED") {
+                await floristOrdersApi.startProduction(order.id);
+            } else if (order.status === "IN_PRODUCTION") {
+                await floristOrdersApi.setReadyForDelivery(order.id);
+            } else if (order.status === "READY_FOR_DELIVERY") {
+                await floristOrdersApi.deliver(order.id);
+            } else {
+                return;
+            }
+
+            await loadOrder();
+        } catch (err) {
+            setStatusError(
+                err instanceof Error
+                    ? err.message
+                    : "Não foi possível atualizar o estado da encomenda.",
+            );
+        } finally {
+            setIsUpdatingStatus(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -246,6 +286,25 @@ export default function FloristOrderDetailPage() {
                     <div className="min-w-0 flex-1">
                         <h2 className="text-xl font-semibold text-[#2F3B2A]">{STATUS_LABELS[order.status]}</h2>
                         <p className="mt-1 max-w-3xl text-sm leading-6 text-[#7A8474]">{STATUS_DESCRIPTIONS[order.status]}</p>
+                        {statusError && (
+                            <p className="mt-3 text-sm font-medium text-red-600">{statusError}</p>
+                        )}
+                        {(["ASSIGNED", "IN_PRODUCTION", "READY_FOR_DELIVERY"] as FloristOrderStatus[]).includes(order.status) && (
+                            <button
+                                type="button"
+                                onClick={() => void handleAdvanceStatus()}
+                                disabled={isUpdatingStatus}
+                                className="mt-5 inline-flex items-center justify-center rounded-full bg-[#55624A] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#435039] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {isUpdatingStatus
+                                    ? "A atualizar..."
+                                    : order.status === "ASSIGNED"
+                                        ? "Iniciar preparação"
+                                        : order.status === "IN_PRODUCTION"
+                                            ? "Marcar como pronta para entrega"
+                                            : "Confirmar entrega"}
+                            </button>
+                        )}
                     </div>
                     <div className="rounded-2xl bg-[#F3F5EE] px-5 py-4 sm:min-w-48">
                         <p className="text-xs font-medium text-[#7A8474]">Valor da encomenda</p>

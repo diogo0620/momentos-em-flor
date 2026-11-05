@@ -16,11 +16,8 @@ import {
     Trash2,
 } from "lucide-react";
 
-import {
-    deleteTaxCode,
-    getTaxCodes,
-    type TaxCode,
-} from "@/lib/api/tax-codes";
+import { adminTaxCodesApi } from "@/lib/api/tax-codes/admin-tax-codes";
+import type { AdminTaxCodeList as TaxCode } from "@/types/tax-codes/admin/admin-tax-code-list";
 
 export default function AdminTaxCodesPage() {
     const [taxCodes, setTaxCodes] =
@@ -44,9 +41,9 @@ export default function AdminTaxCodesPage() {
             setError(null);
 
             const response =
-                await getTaxCodes();
+                await adminTaxCodesApi.getAll({ pageSize: 100 });
 
-            setTaxCodes(response.data);
+            setTaxCodes(response.items);
         } catch (err) {
             setError(
                 err instanceof Error
@@ -67,7 +64,7 @@ export default function AdminTaxCodesPage() {
     ) {
         const confirmed =
             window.confirm(
-                `Tem a certeza que pretende remover o Tax Code "${taxCode.code}"?`,
+                `Tem a certeza que pretende remover a Taxa de IVA "${taxCode.name}"?`,
             );
 
         if (!confirmed) {
@@ -77,7 +74,7 @@ export default function AdminTaxCodesPage() {
         try {
             setDeletingId(taxCode.id);
 
-            await deleteTaxCode(
+            await adminTaxCodesApi.delete(
                 taxCode.id,
             );
 
@@ -111,10 +108,10 @@ export default function AdminTaxCodesPage() {
             }
 
             return (
-                taxCode.code
+                taxCode.name
                     .toLowerCase()
                     .includes(value) ||
-                taxCode.name
+                taxCode.description
                     .toLowerCase()
                     .includes(value)
             );
@@ -302,7 +299,7 @@ export default function AdminTaxCodesPage() {
                             bg-gray-100
                             text-gray-400
                         ">
-                            <ReceiptPercent
+                            <TicketPercent
                                 size={25}
                             />
                         </div>
@@ -433,7 +430,7 @@ export default function AdminTaxCodesPage() {
                                                     text-gray-700
                                                 ">
                                                     {
-                                                        taxCode.code
+                                                        taxCode.name
                                                     }
                                                 </span>
                                             </td>
@@ -448,7 +445,7 @@ export default function AdminTaxCodesPage() {
                                                     text-gray-800
                                                 ">
                                                     {
-                                                        taxCode.name
+                                                        taxCode.description
                                                     }
                                                 </span>
                                             </td>

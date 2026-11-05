@@ -7,9 +7,11 @@ import {
 } from "react";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { getRedirectPath } from "@/lib/auth/auth";
+import { isValidEmail } from "@/lib/validation/auth";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -33,8 +35,17 @@ export default function LoginPage() {
     const [isSubmitting, setIsSubmitting] =
         useState(false);
 
-        /*
+    const [registered, setRegistered] =
+        useState(false);
+
+    const [passwordReset, setPasswordReset] = useState(false);
+
     useEffect(() => {
+        setRegistered(
+            new URLSearchParams(window.location.search).get("registered") === "1",
+        );
+        setPasswordReset(new URLSearchParams(window.location.search).get("passwordReset") === "1");
+
         if (
             !isLoading &&
             isAuthenticated &&
@@ -50,7 +61,6 @@ export default function LoginPage() {
         user,
         router,
     ]);
-    */
 
     async function handleSubmit(
         event: FormEvent<HTMLFormElement>,
@@ -58,6 +68,16 @@ export default function LoginPage() {
         event.preventDefault();
 
         setError(null);
+
+        if (!isValidEmail(email)) {
+            setError("Introduz um endereço de email válido.");
+            return;
+        }
+        if (!password) {
+            setError("Introduz a tua password.");
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
@@ -141,6 +161,18 @@ export default function LoginPage() {
 
                     </div>
 
+                    {registered && (
+                        <div role="status" className="mb-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                            Conta criada com sucesso. Já podes iniciar sessão.
+                        </div>
+                    )}
+
+                    {passwordReset && (
+                        <div role="status" className="mb-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                            Password alterada com sucesso. Já podes iniciar sessão.
+                        </div>
+                    )}
+
                     <form
                         onSubmit={handleSubmit}
                         className="space-y-5"
@@ -204,13 +236,12 @@ export default function LoginPage() {
                                     Password
                                 </label>
 
-                                <button
-                                    type="button"
+                                <Link
+                                    href="/forgot-password"
                                     className="text-xs font-medium text-[#6B795F] transition hover:text-[#55624A]"
-                                    onClick={() => {}}
                                 >
                                     Esqueceste-te da password?
-                                </button>
+                                </Link>
 
                             </div>
 

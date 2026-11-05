@@ -39,15 +39,45 @@ export class StripeService {
     async createPaymentIntent(
         amount: number,
         metadata: Record<string, string>,
+        idempotencyKey: string,
     ): Promise<Stripe.PaymentIntent> {
-        return this.stripe.paymentIntents.create({
-            amount: Math.round(amount * 100),
-            currency: 'eur',
-            metadata,
-            automatic_payment_methods: {
-                enabled: true,
+        return this.stripe.paymentIntents.create(
+            {
+                amount: Math.round(amount * 100),
+                currency: 'eur',
+                metadata,
+                automatic_payment_methods: {
+                    enabled: true,
+                },
             },
-        });
+            { idempotencyKey },
+        );
+    }
+
+    async retrievePaymentIntent(
+        paymentIntentId: string,
+    ): Promise<Stripe.PaymentIntent> {
+        return this.stripe.paymentIntents.retrieve(paymentIntentId);
+    }
+
+    async cancelPaymentIntent(
+        paymentIntentId: string,
+    ): Promise<Stripe.PaymentIntent> {
+        return this.stripe.paymentIntents.cancel(paymentIntentId);
+    }
+
+    async createFullRefund(
+        paymentIntentId: string,
+        metadata: Record<string, string>,
+        idempotencyKey: string,
+    ): Promise<Stripe.Refund> {
+        return this.stripe.refunds.create(
+            {
+                payment_intent: paymentIntentId,
+                metadata,
+            },
+            { idempotencyKey },
+        );
     }
 
     async retrieveCheckoutSession(

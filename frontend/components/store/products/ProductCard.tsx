@@ -3,7 +3,6 @@ import Link from "next/link";
 import { ArrowUpRight, Flower2, Sparkles } from "lucide-react";
 
 import WishlistButton from "@/components/wishlist/WishlistButton";
-import { AdminProductList } from "@/types/products/admin/admin-product-list";
 import { PublicProductList } from "@/types/products/public/public-product-list";
 
 type Props = {
@@ -20,7 +19,6 @@ export default function ProductCard({ product }: Props) {
                             src={product.image}
                             alt={product.name}
                             fill
-                            unoptimized
                             className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.045]"
                             sizes="(max-width: 639px) 100vw, (max-width: 1279px) 50vw, 33vw"
                         />
@@ -59,7 +57,7 @@ export default function ProductCard({ product }: Props) {
                     </Link>
                 </div>
 
-                <div className="mt-auto flex items-end justify-between gap-3 border-t border-[#EEF0EB] pt-4 mt-5">
+                <div className="mt-5 flex items-end justify-between gap-3 border-t border-[#EEF0EB] pt-4">
                     <div>
                         <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#929B89]">
                             {product.type === "RENTAL" ? "Desde" : "Preço"}

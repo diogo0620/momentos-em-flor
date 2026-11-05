@@ -6,6 +6,7 @@ import {
     useMemo,
     useState,
     useRef,
+    Suspense,
     type FormEvent,
 } from "react";
 import Link from "next/link";
@@ -99,6 +100,20 @@ function getInitialState(params: URLSearchParams) {
 }
 
 export default function ProductsPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="min-h-screen bg-[#F7F8F4] px-4 py-16">
+                    <div className="mx-auto h-96 max-w-7xl animate-pulse rounded-3xl bg-white" />
+                </div>
+            }
+        >
+            <ProductsPageContent />
+        </Suspense>
+    );
+}
+
+function ProductsPageContent() {
     const searchParams = useSearchParams();
     const queryString = searchParams.toString();
     const initialState = useRef<ReturnType<typeof getInitialState> | null>(null);

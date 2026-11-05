@@ -4,7 +4,6 @@ import { Order, Prisma } from '@prisma/client';
 import { BaseMapper } from '@/common/mappers/base.mapper';
 import { AdminOrderListResponseDto } from '../dtos/admin-order-list-response.dto';
 import { AdminOrderResponseDto } from '../dtos/admin-order-response.dto';
-import { off } from 'process';
 
 type AdminOrderWithRelations = Prisma.OrderGetPayload<{
     include: {
@@ -39,6 +38,18 @@ type AdminOrderWithRelations = Prisma.OrderGetPayload<{
         taxTotals: {
             include: {
                 taxCode: true;
+            };
+        };
+        payment: {
+            include: {
+                refund: true;
+            };
+        };
+        moloniFiscalDocument: {
+            select: {
+                creditNoteRequiredAt: true;
+                creditNoteId: true;
+                creditNoteRecordedAt: true;
             };
         };
     };
@@ -94,6 +105,7 @@ export class AdminOrdersMapper extends BaseMapper<
             deliveryFee: Number(order.deliveryFee),
             discount: Number(order.discount),
             total: Number(order.total),
+            expectedFloristTotal: Number(order.expectedFloristTotal),
 
             assignedAt: order.assignedAt,
             cancelledAt: order.cancelledAt,
@@ -104,6 +116,34 @@ export class AdminOrdersMapper extends BaseMapper<
             inProductionAt: order.inProductionAt,
             readyForDeliveryAt: order.readyForDeliveryAt,
             deliveredAt: order.deliveredAt,
+
+            payment: order.payment
+                ? {
+                    id: order.payment.id,
+                    orderId: order.payment.orderId,
+                    status: order.payment.status,
+                    amount: Number(order.payment.amount),
+                    currency: order.payment.currency,
+                    stripeSessionId: order.payment.stripeSessionId,
+                    stripePaymentIntentId: order.payment.stripePaymentIntentId,
+                    paidAt: order.payment.paidAt,
+                    createdAt: order.payment.createdAt,
+                    updatedAt: order.payment.updatedAt,
+                    refund: order.payment.refund
+                        ? {
+                            id: order.payment.refund.id,
+                            status: order.payment.refund.status,
+                            amount: Number(order.payment.refund.amount),
+                            currency: order.payment.refund.currency,
+                            reason: order.payment.refund.reason,
+                            failureReason: order.payment.refund.failureReason,
+                            requestedAt: order.payment.refund.requestedAt,
+                            completedAt: order.payment.refund.completedAt,
+                        }
+                        : null,
+                }
+                : null,
+            moloniFiscalDocument: order.moloniFiscalDocument,
 
             items: order.items.map((item) => ({
                 id: item.id,
@@ -200,6 +240,7 @@ export class AdminOrdersMapper extends BaseMapper<
             deliveryCity: order.deliveryCity,
             deliveryDistrict: order.deliveryDistrict,
             total: Number(order.total),
+            expectedFloristTotal: Number(order.expectedFloristTotal),
             status: order.status,
             createdAt: order.createdAt,
         };

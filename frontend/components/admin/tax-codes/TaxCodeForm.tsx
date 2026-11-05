@@ -16,11 +16,8 @@ import { useRouter } from "next/navigation";
 
 import Link from "next/link";
 
-import {
-    createTaxCode,
-    updateTaxCode,
-    type TaxCode,
-} from "@/lib/api/tax-codes";
+import { adminTaxCodesApi } from "@/lib/api/tax-codes/admin-tax-codes";
+import type { AdminTaxCodeDetail as TaxCode } from "@/types/tax-codes/admin/admin-tax-code-detail";
 
 type Props = {
     taxCode?: TaxCode;
@@ -33,12 +30,12 @@ export default function TaxCodeForm({
 
     const isEditing = !!taxCode;
 
-    const [code, setCode] = useState(
-        taxCode?.code ?? "",
-    );
-
     const [name, setName] = useState(
         taxCode?.name ?? "",
+    );
+
+    const [description, setDescription] = useState(
+        taxCode?.description ?? "",
     );
 
     const [rate, setRate] = useState(
@@ -56,12 +53,12 @@ export default function TaxCodeForm({
         useState<string | null>(null);
 
     function validate() {
-        if (!code.trim()) {
-            return "O código é obrigatório.";
-        }
-
         if (!name.trim()) {
             return "O nome é obrigatório.";
+        }
+
+        if (!description.trim()) {
+            return "A descrição é obrigatória.";
         }
 
         if (rate.trim() === "") {
@@ -99,13 +96,13 @@ export default function TaxCodeForm({
             setError(null);
 
             const payload = {
-                code: code.trim().toUpperCase(),
                 name: name.trim(),
+                description: description.trim(),
                 rate: Number(rate),
             };
 
             if (isEditing) {
-                await updateTaxCode(
+                await adminTaxCodesApi.update(
                     taxCode.id,
                     {
                         ...payload,
@@ -118,12 +115,12 @@ export default function TaxCodeForm({
                 );
             } else {
                 const response =
-                    await createTaxCode(
+                    await adminTaxCodesApi.create(
                         payload,
                     );
 
                 router.push(
-                    `/admin/tax-codes/${response.data.id}`,
+                    `/admin/tax-codes/${response.id}`,
                 );
             }
 
@@ -211,19 +208,19 @@ export default function TaxCodeForm({
                                     text-gray-700
                                 "
                             >
-                                Código
+                                Nome
                             </label>
 
                             <input
                                 id="code"
                                 type="text"
-                                value={code}
+                                value={name}
                                 onChange={(event) =>
-                                    setCode(
+                                    setName(
                                         event.target.value,
                                     )
                                 }
-                                placeholder="PT_NORMAL"
+                                placeholder="IVA Normal"
                                 className="
                                     w-full
                                     rounded-xl
@@ -242,7 +239,7 @@ export default function TaxCodeForm({
                             />
 
                             <p className="mt-2 text-xs text-gray-400">
-                                Código único utilizado internamente.
+                                Nome utilizado para identificar a taxa.
                             </p>
                         </div>
 
@@ -259,19 +256,19 @@ export default function TaxCodeForm({
                                     text-gray-700
                                 "
                             >
-                                Nome
+                                Descrição
                             </label>
 
                             <input
                                 id="name"
                                 type="text"
-                                value={name}
+                                value={description}
                                 onChange={(event) =>
-                                    setName(
+                                    setDescription(
                                         event.target.value,
                                     )
                                 }
-                                placeholder="IVA Normal"
+                                placeholder="Taxa normal de IVA em Portugal"
                                 className="
                                     w-full
                                     rounded-xl

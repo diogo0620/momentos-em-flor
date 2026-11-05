@@ -7,6 +7,7 @@ import type {
 import type {
     FloristOrderList,
 } from "@/types/orders/florist/florist-order-list";
+import { apiFetch } from "../common/client";
 
 class FloristOrdersApi extends BaseApi<
     FloristOrderDetail,
@@ -16,6 +17,24 @@ class FloristOrdersApi extends BaseApi<
 > {
     constructor() {
         super("/florist/orders");
+    }
+
+    async startProduction(id: number): Promise<void> {
+        return apiFetch<void>(`${this.endpoint}/${id}/start-production`, {
+            method: "POST",
+        });
+    }
+
+    async setReadyForDelivery(id: number): Promise<void> {
+        return apiFetch<void>(`${this.endpoint}/${id}/ready-for-delivery`, {
+            method: "POST",
+        });
+    }
+
+    async deliver(id: number): Promise<void> {
+        return apiFetch<void>(`${this.endpoint}/${id}/deliver`, {
+            method: "POST",
+        });
     }
 }
 

@@ -1,10 +1,9 @@
 import { IsStrongPassword } from '@/common/validators/password.validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
-  IsOptional,
+  IsNotEmpty,
   IsString,
-  MinLength,
 } from 'class-validator';
 
 export class PublicCreateUserDto {
@@ -12,12 +11,14 @@ export class PublicCreateUserDto {
     example: 'Diogo',
   })
   @IsString()
+  @IsNotEmpty()
   firstName!: string;
 
   @ApiProperty({
     example: 'Silva',
   })
   @IsString()
+  @IsNotEmpty()
   lastName!: string;
 
   @ApiProperty({
@@ -34,10 +35,10 @@ export class PublicCreateUserDto {
   @IsStrongPassword()
   password!: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     example: '+351912345678',
   })
-  @IsOptional()
   @IsString()
+  @IsNotEmpty()
   phone!: string;
 }

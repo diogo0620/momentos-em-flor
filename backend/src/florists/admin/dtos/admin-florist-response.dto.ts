@@ -73,6 +73,9 @@ export class AdminFloristResponseDto {
   @ApiProperty()
   deliveryRadiusKm!: number;
 
+  @ApiProperty() averageRating!: number;
+  @ApiProperty() reviewCount!: number;
+
   @ApiPropertyOptional()
   acceptingOrders!: boolean;
 

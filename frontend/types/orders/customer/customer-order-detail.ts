@@ -6,8 +6,10 @@
  */
 export type CustomerOrderItemDetail = {
     id: number;
+    type: "PRODUCT" | "DELIVERY_FEE";
     productId?: number | null;
     productName: string;
+    variantName?: string | null;
     description: string | null;
     image: string | null;
     quantity: number;
@@ -26,6 +28,10 @@ export type CustomerOrderItemDetail = {
 export type CustomerOrderDetail = {
     id: number;
     orderNumber: string;
+    customerFirstName: string;
+    customerLastName: string;
+    customerEmail: string;
+    customerPhone: string;
     customerTaxNumber?: string | null;
 
     recipientFirstName: string;
@@ -55,11 +61,30 @@ export type CustomerOrderDetail = {
 
     status: CustomerOrderStatus;
     items: CustomerOrderItemDetail[];
+    review: CustomerOrderReview | null;
 
     createdAt: string;
     cancelledAt?: string | null;
     cancellationReason?: string | null;
 }
+
+export type ReviewCategory = "FLOWER_QUALITY" | "PRESENTATION" | "DELIVERY" | "SERVICE";
+
+export type CustomerOrderReview = {
+    id: number;
+    comment: string | null;
+    averageRating: number;
+    ratings: Array<{ category: ReviewCategory; rating: number }>;
+    createdAt: string;
+};
+
+export type CustomerCreateOrderReview = {
+    flowerQuality: number;
+    presentation: number;
+    delivery: number;
+    service: number;
+    comment?: string;
+};
 
 export type CustomerOrderStatus =  
     "CREATED" |

@@ -10,6 +10,7 @@ import { CustomerUsersMapper } from './mappers/customer-users.mapper';
 import { CustomerUserResponseDto } from './dtos/customer-user-response.dto';
 import { CustomerUpdateUserDto } from './dtos/customer-update-user.dto';
 import { CustomerUserChangePasswordDto } from './dtos/customer-user-change-password.dto';
+import { normalizePhoneNumber } from '@/common/phone/phone-number';
 
 
 @Injectable()
@@ -56,7 +57,7 @@ export class CustomerUsersService {
                         lastName: dto.lastName,
                     }),
                     ...(dto.phone !== undefined && {
-                        phone: dto.phone,
+                        phone: normalizePhoneNumber(dto.phone),
                     })
                 },
             });

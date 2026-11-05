@@ -30,9 +30,15 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ? exceptionResponse
         : (exceptionResponse as any).message ?? exceptionResponse;
 
+    const code =
+      typeof exceptionResponse === 'object' && exceptionResponse !== null
+        ? (exceptionResponse as any).code
+        : undefined;
+
     response.status(status).json({
       success: false,
       statusCode: status,
+      ...(code ? { code } : {}),
       message,
       path: request.url,
       timestamp: new Date().toISOString(),
