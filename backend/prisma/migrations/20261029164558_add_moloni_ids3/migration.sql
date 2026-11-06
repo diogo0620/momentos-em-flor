@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Product" ALTER COLUMN "moloniId" SET DATA TYPE TEXT;
+
+-- AlterTable
+ALTER TABLE "TaxCode" ALTER COLUMN "moloniId" SET DATA TYPE TEXT;

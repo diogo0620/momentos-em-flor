@@ -14,11 +14,16 @@ type CartContextType = {
     items: CartItem[];
 
     addItem: (
-        item: CartItem
+        item: CartItem,
+    ) => void;
+
+    updateQuantity: (
+        cartItemId: string,
+        quantity: number,
     ) => void;
 
     removeItem: (
-        id: string
+        cartItemId: string,
     ) => void;
 
     clearCart: () => void;
@@ -26,7 +31,7 @@ type CartContextType = {
 
 const CartContext =
     createContext<CartContextType | null>(
-        null
+        null,
     );
 
 export function CartProvider({
@@ -34,128 +39,182 @@ export function CartProvider({
 }: {
     children: ReactNode;
 }) {
-
     const [items, setItems] =
         useState<CartItem[]>([]);
 
+    // Restaurar carrinho do localStorage
     useEffect(() => {
-
         const stored =
-            localStorage.getItem(
-                "cart"
-            );
+            localStorage.getItem("cart");
 
-        if (stored) {
-
-            setItems(
-                JSON.parse(stored)
-            );
-
+        if (!stored) {
+            return;
         }
 
+        try {
+            const parsed =
+                JSON.parse(stored);
+
+            if (Array.isArray(parsed)) {
+                setItems(parsed);
+            }
+        } catch {
+            localStorage.removeItem("cart");
+        }
     }, []);
 
+    // Guardar carrinho no localStorage
     useEffect(() => {
-
         localStorage.setItem(
             "cart",
-            JSON.stringify(items)
+            JSON.stringify(items),
         );
-
     }, [items]);
 
     function addItem(
-        item: CartItem
+        item: CartItem,
     ) {
-
         setItems((current) => {
-
             const existing =
                 current.find(
-                    (p) =>
-                        p.id === item.id &&
-                        p.recipient ===
-                            item.recipient &&
-                        p.message ===
-                            item.message
+                    (product) =>
+                        product.id ===
+                            item.id &&
+                        product.variantId ===
+                            item.variantId &&
+                        areComponentsEqual(
+                            product.components,
+                            item.components,
+                        ),
                 );
 
             if (existing) {
-
                 return current.map(
-                    (p) =>
-                        p === existing
+                    (product) =>
+                        product.cartItemId ===
+                        existing.cartItemId
                             ? {
-                                  ...p,
+                                  ...product,
                                   quantity:
-                                      p.quantity +
+                                      product.quantity +
                                       item.quantity,
                               }
-                            : p
+                            : product,
                 );
-
             }
 
             return [
                 ...current,
                 item,
             ];
-
         });
+    }
 
+    function updateQuantity(
+        cartItemId: string,
+        quantity: number,
+    ) {
+        if (quantity <= 0) {
+            setItems((current) =>
+                current.filter(
+                    (item) =>
+                        item.cartItemId !==
+                        cartItemId,
+                ),
+            );
+
+            return;
+        }
+
+        setItems((current) =>
+            current.map((item) =>
+                item.cartItemId ===
+                cartItemId
+                    ? {
+                          ...item,
+                          quantity,
+                      }
+                    : item,
+            ),
+        );
     }
 
     function removeItem(
-        id: string
+        cartItemId: string,
     ) {
-
         setItems((current) =>
             current.filter(
                 (item) =>
-                    item.id !== id
-            )
+                    item.cartItemId !==
+                    cartItemId,
+            ),
         );
-
     }
 
     function clearCart() {
-
         setItems([]);
-
     }
 
     return (
-
         <CartContext.Provider
             value={{
                 items,
                 addItem,
+                updateQuantity,
                 removeItem,
                 clearCart,
             }}
         >
-
             {children}
-
         </CartContext.Provider>
-
     );
+}
 
+function areComponentsEqual(
+    first?: CartItem["components"],
+    second?: CartItem["components"],
+) {
+    const firstComponents =
+        first ?? [];
+
+    const secondComponents =
+        second ?? [];
+
+    if (
+        firstComponents.length !==
+        secondComponents.length
+    ) {
+        return false;
+    }
+
+    return firstComponents.every(
+        (firstComponent) => {
+            const secondComponent =
+                secondComponents.find(
+                    (component) =>
+                        component.componentId ===
+                        firstComponent.componentId,
+                );
+
+            return (
+                secondComponent !==
+                    undefined &&
+                secondComponent.quantity ===
+                    firstComponent.quantity
+            );
+        },
+    );
 }
 
 export function useCart() {
-
     const context =
         useContext(CartContext);
 
     if (!context) {
-
         throw new Error(
-            "useCart must be used inside CartProvider"
+            "useCart must be used inside CartProvider",
         );
-
     }
 
     return context;
-
 }

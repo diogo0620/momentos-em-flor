@@ -1,27 +1,44 @@
 import "./globals.css";
+import type { Metadata, Viewport } from "next";
 
-import { Inter } from "next/font/google";
+import { AuthProvider } from "@/lib/auth/AuthProvider";
+import { WishlistProvider } from "@/contexts/WishlistContext";
 
-const inter = Inter({
-  subsets: ["latin"],
-});
+export const metadata: Metadata = {
+    title: {
+        default: "Momentos em Flor",
+        template: "%s · Momentos em Flor",
+    },
+    description:
+        "Flores preparadas por floristas locais para todos os momentos especiais.",
+    applicationName: "Momentos em Flor",
+    openGraph: {
+        title: "Momentos em Flor",
+        description: "Flores preparadas por floristas locais para todos os momentos especiais.",
+        type: "website",
+        locale: "pt_PT",
+    },
+};
 
-export const metadata = {
-  title: "Momentos em Flor",
-  description:
-    "Flores preparadas por floristas locais para todos os momentos especiais.",
+export const viewport: Viewport = {
+    themeColor: "#55624A",
+    colorScheme: "light",
 };
 
 export default function RootLayout({
-  children,
+    children,
 }: {
-  children: React.ReactNode;
+    children: React.ReactNode;
 }) {
-  return (
-    <html lang="pt">
-      <body className={inter.className}>
-        {children}
-      </body>
-    </html>
-  );
+    return (
+        <html lang="pt">
+            <body className="font-sans">
+                <AuthProvider>
+                    <WishlistProvider>
+                        {children}
+                    </WishlistProvider>
+                </AuthProvider>
+            </body>
+        </html>
+    );
 }

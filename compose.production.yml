@@ -1,0 +1,111 @@
+services:
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_started
+      api:
+        condition: service_healthy
+    environment:
+      WEB_DOMAIN: ${WEB_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+      TLS_EMAIL: ${TLS_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - momentos_caddy_data:/data
+      - momentos_caddy_config:/config
+
+  database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - momentos_database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}?schema=public
+      FRONTEND_URL: ${PUBLIC_WEB_URL}
+      BACKEND_URL: ${PUBLIC_API_URL}
+      CORS_ORIGINS: ${PUBLIC_WEB_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      COOKIE_SAME_SITE: ${COOKIE_SAME_SITE:-none}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM}
+      EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-}
+      RESEND_ORDER_OFFER_CREATED_TEMPLATE_ID: ${RESEND_ORDER_OFFER_CREATED_TEMPLATE_ID}
+      FLORIST_ORDER_OFFERS_URL: ${FLORIST_ORDER_OFFERS_URL}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY}
+      SUPABASE_PRODUCT_IMAGES_BUCKET: ${SUPABASE_PRODUCT_IMAGES_BUCKET}
+      MOLONI_ENCRYPTION_KEY: ${MOLONI_ENCRYPTION_KEY}
+      DEFAULT_DELIVERY_FEE: ${DEFAULT_DELIVERY_FEE:-5}
+      DEFAULT_DELIVERY_RADIUS_KM: ${DEFAULT_DELIVERY_RADIUS_KM:-15}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD}
+      BOOTSTRAP_ADMIN_PHONE: ${BOOTSTRAP_ADMIN_PHONE}
+      BOOTSTRAP_ADMIN_FIRST_NAME: ${BOOTSTRAP_ADMIN_FIRST_NAME:-Administrador}
+      BOOTSTRAP_ADMIN_LAST_NAME: ${BOOTSTRAP_ADMIN_LAST_NAME:-Momentos em Flor}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL}
+        NEXT_PUBLIC_FILES_URL: ${NEXT_PUBLIC_FILES_URL:-}
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+        NEXT_PUBLIC_CONTACT_EMAIL: ${NEXT_PUBLIC_CONTACT_EMAIL:-}
+        NEXT_PUBLIC_CONTACT_PHONE: ${NEXT_PUBLIC_CONTACT_PHONE:-}
+        NEXT_PUBLIC_INSTAGRAM_URL: ${NEXT_PUBLIC_INSTAGRAM_URL:-}
+        NEXT_PUBLIC_FACEBOOK_URL: ${NEXT_PUBLIC_FACEBOOK_URL:-}
+        NEXT_PUBLIC_LEGAL_ENTITY: ${NEXT_PUBLIC_LEGAL_ENTITY:-}
+        NEXT_PUBLIC_LEGAL_NIF: ${NEXT_PUBLIC_LEGAL_NIF:-}
+        NEXT_PUBLIC_LEGAL_ADDRESS: ${NEXT_PUBLIC_LEGAL_ADDRESS:-}
+        NEXT_PUBLIC_PRIVACY_EMAIL: ${NEXT_PUBLIC_PRIVACY_EMAIL:-}
+        NEXT_PUBLIC_RAL_NAME: ${NEXT_PUBLIC_RAL_NAME:-}
+        NEXT_PUBLIC_RAL_URL: ${NEXT_PUBLIC_RAL_URL:-}
+        NEXT_PUBLIC_BOOK_OF_COMPLAINTS_URL: ${NEXT_PUBLIC_BOOK_OF_COMPLAINTS_URL:-https://www.livroreclamacoes.pt/Inicio/}
+        BACKEND_ORIGIN: ${BACKEND_ORIGIN:-}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+volumes:
+  momentos_database:
+  momentos_caddy_data:
+  momentos_caddy_config:

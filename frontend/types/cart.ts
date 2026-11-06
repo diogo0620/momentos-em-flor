@@ -1,17 +1,21 @@
-import type { Price } from "./price";
+export type CartItemComponent = {
+    componentId: number;
+    name: string;
+    quantity: number;
+};
 
 export type CartItem = {
-    id: string;
+    cartItemId: string;
 
+    id: number;
     name: string;
-
+    description: string;
     image: string;
-
-    price: Price;
-
+    price: number;
     quantity: number;
 
-    recipient?: string;
+    variantId?: number;
+    variantName?: string;
 
-    message?: string;
+    components?: CartItemComponent[];
 };

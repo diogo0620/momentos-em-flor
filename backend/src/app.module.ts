@@ -3,20 +3,50 @@ import { ConfigModule } from '@nestjs/config';
 
 import { PrismaModule } from './prisma/prisma.module';
 import { CategoriesModule } from './categories/categories.module';
-import { LoggerModule } from './common/logger/logger.module';
-import { HealthModule } from './health/health.module';
+import { LoggerModule } from './common/logger/logger.module'
 import appConfig from '@/config/app.config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
+import { TaxCodesModule } from './tax-codes/tax-codes.module';
+import { FloristsModule } from './florists/florists.module';
+import { StoreSettingsModule } from './store-settings/store-settings.module';
+import { ProductsModule } from './products/products.module';
+import { OrdersModule } from './orders/orders.module';
+import { PaymentsModule } from './payments/payments.module';
+import { OrderOffersModule } from './order-offers/order-offers.module';
+import { UploadsModule } from './uploads/uploads.module';
+import { EventsModule } from './events/events.module';
+import { MoloniModule } from './moloni/moloni.module';
+import { FloristCompensationsModule } from './florist-compensations/florist-compensations.module';
+import { validateEnvironment } from '@/config/environment.validation';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       load: [appConfig],
+      validate: validateEnvironment,
     }),
+    EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
     PrismaModule,
+    AuthModule,
+    StoreSettingsModule,
+    UsersModule,
     CategoriesModule,
-    LoggerModule,
-    HealthModule
+    TaxCodesModule,
+    FloristsModule,
+    ProductsModule,
+    OrdersModule,
+    OrderOffersModule,
+    PaymentsModule,
+    UploadsModule,
+    EventsModule,
+    MoloniModule,
+    FloristCompensationsModule,
+    LoggerModule
   ],
 })
 export class AppModule { }

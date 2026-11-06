@@ -1,379 +1,658 @@
+
 "use client";
 
-import { useMemo, useState } from "react";
-
 import Link from "next/link";
-
+import { useCallback, useEffect, useState } from "react";
 import {
+    ArrowDown,
+    ArrowUp,
+    ArrowUpDown,
+    ChevronLeft,
+    ChevronRight,
     Flower2,
-    MapPin,
-    Package,
     Pencil,
     Plus,
+    Search,
+    SlidersHorizontal,
     Star,
 } from "lucide-react";
 
-import { florists } from "@/data/florists";
-
 import PageHeader from "@/components/admin/common/PageHeader";
-import FilterBar from "@/components/admin/common/FilterBar";
 import SearchInput from "@/components/admin/common/SearchInput";
-import SectionCard from "@/components/admin/common/SectionCard";
 import StatusBadge from "@/components/admin/common/StatusBadge";
-import MetricCard from "@/components/admin/common/MetricCard";
-import EmptyState from "@/components/admin/common/EmptyState";
+import DataTable from "@/components/admin/DataTable";
 
-export default function FloristsPage() {
+import type { PaginationParams } from "@/lib/api/common/base-api";
+import { adminFloristsApi } from "@/lib/api/florists/admin-florists";
+import { AdminFloristList } from "@/types/florists/admin/admin-florist-list";
 
-    const [search, setSearch] =
-        useState("");
+const PAGE_SIZE = 10;
 
-    const [status, setStatus] =
-        useState("all");
+const PORTUGAL_DISTRICTS = [
+    "Aveiro",
+    "Beja",
+    "Braga",
+    "Bragança",
+    "Castelo Branco",
+    "Coimbra",
+    "Évora",
+    "Faro",
+    "Guarda",
+    "Leiria",
+    "Lisboa",
+    "Portalegre",
+    "Porto",
+    "Santarém",
+    "Setúbal",
+    "Viana do Castelo",
+    "Vila Real",
+    "Viseu",
+];
 
-    const filteredFlorists =
-        useMemo(() => {
+type SortOrder = "asc" | "desc";
 
-            let result = [...florists];
+type FloristQueryParams = PaginationParams & {
+    addressDistrict?: string;
+    acceptingOrders?: boolean;
+};
 
-            if (search) {
+/* ========================================================================== */
+/* PAGE                                                                       */
+/* ========================================================================== */
 
-                result = result.filter(
-                    (florist) =>
-                        florist.name
-                            .toLowerCase()
-                            .includes(
-                                search.toLowerCase()
-                            ) ||
-                        florist.city
-                            .toLowerCase()
-                            .includes(
-                                search.toLowerCase()
-                            )
+export default function AdminFloristsPage() {
+    const [florists, setFlorists] = useState<AdminFloristList[]>([]);
+
+    const [page, setPage] = useState(1);
+    const [pages, setPages] = useState(0);
+    const [total, setTotal] = useState(0);
+
+    const [searchInput, setSearchInput] = useState("");
+    const [search, setSearch] = useState("");
+
+    const [districtFilter, setDistrictFilter] = useState("");
+    const [activeFilter, setActiveFilter] = useState("");
+    const [acceptingOrdersFilter, setAcceptingOrdersFilter] = useState("");
+
+    const [sort, setSort] = useState("name");
+    const [order, setOrder] = useState<SortOrder>("asc");
+
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    /* ====================================================================== */
+    /* LOAD FLORISTS                                                           */
+    /* ====================================================================== */
+
+    const loadFlorists = useCallback(
+        async (requestedPage = 1) => {
+            try {
+                setIsLoading(true);
+                setError(null);
+
+                const params: FloristQueryParams = {
+                    page: requestedPage,
+                    pageSize: PAGE_SIZE,
+                    search: search || undefined,
+                    addressDistrict: districtFilter || undefined,
+                    sort,
+                    order,
+                };
+
+                if (activeFilter !== "") {
+                    params.active = activeFilter === "true";
+                }
+
+                if (acceptingOrdersFilter !== "") {
+                    params.acceptingOrders =
+                        acceptingOrdersFilter === "true";
+                }
+
+                const response = await adminFloristsApi.getAll(params);
+
+                setFlorists(response.items);
+                setPage(response.page);
+                setPages(response.pages);
+                setTotal(response.total);
+            } catch (err) {
+                setError(
+                    err instanceof Error
+                        ? err.message
+                        : "Não foi possível carregar as floristas.",
                 );
-
+            } finally {
+                setIsLoading(false);
             }
-
-            if (status === "active") {
-
-                result = result.filter(
-                    (f) => f.active
-                );
-
-            }
-
-            if (status === "inactive") {
-
-                result = result.filter(
-                    (f) => !f.active
-                );
-
-            }
-
-            return result.sort((a, b) =>
-                a.name.localeCompare(
-                    b.name
-                )
-            );
-
-        }, [search, status]);
-
-    const activeFlorists =
-        florists.filter(
-            (f) => f.active
-        ).length;
-
-    const averageRating =
-        florists.reduce(
-            (sum, florist) =>
-                sum + florist.rating,
-            0
-        ) / florists.length;
-
-    const totalProducts =
-        florists.reduce(
-            (sum, florist) =>
-                sum +
-                florist.products.length,
-            0
-        );
-
-    return (
-
-        <div className="space-y-8">
-
-            <PageHeader
-                title="Floristas"
-                subtitle="Gerencie as floristas parceiras."
-                buttonText="Nova Florista"
-                buttonHref="/admin/florists/new"
-                buttonIcon={Plus}
-            />
-
-            <FilterBar>
-
-                <SearchInput
-                    value={search}
-                    onChange={setSearch}
-                    placeholder="Pesquisar floristas..."
-                />
-
-                <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-
-                    <p className="text-sm text-gray-500">
-
-                        A mostrar{" "}
-
-                        <span className="font-semibold text-[#2F3B2A]">
-                            {filteredFlorists.length}
-                        </span>
-
-                        {" "}de{" "}
-
-                        <span className="font-semibold text-[#2F3B2A]">
-                            {florists.length}
-                        </span>
-
-                        {" "}floristas
-
-                    </p>
-
-                    <select
-                        value={status}
-                        onChange={(e) =>
-                            setStatus(
-                                e.target.value
-                            )
-                        }
-                        className="
-                            rounded-xl
-                            border
-                            border-gray-200
-                            bg-white
-                            px-5
-                            py-3
-                        "
-                    >
-
-                        <option value="all">
-                            Todos os estados
-                        </option>
-
-                        <option value="active">
-                            Ativas
-                        </option>
-
-                        <option value="inactive">
-                            Inativas
-                        </option>
-
-                    </select>
-
-                </div>
-
-            </FilterBar>
-
-            <SectionCard>
-
-                {filteredFlorists.length > 0 && (
-
-                    <>
-
-                        <div
-                            className="
-                                grid
-                                grid-cols-[2fr_1fr_120px_150px_150px_70px]
-                                border-b
-                                bg-[#F8F9F5]
-                                px-6
-                                py-4
-                                text-sm
-                                font-semibold
-                                text-gray-500
-                            "
-                        >
-
-                            <div>Florista</div>
-
-                            <div>Cidade</div>
-
-                            <div>Rating</div>
-
-                            <div>Estado</div>
-
-                            <div>Produtos</div>
-
-                            <div></div>
-
-                        </div>
-
-                        {filteredFlorists.map(
-                            (florist) => (
-
-                                <div
-                                    key={florist.id}
-                                    className="
-                                        grid
-                                        grid-cols-[2fr_1fr_120px_150px_150px_70px]
-                                        items-center
-                                        border-b
-                                        border-gray-100
-                                        px-6
-                                        py-5
-                                        transition-all
-                                        duration-200
-                                        hover:bg-[#F8F9F5]
-                                    "
-                                >
-
-                                    <div>
-
-                                        <h3 className="font-semibold text-[#2F3B2A]">
-                                            {florist.name}
-                                        </h3>
-
-                                        <p className="mt-1 text-sm text-gray-500">
-                                            ID #{florist.id}
-                                        </p>
-
-                                    </div>
-
-                                    <div className="flex items-center gap-2 text-gray-700">
-
-                                        <MapPin size={16} />
-
-                                        {florist.city}
-
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-
-                                        <Star
-                                            size={16}
-                                            className="fill-yellow-400 text-yellow-400"
-                                        />
-
-                                        <span className="font-medium">
-                                            {florist.rating}
-                                        </span>
-
-                                    </div>
-                                                                        {/* ESTADO */}
-
-                                    <div>
-
-                                        <StatusBadge
-                                            status={
-                                                florist.active
-                                                    ? "ACTIVE"
-                                                    : "INACTIVE"
-                                            }
-                                        />
-
-                                    </div>
-
-                                    {/* PRODUTOS */}
-
-                                    <div>
-
-                                        <span
-                                            className="
-                                                rounded-full
-                                                bg-[#D6DEC8]/50
-                                                px-3
-                                                py-1
-                                                text-sm
-                                                text-[#55624A]
-                                            "
-                                        >
-                                            {florist.products.length} produtos
-                                        </span>
-
-                                    </div>
-
-                                    {/* EDITAR */}
-
-                                    <div className="flex justify-end">
-
-                                        <Link
-                                            href={`/admin/florists/${florist.id}`}
-                                            className="
-                                                flex
-                                                h-10
-                                                w-10
-                                                items-center
-                                                justify-center
-                                                rounded-full
-                                                transition-all
-                                                duration-200
-                                                hover:bg-[#D6DEC8]
-                                                hover:scale-110
-                                            "
-                                        >
-                                            <Pencil
-                                                size={18}
-                                            />
-                                        </Link>
-
-                                    </div>
-
-                                </div>
-
-                            )
-                        )}
-
-                    </>
-
-                )}
-
-                {filteredFlorists.length === 0 && (
-
-                    <EmptyState
-                        title="Nenhuma florista encontrada"
-                        description="Experimente alterar os filtros ou a pesquisa."
-                    />
-
-                )}
-
-            </SectionCard>
-
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-
-                <MetricCard
-                    title="Floristas"
-                    value={florists.length}
-                    subtitle="Registadas"
-                    icon={Flower2}
-                />
-
-                <MetricCard
-                    title="Ativas"
-                    value={activeFlorists}
-                    subtitle="Disponíveis"
-                    icon={Flower2}
-                    color="#16A34A"
-                />
-
-                <MetricCard
-                    title="Rating Médio"
-                    value={averageRating.toFixed(1)}
-                    subtitle="Avaliação"
-                    icon={Star}
-                    color="#D97706"
-                />
-
-                <MetricCard
-                    title="Produtos"
-                    value={totalProducts}
-                    subtitle="Especialidades"
-                    icon={Package}
-                    color="#2563EB"
-                />
-
-            </div>
-
-        </div>
-
+        },
+        [
+            search,
+            districtFilter,
+            activeFilter,
+            acceptingOrdersFilter,
+            sort,
+            order,
+        ],
     );
 
+    /* ====================================================================== */
+    /* EFFECTS                                                                 */
+    /* ====================================================================== */
+
+    useEffect(() => {
+        void loadFlorists(1);
+    }, [loadFlorists]);
+
+    /* ====================================================================== */
+    /* SEARCH                                                                  */
+    /* ====================================================================== */
+
+    function handleSearch(event: React.FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        setSearch(searchInput.trim());
+    }
+
+    /* ====================================================================== */
+    /* FILTERS                                                                 */
+    /* ====================================================================== */
+
+    function handleResetFilters() {
+        setSearchInput("");
+        setSearch("");
+        setDistrictFilter("");
+        setActiveFilter("");
+        setAcceptingOrdersFilter("");
+    }
+
+    /* ====================================================================== */
+    /* SORT                                                                    */
+    /* ====================================================================== */
+
+    function handleSort(field: string) {
+        if (sort === field) {
+            setOrder((current) =>
+                current === "asc" ? "desc" : "asc",
+            );
+        } else {
+            setSort(field);
+            setOrder("asc");
+        }
+    }
+
+    /* ====================================================================== */
+    /* RENDER                                                                  */
+    /* ====================================================================== */
+
+    return (
+        <div className="space-y-6 pb-10">
+            {/* HEADER */}
+
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <PageHeader
+                    title="Floristas"
+                    subtitle="Gere a rede de floristas parceiras do Momentos em Flor."
+                />
+
+                <Link
+                    href="/admin/florists/new"
+                    className="
+                        inline-flex items-center justify-center gap-2
+                        rounded-2xl bg-[#55624A] px-5 py-3
+                        text-sm font-semibold text-white shadow-sm
+                        transition hover:bg-[#46523C]
+                    "
+                >
+                    <Plus size={18} />
+                    Nova florista
+                </Link>
+            </div>
+
+            {/* SEARCH AND FILTERS */}
+
+            <section className="rounded-3xl bg-white p-5 shadow-sm sm:p-6">
+                <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]">
+                        <SlidersHorizontal size={19} />
+                    </div>
+
+                    <div>
+                        <h2 className="font-semibold text-[#2F3B2A]">
+                            Pesquisa e filtros
+                        </h2>
+
+                        <p className="text-xs text-gray-400">
+                            Filtra por nome, distrito, estado e disponibilidade.
+                        </p>
+                    </div>
+                </div>
+
+                <form
+                    onSubmit={handleSearch}
+                    className="mt-5 space-y-4"
+                >
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                        <div className="flex-1">
+                            <SearchInput
+                                value={searchInput}
+                                onChange={setSearchInput}
+                                placeholder="Pesquisar floristas..."
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            className="
+                                inline-flex items-center justify-center gap-2
+                                rounded-2xl bg-[#55624A] px-5 py-3
+                                text-sm font-semibold text-white
+                                transition hover:bg-[#46523C]
+                            "
+                        >
+                            <Search size={17} />
+                            Pesquisar
+                        </button>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                        <FilterSelect
+                            label="Distrito"
+                            value={districtFilter}
+                            onChange={setDistrictFilter}
+                        >
+                            <option value="">Todos os distritos</option>
+
+                            {PORTUGAL_DISTRICTS.map((district) => (
+                                <option key={district} value={district}>
+                                    {district}
+                                </option>
+                            ))}
+                        </FilterSelect>
+
+                        <FilterSelect
+                            label="Estado"
+                            value={activeFilter}
+                            onChange={setActiveFilter}
+                        >
+                            <option value="">Todos os estados</option>
+                            <option value="true">Ativas</option>
+                            <option value="false">Inativas</option>
+                        </FilterSelect>
+
+                        <FilterSelect
+                            label="Aceita encomendas"
+                            value={acceptingOrdersFilter}
+                            onChange={setAcceptingOrdersFilter}
+                        >
+                            <option value="">Todas</option>
+                            <option value="true">Sim</option>
+                            <option value="false">Não</option>
+                        </FilterSelect>
+                    </div>
+
+                    <div className="flex justify-end">
+                        <button
+                            type="button"
+                            onClick={handleResetFilters}
+                            className="text-sm font-medium text-gray-500 transition hover:text-[#55624A]"
+                        >
+                            Limpar filtros
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            {/* ERROR */}
+
+            {error && (
+                <div className="flex flex-col gap-3 rounded-2xl border border-red-100 bg-red-50 p-5 text-sm text-red-600 sm:flex-row sm:items-center sm:justify-between">
+                    <p>{error}</p>
+
+                    <button
+                        type="button"
+                        onClick={() => void loadFlorists(page)}
+                        className="font-semibold underline"
+                    >
+                        Tentar novamente
+                    </button>
+                </div>
+            )}
+
+            {/* FLORISTS TABLE */}
+
+            <DataTable>
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead>
+                            <tr className="border-b border-gray-100 bg-[#FAFBF8] text-left">
+                                <th className="px-5 py-4">
+                                    <SortButton
+                                        label="Florista"
+                                        field="name"
+                                        currentSort={sort}
+                                        order={order}
+                                        onSort={handleSort}
+                                    />
+                                </th>
+
+                                <th className="px-5 py-4">
+                                    <SortButton
+                                        label="Localização"
+                                        field="addressDistrict"
+                                        currentSort={sort}
+                                        order={order}
+                                        onSort={handleSort}
+                                    />
+                                </th>
+
+                                <th className="px-5 py-4 font-semibold text-[#2F3B2A]">
+                                    Avaliação
+                                </th>
+
+                                <th className="px-5 py-4 font-semibold text-[#2F3B2A]">
+                                    Aceita encomendas
+                                </th>
+
+                                <th className="px-5 py-4 font-semibold text-[#2F3B2A]">
+                                    Estado
+                                </th>
+
+                                <th className="px-5 py-4 text-right font-semibold text-[#2F3B2A]">
+                                    Ações
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {isLoading ? (
+                                <LoadingRows />
+                            ) : florists.length === 0 ? (
+                                <tr>
+                                    <td
+                                        colSpan={6}
+                                        className="px-6 py-20 text-center"
+                                    >
+                                        <Flower2
+                                            size={28}
+                                            className="mx-auto text-[#55624A]"
+                                        />
+
+                                        <p className="mt-4 font-semibold text-[#2F3B2A]">
+                                            Nenhuma florista encontrada
+                                        </p>
+
+                                        <p className="mt-1 text-sm text-gray-400">
+                                            Experimenta alterar a pesquisa ou os filtros.
+                                        </p>
+                                    </td>
+                                </tr>
+                            ) : (
+                                florists.map((florist) => (
+                                    <FloristRow
+                                        key={florist.id}
+                                        florist={florist}
+                                    />
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* PAGINATION */}
+
+                {!isLoading && pages > 0 && (
+                    <div className="flex flex-col gap-4 border-t border-gray-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm text-gray-500">
+                            A mostrar{" "}
+                            <span className="font-semibold text-gray-700">
+                                {florists.length}
+                            </span>{" "}
+                            de{" "}
+                            <span className="font-semibold text-gray-700">
+                                {total}
+                            </span>{" "}
+                            floristas
+                        </p>
+
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                disabled={page <= 1}
+                                onClick={() => void loadFlorists(page - 1)}
+                                aria-label="Página anterior"
+                                className="
+                                    flex h-10 w-10 items-center justify-center
+                                    rounded-xl border border-gray-200 text-gray-600
+                                    transition hover:bg-[#F5F7F2]
+                                    disabled:cursor-not-allowed disabled:opacity-40
+                                "
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+
+                            <span className="flex h-10 min-w-10 items-center justify-center rounded-xl bg-[#55624A] px-3 text-sm font-semibold text-white">
+                                {page}
+                            </span>
+
+                            <span className="text-sm text-gray-400">
+                                / {pages}
+                            </span>
+
+                            <button
+                                type="button"
+                                disabled={page >= pages}
+                                onClick={() => void loadFlorists(page + 1)}
+                                aria-label="Página seguinte"
+                                className="
+                                    flex h-10 w-10 items-center justify-center
+                                    rounded-xl border border-gray-200 text-gray-600
+                                    transition hover:bg-[#F5F7F2]
+                                    disabled:cursor-not-allowed disabled:opacity-40
+                                "
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </DataTable>
+        </div>
+    );
+}
+
+/* ========================================================================== */
+/* FLORIST ROW                                                                */
+/* ========================================================================== */
+
+function FloristRow({
+    florist,
+}: {
+    florist: AdminFloristList;
+}) {
+    return (
+        <tr className="group border-b border-gray-50 transition hover:bg-[#FAFBF8]">
+            {/* FLORIST */}
+
+            <td className="px-5 py-5">
+                <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F3F5EE] text-[#55624A]">
+                        <Flower2 size={21} />
+                    </div>
+
+                    <div className="min-w-0">
+                        <p className="truncate font-semibold text-[#2F3B2A]">
+                            {florist.name}
+                        </p>
+                    </div>
+                </div>
+            </td>
+
+            {/* LOCATION */}
+
+            <td className="px-5 py-5">
+                <div>
+                    <p className="font-medium text-[#2F3B2A]">
+                        {florist.addressCity || "—"}
+                    </p>
+
+                    <p className="mt-1 text-xs text-gray-400">
+                        {florist.addressDistrict || "—"}
+                    </p>
+                </div>
+            </td>
+
+            <td className="px-5 py-5">
+                <div className="flex items-center gap-2 font-semibold text-[#2F3B2A]">
+                    <Star size={16} className={florist.reviewCount > 0 ? "fill-[#D6A84B] text-[#D6A84B]" : "text-gray-300"} />
+                    <span>{florist.reviewCount > 0 ? florist.averageRating.toFixed(1) : "—"}</span>
+                    <span className="text-xs font-normal text-gray-400">({florist.reviewCount})</span>
+                </div>
+            </td>
+
+            {/* ACCEPTING ORDERS */}
+
+            <td className="px-5 py-5">
+                {florist.acceptingOrders ? (
+                    <span className="inline-flex rounded-full bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700">
+                        Sim
+                    </span>
+                ) : (
+                    <span className="inline-flex rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500">
+                        Não
+                    </span>
+                )}
+            </td>
+
+            {/* STATUS */}
+
+            <td className="px-5 py-5">
+                <StatusBadge
+                    status={florist.active ? "Ativo" : "Inativo"}
+                />
+            </td>
+
+            {/* ACTIONS */}
+
+            <td className="px-5 py-5">
+                <div className="flex items-center justify-end">
+                    <Link
+                        href={`/admin/florists/${florist.id}/edit`}
+                        title="Editar florista"
+                        aria-label={`Editar ${florist.name}`}
+                        className="
+                            flex h-9 w-9 items-center justify-center
+                            rounded-xl text-gray-400 transition
+                            hover:bg-[#F3F5EE] hover:text-[#55624A]
+                        "
+                    >
+                        <Pencil size={17} />
+                    </Link>
+                </div>
+            </td>
+        </tr>
+    );
+}
+
+/* ========================================================================== */
+/* SORT BUTTON                                                                */
+/* ========================================================================== */
+
+function SortButton({
+    label,
+    field,
+    currentSort,
+    order,
+    onSort,
+}: {
+    label: string;
+    field: string;
+    currentSort: string;
+    order: SortOrder;
+    onSort: (field: string) => void;
+}) {
+    const isActive = currentSort === field;
+
+    return (
+        <button
+            type="button"
+            onClick={() => onSort(field)}
+            className="
+                inline-flex items-center gap-2
+                font-semibold text-[#2F3B2A]
+                transition hover:text-[#55624A]
+            "
+        >
+            {label}
+
+            {isActive ? (
+                order === "asc" ? (
+                    <ArrowUp size={15} className="text-[#55624A]" />
+                ) : (
+                    <ArrowDown size={15} className="text-[#55624A]" />
+                )
+            ) : (
+                <ArrowUpDown size={15} className="text-gray-400" />
+            )}
+        </button>
+    );
+}
+
+/* ========================================================================== */
+/* FILTER SELECT                                                              */
+/* ========================================================================== */
+
+function FilterSelect({
+    label,
+    value,
+    onChange,
+    children,
+}: {
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+    children: React.ReactNode;
+}) {
+    return (
+        <label className="block">
+            <span className="mb-2 block text-xs font-semibold text-gray-500">
+                {label}
+            </span>
+
+            <select
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+                className="
+                    w-full rounded-xl border border-gray-200 bg-white
+                    px-3 py-3 text-sm text-gray-700 outline-none transition
+                    focus:border-[#55624A] focus:ring-4 focus:ring-[#55624A]/10
+                "
+            >
+                {children}
+            </select>
+        </label>
+    );
+}
+
+/* ========================================================================== */
+/* LOADING ROWS                                                               */
+/* ========================================================================== */
+
+function LoadingRows() {
+    return (
+        <>
+            {Array.from({ length: 5 }).map((_, rowIndex) => (
+                <tr
+                    key={rowIndex}
+                    className="border-b border-gray-50"
+                >
+                    {Array.from({ length: 6 }).map((_, cellIndex) => (
+                        <td
+                            key={cellIndex}
+                            className="px-5 py-5"
+                        >
+                            <div className="h-5 animate-pulse rounded-lg bg-gray-100" />
+                        </td>
+                    ))}
+                </tr>
+            ))}
+        </>
+    );
 }

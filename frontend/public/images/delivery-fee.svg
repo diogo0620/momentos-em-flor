@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title">
+  <title id="title">Entrega Momentos em Flor</title>
+  <rect width="160" height="160" rx="30" fill="#F1F4EB"/>
+  <path d="M31 51c0-7 6-13 13-13h57c7 0 13 6 13 13v54H31V51Z" fill="#71805F"/>
+  <path d="M114 67h15c4 0 8 2 10 6l10 18v14h-35V67Z" fill="#9AAA87"/>
+  <path d="M120 75h8c2 0 4 1 5 3l6 11h-19V75Z" fill="#E7EBDD"/>
+  <path d="M25 105h128v11H25z" fill="#55624A"/>
+  <circle cx="54" cy="116" r="14" fill="#394633"/>
+  <circle cx="54" cy="116" r="6" fill="#D6DEC8"/>
+  <circle cx="127" cy="116" r="14" fill="#394633"/>
+  <circle cx="127" cy="116" r="6" fill="#D6DEC8"/>
+  <path d="M72 60c-9-6-18 4-11 12 5 6 11 8 11 8s7-2 12-8c7-8-3-18-12-12Z" fill="#F4DDD6"/>
+  <circle cx="72" cy="70" r="5" fill="#D69A83"/>
+</svg>

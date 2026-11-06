@@ -24,9 +24,8 @@ export class PaginationQueryDto {
 
 
   @ApiPropertyOptional({
-    default: DEFAULT_PAGE_SIZE,
+    default: DEFAULT_PAGE,
     minimum: 1,
-    maximum: MAX_PAGE_SIZE,
   })
   @IsOptional()
   @Type(() => Number)
@@ -53,11 +52,11 @@ export class PaginationQueryDto {
   search?: string;
 
   @ApiPropertyOptional({
-    default: 'name',
+    default: 'id',
   })
   @IsOptional()
   @IsString()
-  sort: string = 'name';
+  sort: string = 'id';
 
   @ApiPropertyOptional({
     enum: SortOrder,
