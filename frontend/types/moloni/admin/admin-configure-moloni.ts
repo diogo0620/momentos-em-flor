@@ -11,7 +11,5 @@ export type AdminConfigureMoloni = {
     paymentMethodId: string;
     defaultCustomerId: string;
     defaultProductId: string;
-    defaultTaxId: string;
-    defaultTaxRate: string;
     issueReceiptAfterPayment: boolean;
 }

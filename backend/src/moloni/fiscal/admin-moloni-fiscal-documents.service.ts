@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import {
   MoloniDocumentStatus,
@@ -19,6 +20,13 @@ import { EmailService } from '@/email/email.service';
 
 type MoloniCustomer = { customer_id: number };
 type MoloniDocumentResult = { valid?: number; document_id?: number };
+type MoloniTax = {
+  tax_id?: number;
+  value?: number;
+  type?: number;
+  saft_type?: number;
+};
+type FiscalDocumentKind = 'invoice' | 'receipt' | 'credit-note';
 type MoloniDocumentTax = {
   tax_id: number;
   value: number;
@@ -79,6 +87,8 @@ const fiscalDocumentInclude = {
           description: true,
           quantity: true,
           netAmount: true,
+          grossAmount: true,
+          taxCodeId: true,
           taxRate: true,
         },
       },
@@ -183,23 +193,18 @@ export class AdminMoloniFiscalDocumentsService {
       }
 
       try {
-        const configuredTaxRate = Number(settings.defaultTaxRate);
-        const hasUnexpectedTaxRate = record.order.items.some(
-          (item) => Number(item.taxRate ?? configuredTaxRate) !== configuredTaxRate,
-        );
-        if (hasUnexpectedTaxRate) {
-          throw new BadRequestException(
-            'A encomenda contém uma taxa de IVA diferente da taxa Moloni configurada.',
-          );
-        }
-
         const customerId = await this.resolveCustomerId(record, settings.defaultCustomerId!);
         const existing = await this.moloniApi.getInvoiceByReference<MoloniDocumentResult>(
           String(record.order.id),
         );
-        const result = existing?.document_id
-          ? existing
-          : await this.moloniApi.insertInvoice<MoloniDocumentResult>({
+        let result = existing;
+
+        if (!result?.document_id) {
+          const products = await this.buildInvoiceProducts(
+            record,
+            settings.defaultProductId!,
+          );
+          result = await this.moloniApi.insertInvoice<MoloniDocumentResult>({
               date: this.toDate(record.order.paidAt!),
               expiration_date: this.toDate(record.order.paidAt!),
               document_set_id: Number(settings.invoiceDocumentSetId),
@@ -207,27 +212,22 @@ export class AdminMoloniFiscalDocumentsService {
               our_reference: String(record.order.id),
               your_reference: record.order.orderNumber,
               special_discount: Number(record.order.discount),
-              products: record.order.items.map((item, index) => ({
-                product_id: Number(settings.defaultProductId),
-                name: item.name,
-                summary: item.description || undefined,
-                qty: item.quantity,
-                price: Number(item.netAmount) / item.quantity,
-                order: index + 1,
-                taxes: [{
-                  tax_id: Number(settings.defaultTaxId),
-                  value: Number(item.taxRate ?? settings.defaultTaxRate),
-                  order: 1,
-                  cumulative: 0,
-                }],
-              })),
+              products,
               notes: `Encomenda ${record.order.orderNumber}`,
               status: 1,
             });
+        }
 
         if (!result.document_id) {
           throw new Error('A Moloni não devolveu o ID da fatura.');
         }
+
+        const issuedInvoice = await this.moloniApi.getInvoice<MoloniInvoice>(
+          String(result.document_id),
+        );
+        const totalDifference = Math.abs(
+          Number(issuedInvoice.net_value) - Number(record.order.total),
+        );
 
         await this.prisma.moloniFiscalDocument.update({
           where: { id },
@@ -236,6 +236,9 @@ export class AdminMoloniFiscalDocumentsService {
             invoiceStatus: MoloniDocumentStatus.ISSUED,
             invoiceId: String(result.document_id),
             invoiceIssuedAt: new Date(),
+            lastError: totalDifference >= 0.005
+              ? `A fatura Moloni difere ${totalDifference.toFixed(2)} EUR do total da encomenda.`
+              : null,
           },
         });
       } catch (error) {
@@ -565,6 +568,93 @@ export class AdminMoloniFiscalDocumentsService {
     return String(customer.customer_id);
   }
 
+  async getPdfLink(id: number, kind: FiscalDocumentKind) {
+    const record = await this.getRecord(id);
+    const documentId = kind === 'invoice'
+      ? record.invoiceId
+      : kind === 'receipt'
+        ? record.receiptId
+        : record.creditNoteId;
+
+    if (!documentId) {
+      throw new BadRequestException('O documento ainda não foi emitido na Moloni.');
+    }
+
+    const pdf = await this.moloniApi.getDocumentPdfLink<{ url?: string }>(documentId);
+    if (!pdf.url || !pdf.url.startsWith('https://')) {
+      throw new ServiceUnavailableException(
+        'A Moloni não devolveu uma ligação segura para o documento.',
+      );
+    }
+
+    return ApiResponse.success({ url: pdf.url });
+  }
+
+  private async buildInvoiceProducts(
+    record: FiscalDocumentRecord,
+    defaultProductId: string,
+  ) {
+    const taxIds = new Map<number, number>();
+
+    for (const item of record.order.items) {
+      if (!item.taxCodeId || item.taxRate === null) {
+        throw new BadRequestException(
+          `A linha "${item.name}" não tem um código de IVA associado.`,
+        );
+      }
+
+      const rate = Number(item.taxRate);
+      if (!taxIds.has(item.taxCodeId)) {
+        taxIds.set(item.taxCodeId, await this.resolveMoloniTaxId(rate));
+      }
+    }
+
+    return record.order.items.map((item, index) => {
+      const rate = Number(item.taxRate);
+      const unitNetPrice = Number(item.grossAmount) /
+        item.quantity /
+        (1 + rate / 100);
+
+      return {
+        product_id: Number(defaultProductId),
+        name: item.name,
+        summary: item.description || undefined,
+        qty: item.quantity,
+        price: Number(unitNetPrice.toFixed(8)),
+        order: index + 1,
+        taxes: [{
+          tax_id: taxIds.get(item.taxCodeId!)!,
+          value: rate,
+          order: 1,
+          cumulative: 0,
+        }],
+      };
+    });
+  }
+
+  private async resolveMoloniTaxId(rate: number): Promise<number> {
+    const taxes = await this.moloniApi.getTaxes<MoloniTax[]>({
+      value: rate,
+      type: 1,
+      fiscal_zone: 'PT',
+      active_by_default: 1,
+    });
+    const matches = taxes.filter(
+      (tax) => tax.tax_id &&
+        Number(tax.value) === rate &&
+        tax.type === 1 &&
+        tax.saft_type === 1,
+    );
+
+    if (matches.length !== 1) {
+      throw new BadRequestException(
+        `Não foi possível identificar de forma inequívoca o IVA de ${rate}% na Moloni.`,
+      );
+    }
+
+    return matches[0].tax_id!;
+  }
+
   private async sendInvoiceEmailIfNeeded(
     record: FiscalDocumentRecord,
   ): Promise<void> {
@@ -629,16 +719,12 @@ export class AdminMoloniFiscalDocumentsService {
     paymentMethodId: string | null;
     defaultCustomerId: string | null;
     defaultProductId: string | null;
-    defaultTaxId: string | null;
-    defaultTaxRate: Prisma.Decimal | null;
     issueReceiptAfterPayment: boolean;
   }): void {
     if (
       !settings.invoiceDocumentSetId ||
       !settings.defaultCustomerId ||
-      !settings.defaultProductId ||
-      !settings.defaultTaxId ||
-      !settings.defaultTaxRate
+      !settings.defaultProductId
     ) {
       throw new BadRequestException('A configuração fiscal da Moloni está incompleta.');
     }

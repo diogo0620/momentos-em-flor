@@ -22,12 +22,14 @@ export class EmailService {
             ),
         );
 
-        this.from = this.configService.getOrThrow<string>(
-            'EMAIL_FROM',
+        this.from = this.normalizeAddress(
+            this.configService.getOrThrow<string>('EMAIL_FROM'),
         );
 
-        this.replyTo =
-            this.configService.get<string>('EMAIL_REPLY_TO');
+        const replyTo = this.configService.get<string>('EMAIL_REPLY_TO');
+        this.replyTo = replyTo
+            ? this.normalizeAddress(replyTo)
+            : undefined;
     }
 
     async sendEmail(params: {
@@ -92,5 +94,21 @@ export class EmailService {
                 'Unable to send email.',
             );
         }
+    }
+
+    private normalizeAddress(value: string): string {
+        const trimmed = value.trim();
+        const first = trimmed.at(0);
+        const last = trimmed.at(-1);
+
+        if (
+            trimmed.length >= 2 &&
+            ((first === '"' && last === '"') ||
+                (first === "'" && last === "'"))
+        ) {
+            return trimmed.slice(1, -1).trim();
+        }
+
+        return trimmed;
     }
 }

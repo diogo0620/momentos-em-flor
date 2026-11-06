@@ -28,6 +28,13 @@ class AdminMoloniFiscalDocumentsApi extends BaseApi<
             method: "POST",
         });
     }
+
+    async getPdfLink(
+        id: number,
+        kind: "invoice" | "receipt" | "credit-note",
+    ): Promise<{ url: string }> {
+        return apiFetch<{ url: string }>(`${this.endpoint}/${id}/${kind}-pdf`);
+    }
 }
 
 export const adminMoloniFiscalDocumentsApi = new AdminMoloniFiscalDocumentsApi();

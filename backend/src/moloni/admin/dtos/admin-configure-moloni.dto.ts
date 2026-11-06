@@ -7,7 +7,6 @@ import {
   IsNumberString,
   IsOptional,
   IsString,
-  Matches,
   MaxLength,
   ValidateIf,
 } from 'class-validator';
@@ -83,14 +82,6 @@ export class AdminConfigureMoloniDto {
   @ValidateIf((_object, value) => value !== '' && value !== undefined && value !== null)
   @IsNumberString()
   defaultProductId?: string;
-
-  @ValidateIf((_object, value) => value !== '' && value !== undefined && value !== null)
-  @IsNumberString()
-  defaultTaxId?: string;
-
-  @ValidateIf((_object, value) => value !== '' && value !== undefined && value !== null)
-  @Matches(/^\d{1,3}([.,]\d{1,2})?$/)
-  defaultTaxRate?: string;
 
   @IsBoolean()
   issueReceiptAfterPayment!: boolean;

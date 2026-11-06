@@ -38,6 +38,21 @@ export class AdminMoloniFiscalDocumentsController {
     return this.service.issue(id);
   }
 
+  @Get(':id/invoice-pdf')
+  getInvoicePdf(@Param('id', ParseIntPipe) id: number) {
+    return this.service.getPdfLink(id, 'invoice');
+  }
+
+  @Get(':id/receipt-pdf')
+  getReceiptPdf(@Param('id', ParseIntPipe) id: number) {
+    return this.service.getPdfLink(id, 'receipt');
+  }
+
+  @Get(':id/credit-note-pdf')
+  getCreditNotePdf(@Param('id', ParseIntPipe) id: number) {
+    return this.service.getPdfLink(id, 'credit-note');
+  }
+
   @Post(':id/record-credit-note')
   @HttpCode(HttpStatus.OK)
   recordCreditNote(

@@ -73,8 +73,6 @@ export class AdminMoloniResponseDto {
   paymentMethodId?: string | null;
   defaultCustomerId?: string | null;
   defaultProductId?: string | null;
-  defaultTaxId?: string | null;
-  defaultTaxRate?: string | null;
   issueReceiptAfterPayment!: boolean;
   fiscalConfigurationComplete!: boolean;
 }

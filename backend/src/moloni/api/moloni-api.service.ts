@@ -71,6 +71,10 @@ export class MoloniApiService {
     });
   }
 
+  async getTaxes<T>(params: MoloniRequestParams = {}): Promise<T> {
+    return this.post<T>('taxes/getAll/', params);
+  }
+
   // ============================================================
   // CUSTOMERS
   // ============================================================

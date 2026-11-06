@@ -859,8 +859,6 @@ model MoloniSettings {
   paymentMethodId      String?
   defaultCustomerId    String?
   defaultProductId     String?
-  defaultTaxId         String?
-  defaultTaxRate       Decimal? @db.Decimal(5, 2)
   issueReceiptAfterPayment Boolean @default(false)
 
   createdAt DateTime @default(now())

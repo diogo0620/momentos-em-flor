@@ -81,8 +81,6 @@ export default function SettingsPage() {
         paymentMethodId: "",
         defaultCustomerId: "",
         defaultProductId: "",
-        defaultTaxId: "",
-        defaultTaxRate: "",
         issueReceiptAfterPayment: false,
     });
 
@@ -146,8 +144,6 @@ export default function SettingsPage() {
                 paymentMethodId: moloniResponse.paymentMethodId ?? "",
                 defaultCustomerId: moloniResponse.defaultCustomerId ?? "",
                 defaultProductId: moloniResponse.defaultProductId ?? "",
-                defaultTaxId: moloniResponse.defaultTaxId ?? "",
-                defaultTaxRate: moloniResponse.defaultTaxRate ?? "",
                 issueReceiptAfterPayment: moloniResponse.issueReceiptAfterPayment,
             }));
         } catch (err) {
@@ -250,8 +246,6 @@ export default function SettingsPage() {
             paymentMethodId: moloniForm.paymentMethodId.trim(),
             defaultCustomerId: moloniForm.defaultCustomerId.trim(),
             defaultProductId: moloniForm.defaultProductId.trim(),
-            defaultTaxId: moloniForm.defaultTaxId.trim(),
-            defaultTaxRate: moloniForm.defaultTaxRate.trim().replace(",", "."),
             issueReceiptAfterPayment: moloniForm.issueReceiptAfterPayment,
         };
 
@@ -658,16 +652,6 @@ export default function SettingsPage() {
                             <div>
                                 <label htmlFor="moloniDefaultProduct" className="mb-2 block text-sm font-semibold text-gray-700">ID do artigo genérico</label>
                                 <input id="moloniDefaultProduct" inputMode="numeric" value={moloniForm.defaultProductId} onChange={(event) => setMoloniForm((current) => ({ ...current, defaultProductId: event.target.value }))} className={inputClassName} placeholder="Artigo base para linhas da fatura" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label htmlFor="moloniDefaultTax" className="mb-2 block text-sm font-semibold text-gray-700">ID do IVA</label>
-                                    <input id="moloniDefaultTax" inputMode="numeric" value={moloniForm.defaultTaxId} onChange={(event) => setMoloniForm((current) => ({ ...current, defaultTaxId: event.target.value }))} className={inputClassName} placeholder="ID" />
-                                </div>
-                                <div>
-                                    <label htmlFor="moloniDefaultTaxRate" className="mb-2 block text-sm font-semibold text-gray-700">Taxa (%)</label>
-                                    <input id="moloniDefaultTaxRate" inputMode="decimal" value={moloniForm.defaultTaxRate} onChange={(event) => setMoloniForm((current) => ({ ...current, defaultTaxRate: event.target.value }))} className={inputClassName} placeholder="23" />
-                                </div>
                             </div>
                         </div>
 

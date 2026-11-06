@@ -43,16 +43,12 @@ export class AdminMoloniMapper {
       paymentMethodId: settings.paymentMethodId,
       defaultCustomerId: settings.defaultCustomerId,
       defaultProductId: settings.defaultProductId,
-      defaultTaxId: settings.defaultTaxId,
-      defaultTaxRate: settings.defaultTaxRate?.toString() ?? null,
       issueReceiptAfterPayment: settings.issueReceiptAfterPayment,
       fiscalConfigurationComplete: Boolean(
         settings.invoiceDocumentSetId &&
         settings.creditNoteDocumentSetId &&
         settings.defaultCustomerId &&
         settings.defaultProductId &&
-        settings.defaultTaxId &&
-        settings.defaultTaxRate &&
         (!settings.issueReceiptAfterPayment ||
           (settings.receiptDocumentSetId && settings.paymentMethodId)),
       ),

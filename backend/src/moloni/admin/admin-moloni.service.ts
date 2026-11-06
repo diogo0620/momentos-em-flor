@@ -83,8 +83,6 @@ export class AdminMoloniService {
         paymentMethodId: dto.paymentMethodId || null,
         defaultCustomerId: dto.defaultCustomerId || null,
         defaultProductId: dto.defaultProductId || null,
-        defaultTaxId: dto.defaultTaxId || null,
-        defaultTaxRate: dto.defaultTaxRate?.replace(',', '.') || null,
         issueReceiptAfterPayment: dto.issueReceiptAfterPayment,
       },
       update: {
@@ -111,8 +109,6 @@ export class AdminMoloniService {
         paymentMethodId: dto.paymentMethodId || null,
         defaultCustomerId: dto.defaultCustomerId || null,
         defaultProductId: dto.defaultProductId || null,
-        defaultTaxId: dto.defaultTaxId || null,
-        defaultTaxRate: dto.defaultTaxRate?.replace(',', '.') || null,
         issueReceiptAfterPayment: dto.issueReceiptAfterPayment,
       },
     });
