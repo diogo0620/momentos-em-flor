@@ -153,6 +153,9 @@ export class CustomerOrdersService {
                     },
                 },
                 review: { include: { ratings: true } },
+                moloniFiscalDocument: {
+                    select: { invoiceId: true },
+                },
             }
         });
 

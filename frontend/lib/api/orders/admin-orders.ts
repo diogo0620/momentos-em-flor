@@ -3,7 +3,7 @@
 import { AdminOrderList } from "@/types/orders/admin/admin-order-list";
 import { BaseApi } from "../common/base-api";
 import { AdminOrderDetail } from "@/types/orders/admin/admin-order-detail";
-import { apiFetch } from "../common/client";
+import { apiFetch, apiFetchBlob } from "../common/client";
 import { AdminCancelOrder } from "@/types/orders/admin/admin-cancel-order";
 
 class AdminOrdersApi extends BaseApi<
@@ -58,6 +58,10 @@ class AdminOrdersApi extends BaseApi<
                 body: JSON.stringify({ reason }),
             },
         );
+    }
+
+    getInvoicePdf(id: number): Promise<Blob> {
+        return apiFetchBlob(`${this.endpoint}/${id}/invoice-pdf`);
     }
 
 }

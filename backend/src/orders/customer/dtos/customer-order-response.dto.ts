@@ -166,6 +166,9 @@ export class CustomerOrderResponseDto {
     })
     status!: OrderStatus;
 
+    @ApiProperty()
+    invoiceAvailable!: boolean;
+
     @ApiProperty({
         type: [CustomerOrderItemResponseDto],
     })

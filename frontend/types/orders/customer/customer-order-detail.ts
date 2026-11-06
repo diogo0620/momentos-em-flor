@@ -60,6 +60,7 @@ export type CustomerOrderDetail = {
     total: number;
 
     status: CustomerOrderStatus;
+    invoiceAvailable: boolean;
     items: CustomerOrderItemDetail[];
     review: CustomerOrderReview | null;
 

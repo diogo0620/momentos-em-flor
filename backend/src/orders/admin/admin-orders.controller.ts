@@ -2,6 +2,7 @@
 import {
     Controller,
     Get,
+    Header,
     Param,
     Query,
     HttpCode,
@@ -10,6 +11,7 @@ import {
     ParseIntPipe,
     Body,
     Post,
+    StreamableFile,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
@@ -21,6 +23,7 @@ import { RolesGuard } from '@/auth/guards/roles.guard';
 import { Roles } from '@/auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { AdminCancelOrderDto } from './dtos/admin-cancel-order.dto';
+import { MoloniDocumentPdfService } from '@/moloni/fiscal/moloni-document-pdf.service';
 
 
 @ApiTags('Orders (Admin)')
@@ -31,6 +34,7 @@ import { AdminCancelOrderDto } from './dtos/admin-cancel-order.dto';
 export class AdminOrdersController {
     constructor(
         private readonly service: AdminOrdersService,
+        private readonly pdfService: MoloniDocumentPdfService,
     ) { }
 
     @Get()
@@ -45,6 +49,19 @@ export class AdminOrdersController {
         @Param('id') id: number,
     ) {
         return await this.service.findOne(id);
+    }
+
+    @Get(':id/invoice-pdf')
+    @Header('Cache-Control', 'private, no-store')
+    async getInvoicePdf(
+        @Param('id', ParseIntPipe) id: number,
+    ) {
+        const file = await this.pdfService.getInvoiceByOrderId(id);
+        return new StreamableFile(file.buffer, {
+            type: 'application/pdf',
+            disposition: `inline; filename="${file.filename}"`,
+            length: file.buffer.length,
+        });
     }
 
     @Post(':id/start-production')

@@ -12,6 +12,7 @@ import {
     ProductVariantType,
     ReviewCategory,
     UserRole,
+    MoloniDocumentStatus,
 } from '@prisma/client';
 
 export class AdminOrderFloristResponseDto {
@@ -287,6 +288,12 @@ export class AdminOrderTaxTotalResponseDto {
 }
 
 export class AdminOrderMoloniFiscalResponseDto {
+    @ApiPropertyOptional({ nullable: true })
+    invoiceId!: string | null;
+
+    @ApiProperty({ enum: MoloniDocumentStatus })
+    invoiceStatus!: MoloniDocumentStatus;
+
     @ApiPropertyOptional({ nullable: true })
     creditNoteRequiredAt!: Date | null;
 

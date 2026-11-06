@@ -15,6 +15,7 @@ import { AdminMoloniFiscalDocumentsService } from './fiscal/admin-moloni-fiscal-
 import { AdminMoloniFiscalDocumentsController } from './fiscal/admin-moloni-fiscal-documents.controller';
 import { EmailModule } from '@/email/email.module';
 import { MoloniFiscalAutomationService } from './fiscal/moloni-fiscal-automation.service';
+import { MoloniDocumentPdfService } from './fiscal/moloni-document-pdf.service';
 
 @Module({
   imports: [EmailModule],
@@ -33,6 +34,7 @@ import { MoloniFiscalAutomationService } from './fiscal/moloni-fiscal-automation
     MoloniFiscalLifecycleService,
     AdminMoloniFiscalDocumentsService,
     MoloniFiscalAutomationService,
+    MoloniDocumentPdfService,
   ],
   exports: [
     MoloniEncryptionService,
@@ -41,6 +43,7 @@ import { MoloniFiscalAutomationService } from './fiscal/moloni-fiscal-automation
     MoloniSyncService,
     MoloniFiscalLifecycleService,
     AdminMoloniFiscalDocumentsService,
+    MoloniDocumentPdfService,
   ],
 })
 export class MoloniModule {}

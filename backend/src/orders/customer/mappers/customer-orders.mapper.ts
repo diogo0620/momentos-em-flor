@@ -15,6 +15,7 @@ type OrderWithItems = Prisma.OrderGetPayload<{
             };
         };
         review: { include: { ratings: true } };
+        moloniFiscalDocument: { select: { invoiceId: true } };
     };
 }>;
 
@@ -66,6 +67,7 @@ export class CustomerOrdersMapper extends BaseMapper<
             discount: Number(order.discount),
             total: Number(order.total),
             status: order.status,
+            invoiceAvailable: Boolean(order.moloniFiscalDocument?.invoiceId),
             items: order.items.map((item) => ({
                 id: item.id,
                 type: item.type,

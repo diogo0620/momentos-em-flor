@@ -38,6 +38,11 @@ export class EmailService {
         variables?: Record<string, string>;
         subject?: string;
         html?: string;
+        attachments?: Array<{
+            filename: string;
+            content: Buffer;
+            contentType?: string;
+        }>;
     }): Promise<{ id: string }> {
         if (!params.templateId && (!params.subject || !params.html)) {
             throw new ServiceUnavailableException(
@@ -50,6 +55,9 @@ export class EmailService {
                 to: params.to,
                 ...(this.replyTo && {
                     replyTo: this.replyTo,
+                }),
+                ...(params.attachments?.length && {
+                    attachments: params.attachments,
                 }),
                 ...(params.templateId
                     ? {

@@ -4,7 +4,7 @@ import { BaseApi } from "../common/base-api";
 import { CustomerOrderList } from "@/types/orders/customer/customer-order-list";
 import { CustomerCreateOrder } from "@/types/orders/customer/customer-create-order";
 import { CustomerCreateOrderReview, CustomerOrderDetail, CustomerOrderReview } from "@/types/orders/customer/customer-order-detail";
-import { apiFetch } from "../common/client";
+import { apiFetch, apiFetchBlob } from "../common/client";
 
 
 
@@ -42,6 +42,12 @@ class CustomerOrdersApi extends BaseApi<
         return apiFetch<CustomerOrderReview>(
             `${this.endpoint}/${encodeURIComponent(orderNumber)}/review`,
             { method: "POST", body: JSON.stringify(data) },
+        );
+    }
+
+    getInvoicePdf(orderNumber: string): Promise<Blob> {
+        return apiFetchBlob(
+            `${this.endpoint}/${encodeURIComponent(orderNumber)}/invoice-pdf`,
         );
     }
 

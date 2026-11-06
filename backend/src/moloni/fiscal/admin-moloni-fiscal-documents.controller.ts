@@ -1,12 +1,14 @@
 import {
   Controller,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   Param,
   ParseIntPipe,
   Post,
   Query,
+  StreamableFile,
   UseGuards,
   Body,
 } from '@nestjs/common';
@@ -39,18 +41,21 @@ export class AdminMoloniFiscalDocumentsController {
   }
 
   @Get(':id/invoice-pdf')
-  getInvoicePdf(@Param('id', ParseIntPipe) id: number) {
-    return this.service.getPdfLink(id, 'invoice');
+  @Header('Cache-Control', 'private, no-store')
+  async getInvoicePdf(@Param('id', ParseIntPipe) id: number) {
+    return this.toPdfStream(await this.service.getPdf(id, 'invoice'));
   }
 
   @Get(':id/receipt-pdf')
-  getReceiptPdf(@Param('id', ParseIntPipe) id: number) {
-    return this.service.getPdfLink(id, 'receipt');
+  @Header('Cache-Control', 'private, no-store')
+  async getReceiptPdf(@Param('id', ParseIntPipe) id: number) {
+    return this.toPdfStream(await this.service.getPdf(id, 'receipt'));
   }
 
   @Get(':id/credit-note-pdf')
-  getCreditNotePdf(@Param('id', ParseIntPipe) id: number) {
-    return this.service.getPdfLink(id, 'credit-note');
+  @Header('Cache-Control', 'private, no-store')
+  async getCreditNotePdf(@Param('id', ParseIntPipe) id: number) {
+    return this.toPdfStream(await this.service.getPdf(id, 'credit-note'));
   }
 
   @Post(':id/record-credit-note')
@@ -66,5 +71,13 @@ export class AdminMoloniFiscalDocumentsController {
   @HttpCode(HttpStatus.OK)
   issueCreditNote(@Param('id', ParseIntPipe) id: number) {
     return this.service.issueCreditNote(id);
+  }
+
+  private toPdfStream(file: { buffer: Buffer; filename: string }) {
+    return new StreamableFile(file.buffer, {
+      type: 'application/pdf',
+      disposition: `inline; filename="${file.filename}"`,
+      length: file.buffer.length,
+    });
   }
 }

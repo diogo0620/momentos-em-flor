@@ -204,3 +204,42 @@ export async function apiFetch<T>(
 
     return response.json();
 }
+
+export async function apiFetchBlob(endpoint: string): Promise<Blob> {
+    const headers = new Headers({ Accept: "application/pdf" });
+    if (accessToken) {
+        headers.set("Authorization", `Bearer ${accessToken}`);
+    }
+
+    let response = await fetch(`${API_URL}${endpoint}`, {
+        headers,
+        credentials: "include",
+    });
+
+    if (response.status === 401) {
+        const newAccessToken = await refreshAccessToken();
+        if (newAccessToken) {
+            headers.set("Authorization", `Bearer ${newAccessToken}`);
+            response = await fetch(`${API_URL}${endpoint}`, {
+                headers,
+                credentials: "include",
+            });
+        }
+    }
+
+    if (!response.ok) {
+        let errorPayload = null;
+        try {
+            errorPayload = await response.json();
+        } catch {
+            // A resposta pode não ter conteúdo JSON.
+        }
+        throw createApiError(
+            errorPayload,
+            response.status,
+            "Não foi possível descarregar o documento.",
+        );
+    }
+
+    return response.blob();
+}

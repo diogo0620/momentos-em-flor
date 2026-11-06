@@ -1,5 +1,5 @@
 import { BaseApi } from "../common/base-api";
-import { apiFetch } from "../common/client";
+import { apiFetch, apiFetchBlob } from "../common/client";
 import type { MoloniFiscalDocument } from "@/types/moloni/admin/moloni-fiscal-document";
 
 class AdminMoloniFiscalDocumentsApi extends BaseApi<
@@ -29,11 +29,11 @@ class AdminMoloniFiscalDocumentsApi extends BaseApi<
         });
     }
 
-    async getPdfLink(
+    async getPdf(
         id: number,
         kind: "invoice" | "receipt" | "credit-note",
-    ): Promise<{ url: string }> {
-        return apiFetch<{ url: string }>(`${this.endpoint}/${id}/${kind}-pdf`);
+    ): Promise<Blob> {
+        return apiFetchBlob(`${this.endpoint}/${id}/${kind}-pdf`);
     }
 }
 

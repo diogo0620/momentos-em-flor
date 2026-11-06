@@ -137,8 +137,10 @@ export default function FiscalDocumentsPage() {
         try {
             setOpeningPdf(key);
             setError(null);
-            const { url } = await adminMoloniFiscalDocumentsApi.getPdfLink(item.id, kind);
-            popup.location.replace(url);
+            const blob = await adminMoloniFiscalDocumentsApi.getPdf(item.id, kind);
+            const objectUrl = URL.createObjectURL(blob);
+            popup.location.replace(objectUrl);
+            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
         } catch (err) {
             popup?.close();
             setError(err instanceof Error ? err.message : "Não foi possível abrir o PDF.");

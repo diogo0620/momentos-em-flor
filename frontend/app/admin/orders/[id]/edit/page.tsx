@@ -24,6 +24,7 @@ import {
     CircleX,
     History,
     LoaderCircle,
+    FileDown,
 } from "lucide-react";
 
 import { adminOrdersApi } from "@/lib/api/orders/admin-orders";
@@ -560,6 +561,7 @@ export default function EditOrderPage() {
     const [refundModalOpen, setRefundModalOpen] = useState(false);
     const [refundReason, setRefundReason] = useState("");
     const [refundSaving, setRefundSaving] = useState(false);
+    const [invoiceLoading, setInvoiceLoading] = useState(false);
 
     const canCreateOffer = order?.status === "WAITING_FOR_FLORISTS";
     const nextStatusAction = order ? STATUS_ACTIONS[order.status] : undefined;
@@ -887,6 +889,31 @@ export default function EditOrderPage() {
         }
     };
 
+    const openInvoicePdf = async () => {
+        if (!order?.moloniFiscalDocument?.invoiceId) return;
+
+        const popup = window.open("about:blank", "_blank");
+        if (!popup) {
+            setError("O navegador bloqueou a nova janela. Permite pop-ups para consultar a fatura.");
+            return;
+        }
+        popup.opener = null;
+
+        try {
+            setInvoiceLoading(true);
+            setError(null);
+            const blob = await adminOrdersApi.getInvoicePdf(order.id);
+            const objectUrl = URL.createObjectURL(blob);
+            popup.location.replace(objectUrl);
+            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+        } catch (err) {
+            popup.close();
+            setError(err instanceof Error ? err.message : "Não foi possível abrir a fatura.");
+        } finally {
+            setInvoiceLoading(false);
+        }
+    };
+
     return (
         <div className="mx-auto w-full max-w-5xl space-y-8 pb-10">
             {/* Header: mesmo padrão das páginas de detalhe */}
@@ -899,7 +926,8 @@ export default function EditOrderPage() {
                     Voltar às encomendas
                 </Link>
 
-                <div className="mt-5 flex items-center gap-4">
+                <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-4">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F3F5EE] text-[#55624A]">
                         <Package size={23} />
                     </div>
@@ -914,6 +942,19 @@ export default function EditOrderPage() {
                             Consulta os dados, os artigos, a entrega e o estado da encomenda.
                         </p>
                     </div>
+                    </div>
+
+                    {order?.moloniFiscalDocument?.invoiceId && (
+                        <button
+                            type="button"
+                            onClick={() => void openInvoicePdf()}
+                            disabled={invoiceLoading}
+                            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#CBD3C3] bg-white px-5 py-3 text-sm font-semibold text-[#55624A] transition hover:bg-[#F3F5EE] disabled:opacity-50"
+                        >
+                            {invoiceLoading ? <LoaderCircle size={17} className="animate-spin" /> : <FileDown size={17} />}
+                            Ver fatura
+                        </button>
+                    )}
                 </div>
             </div>
 

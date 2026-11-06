@@ -17,6 +17,8 @@ import {
   UserRound,
   XCircle,
   Star,
+  FileDown,
+  LoaderCircle,
 } from "lucide-react";
 
 import { customerOrdersApi } from "@/lib/api/orders/customer-orders";
@@ -67,6 +69,8 @@ export default function AccountOrderDetailPage() {
   const [reviewComment, setReviewComment] = useState("");
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -233,6 +237,32 @@ export default function AccountOrderDetailPage() {
     }
   }
 
+  async function openInvoicePdf() {
+    const currentOrder = order;
+    if (!currentOrder?.invoiceAvailable) return;
+
+    const popup = window.open("about:blank", "_blank");
+    if (!popup) {
+      setInvoiceError("O navegador bloqueou a nova janela. Permite pop-ups para consultar a fatura.");
+      return;
+    }
+    popup.opener = null;
+
+    try {
+      setInvoiceLoading(true);
+      setInvoiceError(null);
+      const blob = await customerOrdersApi.getInvoicePdf(currentOrder.orderNumber);
+      const objectUrl = URL.createObjectURL(blob);
+      popup.location.replace(objectUrl);
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    } catch (err) {
+      popup.close();
+      setInvoiceError(err instanceof Error ? err.message : "Não foi possível abrir a fatura.");
+    } finally {
+      setInvoiceLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-6 pb-4">
       <Link
@@ -280,24 +310,38 @@ export default function AccountOrderDetailPage() {
               </span>
             </div>
 
-            {isPendingPayment && (
+            {(isPendingPayment || order.invoiceAvailable) && (
               <div className="flex flex-col gap-2 sm:items-end">
-                <Link
-                  href={`/checkout/payment/${order.orderNumber}`}
-                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-[#55624A] px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#394633]"
-                >
-                  <CreditCard size={17} />
-                  Pagar
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => void handleCancelPendingPayment()}
-                  disabled={isCancelling}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold text-[#965A49] transition hover:bg-[#F9E9E4] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <XCircle size={16} />
-                  {isCancelling ? "A cancelar..." : "Cancelar encomenda"}
-                </button>
+                {isPendingPayment && <>
+                  <Link
+                    href={`/checkout/payment/${order.orderNumber}`}
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-[#55624A] px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#394633]"
+                  >
+                    <CreditCard size={17} />
+                    Pagar
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => void handleCancelPendingPayment()}
+                    disabled={isCancelling}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold text-[#965A49] transition hover:bg-[#F9E9E4] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <XCircle size={16} />
+                    {isCancelling ? "A cancelar..." : "Cancelar encomenda"}
+                  </button>
+                </>}
+                {order.invoiceAvailable && (
+                  <button
+                    type="button"
+                    onClick={() => void openInvoicePdf()}
+                    disabled={invoiceLoading}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#CBD3C3] bg-white px-5 py-3 text-sm font-semibold text-[#55624A] transition hover:bg-[#F7F8F4] disabled:opacity-50"
+                  >
+                    {invoiceLoading ? <LoaderCircle size={17} className="animate-spin" /> : <FileDown size={17} />}
+                    Ver fatura
+                  </button>
+                )}
+                {invoiceError && <p className="max-w-xs text-right text-xs text-red-700">{invoiceError}</p>}
               </div>
             )}
           </div>

@@ -3,7 +3,6 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
-  ServiceUnavailableException,
 } from '@nestjs/common';
 import {
   MoloniDocumentStatus,
@@ -17,6 +16,10 @@ import { getPaginationResponse } from '@/common/database/pagination-response';
 import { MoloniApiService } from '../api/moloni-api.service';
 import { MoloniFiscalDocumentQueryDto } from './dtos/moloni-fiscal-document-query.dto';
 import { EmailService } from '@/email/email.service';
+import {
+  MoloniDocumentPdfService,
+  MoloniPdfDocumentKind,
+} from './moloni-document-pdf.service';
 
 type MoloniCustomer = { customer_id: number };
 type MoloniDocumentResult = { valid?: number; document_id?: number };
@@ -26,7 +29,6 @@ type MoloniTax = {
   type?: number;
   saft_type?: number;
 };
-type FiscalDocumentKind = 'invoice' | 'receipt' | 'credit-note';
 type MoloniDocumentTax = {
   tax_id: number;
   value: number;
@@ -106,6 +108,7 @@ export class AdminMoloniFiscalDocumentsService {
     private readonly prisma: PrismaService,
     private readonly moloniApi: MoloniApiService,
     private readonly emailService: EmailService,
+    private readonly pdfService: MoloniDocumentPdfService,
   ) {}
 
   async issueForOrder(orderId: number) {
@@ -568,26 +571,8 @@ export class AdminMoloniFiscalDocumentsService {
     return String(customer.customer_id);
   }
 
-  async getPdfLink(id: number, kind: FiscalDocumentKind) {
-    const record = await this.getRecord(id);
-    const documentId = kind === 'invoice'
-      ? record.invoiceId
-      : kind === 'receipt'
-        ? record.receiptId
-        : record.creditNoteId;
-
-    if (!documentId) {
-      throw new BadRequestException('O documento ainda não foi emitido na Moloni.');
-    }
-
-    const pdf = await this.moloniApi.getDocumentPdfLink<{ url?: string }>(documentId);
-    if (!pdf.url || !pdf.url.startsWith('https://')) {
-      throw new ServiceUnavailableException(
-        'A Moloni não devolveu uma ligação segura para o documento.',
-      );
-    }
-
-    return ApiResponse.success({ url: pdf.url });
+  getPdf(id: number, kind: MoloniPdfDocumentKind) {
+    return this.pdfService.getByFiscalDocumentId(id, kind);
   }
 
   private async buildInvoiceProducts(
@@ -661,18 +646,15 @@ export class AdminMoloniFiscalDocumentsService {
     if (!record.invoiceId || record.invoiceEmailSentAt) return;
 
     try {
-      const pdf = await this.moloniApi.getDocumentPdfLink<{ url?: string }>(
+      const pdf = await this.pdfService.download(
         record.invoiceId,
+        `fatura-${record.order.orderNumber.replace(/[^a-zA-Z0-9_-]/g, '-')}.pdf`,
       );
-      if (!pdf.url || !pdf.url.startsWith('https://')) {
-        throw new Error('A Moloni não devolveu uma ligação segura para a fatura.');
-      }
 
       const customerName = this.escapeHtml(
         `${record.order.customerFirstName} ${record.order.customerLastName}`.trim(),
       );
       const orderNumber = this.escapeHtml(record.order.orderNumber);
-      const invoiceUrl = this.escapeHtml(pdf.url);
       const result = await this.emailService.sendEmail({
         to: record.order.customerEmail,
         subject: `Fatura da encomenda ${record.order.orderNumber}`,
@@ -680,11 +662,15 @@ export class AdminMoloniFiscalDocumentsService {
           <div style="font-family:Arial,sans-serif;color:#2F3B2A;line-height:1.6;max-width:620px;margin:auto">
             <h1 style="font-size:24px">A sua fatura está disponível</h1>
             <p>Olá ${customerName},</p>
-            <p>A fatura da encomenda <strong>${orderNumber}</strong> foi emitida.</p>
-            <p><a href="${invoiceUrl}" style="display:inline-block;background:#55624A;color:#fff;text-decoration:none;padding:12px 20px;border-radius:12px">Descarregar fatura assinada</a></p>
-            <p style="font-size:13px;color:#73796D">Guarde este email para consultar o documento.</p>
+            <p>A fatura da encomenda <strong>${orderNumber}</strong> foi emitida e segue em anexo.</p>
+            <p style="font-size:13px;color:#73796D">Pode também consultar o documento nos detalhes da encomenda.</p>
           </div>
         `,
+        attachments: [{
+          filename: pdf.filename,
+          content: pdf.buffer,
+          contentType: 'application/pdf',
+        }],
       });
       await this.prisma.moloniFiscalDocument.update({
         where: { id: record.id },

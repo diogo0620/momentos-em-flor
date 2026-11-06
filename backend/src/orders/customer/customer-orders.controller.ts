@@ -2,6 +2,7 @@
 import {
     Controller,
     Get,
+    Header,
     Post,
     Patch,
     Delete,
@@ -12,6 +13,7 @@ import {
     HttpCode,
     HttpStatus,
     UseGuards,
+    StreamableFile,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
@@ -27,6 +29,7 @@ import { CustomerUpdateOrderDto } from './dtos/customer-update-order.dto';
 import { CurrentUser } from '@/auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/interfaces/authenticated-user.interface';
 import { CustomerCreateOrderReviewDto } from './dtos/customer-create-order-review.dto';
+import { MoloniDocumentPdfService } from '@/moloni/fiscal/moloni-document-pdf.service';
 
 
 @ApiTags('Orders (Customer)')
@@ -37,6 +40,7 @@ import { CustomerCreateOrderReviewDto } from './dtos/customer-create-order-revie
 export class CustomerOrdersController {
     constructor(
         private readonly service: CustomerOrdersService,
+        private readonly pdfService: MoloniDocumentPdfService,
     ) { }
 
     @Get()
@@ -52,6 +56,20 @@ export class CustomerOrdersController {
         @Param('orderNumber') orderNumber: string,
     ) {
         return await this.service.findOne(user, orderNumber);
+    }
+
+    @Get(':orderNumber/invoice-pdf')
+    @Header('Cache-Control', 'private, no-store')
+    async getInvoicePdf(
+        @CurrentUser() user: AuthenticatedUser,
+        @Param('orderNumber') orderNumber: string,
+    ) {
+        const file = await this.pdfService.getCustomerInvoice(orderNumber, user.id);
+        return new StreamableFile(file.buffer, {
+            type: 'application/pdf',
+            disposition: `inline; filename="${file.filename}"`,
+            length: file.buffer.length,
+        });
     }
 
     @Post()
