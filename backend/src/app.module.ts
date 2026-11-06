@@ -21,6 +21,8 @@ import { EventsModule } from './events/events.module';
 import { MoloniModule } from './moloni/moloni.module';
 import { FloristCompensationsModule } from './florist-compensations/florist-compensations.module';
 import { validateEnvironment } from '@/config/environment.validation';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
@@ -48,5 +50,7 @@ import { validateEnvironment } from '@/config/environment.validation';
     FloristCompensationsModule,
     LoggerModule
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule { }

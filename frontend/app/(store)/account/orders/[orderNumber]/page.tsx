@@ -167,6 +167,12 @@ export default function AccountOrderDetailPage() {
   const isPendingPayment = order.status === "PENDING_PAYMENT";
 
   async function handleCancelPendingPayment() {
+    const currentOrder = order;
+
+    if (!currentOrder || currentOrder.status !== "PENDING_PAYMENT") {
+      return;
+    }
+
     if (
       !window.confirm(
         "Pretende cancelar esta encomenda? Depois de cancelada, não poderá retomar o pagamento.",
@@ -178,9 +184,9 @@ export default function AccountOrderDetailPage() {
     try {
       setIsCancelling(true);
       setCancelError(null);
-      await customerOrdersApi.cancelPendingPayment(order.orderNumber);
+      await customerOrdersApi.cancelPendingPayment(currentOrder.orderNumber);
       setOrder({
-        ...order,
+        ...currentOrder,
         status: "CANCELLED",
         cancelledAt: new Date().toISOString(),
         cancellationReason: "CUSTOMER_REQUEST",
@@ -202,6 +208,12 @@ export default function AccountOrderDetailPage() {
   );
 
   async function handleReviewSubmit() {
+    const currentOrder = order;
+
+    if (!currentOrder || currentOrder.status !== "DELIVERED" || currentOrder.review) {
+      return;
+    }
+
     if (Object.values(reviewRatings).some((rating) => rating < 1)) {
       setReviewError("Avalia todas as categorias antes de enviar.");
       return;
@@ -209,11 +221,11 @@ export default function AccountOrderDetailPage() {
     try {
       setIsSubmittingReview(true);
       setReviewError(null);
-      const review = await customerOrdersApi.createReview(order.orderNumber, {
+      const review = await customerOrdersApi.createReview(currentOrder.orderNumber, {
         ...reviewRatings,
         comment: reviewComment.trim() || undefined,
       });
-      setOrder({ ...order, review });
+      setOrder({ ...currentOrder, review });
     } catch (err) {
       setReviewError(err instanceof Error ? err.message : "Não foi possível guardar a avaliação.");
     } finally {
