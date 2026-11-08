@@ -1,5 +1,7 @@
 
 
+import type { CustomerOrderStatus } from "@/lib/orders/customer-order-status";
+
 /**
  * Representa uma linha da encomenda devolvida pela API de cliente.
  * Corresponde a CustomerOrderItemResponseDto no backend.
@@ -18,7 +20,6 @@ export type CustomerOrderItemDetail = {
     taxRate: number;
     taxAmount: number;
     grossAmount: number;
-    taxCodeId?: number | null;
 }
 
 /**
@@ -66,7 +67,6 @@ export type CustomerOrderDetail = {
 
     createdAt: string;
     cancelledAt?: string | null;
-    cancellationReason?: string | null;
 }
 
 export type ReviewCategory = "FLOWER_QUALITY" | "PRESENTATION" | "DELIVERY" | "SERVICE";
@@ -86,16 +86,6 @@ export type CustomerCreateOrderReview = {
     service: number;
     comment?: string;
 };
-
-export type CustomerOrderStatus =  
-    "CREATED" |
-  "PENDING_PAYMENT" |
-  "WAITING_FOR_FLORISTS" |
-  "ASSIGNED" |
-  "IN_PRODUCTION" |
-  "READY_FOR_DELIVERY" |
-  "DELIVERED" |
-  "CANCELLED" 
 
 export type Occasion =
     | "BIRTHDAY"

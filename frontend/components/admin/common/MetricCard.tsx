@@ -18,24 +18,25 @@ export default function MetricCard({
     return (
         <div
             className="
-                rounded-3xl
+                rounded-2xl
+                border
+                border-[#e1e5df]
                 bg-white
                 p-6
-                shadow-sm
+                shadow-[0_1px_2px_rgba(25,42,33,0.03)]
                 transition
-                hover:-translate-y-1
-                hover:shadow-lg
+                hover:border-[#cbd3cb]
             "
         >
             <div className="flex items-start justify-between">
 
                 <div>
 
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm font-medium text-[#6d776f]">
                         {title}
                     </p>
 
-                    <h2 className="mt-3 text-4xl font-bold text-[#2F3B2A]">
+                    <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#203128]">
                         {value}
                     </h2>
 

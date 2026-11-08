@@ -6,11 +6,10 @@ import {
 import {
     DeliveryTimeSlot,
     Occasion,
-    OrderStatus,
-    OrderCancellationReason,
     OrderItemType,
     ReviewCategory,
 } from '@prisma/client';
+import { CustomerOrderStatus } from '../customer-order-status';
 
 class CustomerOrderReviewRatingResponseDto {
     @ApiProperty({ enum: ReviewCategory }) category!: ReviewCategory;
@@ -68,8 +67,6 @@ class CustomerOrderItemResponseDto {
     @ApiProperty()
     grossAmount!: number;
 
-    @ApiPropertyOptional()
-    taxCodeId?: number | null;
 }
 
 
@@ -162,9 +159,9 @@ export class CustomerOrderResponseDto {
     total!: number;
 
     @ApiProperty({
-        enum: OrderStatus,
+        enum: CustomerOrderStatus,
     })
-    status!: OrderStatus;
+    status!: CustomerOrderStatus;
 
     @ApiProperty()
     invoiceAvailable!: boolean;
@@ -183,9 +180,4 @@ export class CustomerOrderResponseDto {
     @ApiPropertyOptional()
     cancelledAt?: Date | null;
 
-    @ApiPropertyOptional({
-        enum: OrderCancellationReason,
-    })
-    cancellationReason?:
-        OrderCancellationReason | null;
 }

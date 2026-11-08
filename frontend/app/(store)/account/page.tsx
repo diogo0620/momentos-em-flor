@@ -15,8 +15,8 @@ import { customerOrdersApi } from "@/lib/api/orders/customer-orders";
 import type { CustomerUserDetail } from "@/types/users/customer/customer-user-detail";
 import type {
   CustomerOrderList,
-  CustomerOrderStatus,
 } from "@/types/orders/customer/customer-order-list";
+import { getCustomerOrderStatusLabel } from "@/lib/orders/customer-order-status";
 
 const money = (value: number) =>
   new Intl.NumberFormat("pt-PT", {
@@ -30,17 +30,6 @@ const date = (value: string | Date) =>
     month: "long",
     year: "numeric",
   }).format(new Date(value));
-
-const statusLabel: Record<CustomerOrderStatus, string> = {
-  CREATED: "Criada",
-  PENDING_PAYMENT: "A aguardar pagamento",
-  WAITING_FOR_FLORISTS: "À procura de florista",
-  ASSIGNED: "Atribuída a uma florista",
-  IN_PRODUCTION: "Em preparação",
-  READY_FOR_DELIVERY: "Pronta para entrega",
-  DELIVERED: "Entregue",
-  CANCELLED: "Cancelada",
-};
 
 export default function AccountHomePage() {
   const [user, setUser] = useState<CustomerUserDetail | null>(null);
@@ -216,7 +205,7 @@ export default function AccountHomePage() {
 
                 <div className="flex items-center justify-between gap-4 sm:justify-end">
                   <span className="rounded-full bg-[#F1F4EB] px-3 py-1.5 text-xs font-medium text-[#566449]">
-                    {statusLabel[order.status] ?? order.status}
+                    {getCustomerOrderStatusLabel(order.status)}
                   </span>
                   <span className="text-sm font-semibold text-[#2F3B2A]">
                     {money(order.total)}

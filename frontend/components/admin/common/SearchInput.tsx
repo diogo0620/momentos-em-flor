@@ -36,7 +36,7 @@ export default function SearchInput({
                 placeholder={placeholder}
                 className="
                     w-full
-                    rounded-2xl
+                    rounded-xl
                     border
                     border-gray-200
                     bg-white
@@ -46,9 +46,9 @@ export default function SearchInput({
                     outline-none
                     transition-all
                     duration-200
-                    focus:border-[#55624A]
+                    focus:border-[#52705d]
                     focus:ring-4
-                    focus:ring-[#55624A]/10
+                    focus:ring-[#52705d]/10
                 "
             />
 

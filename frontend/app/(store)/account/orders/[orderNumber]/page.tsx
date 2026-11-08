@@ -23,19 +23,7 @@ import {
 
 import { customerOrdersApi } from "@/lib/api/orders/customer-orders";
 import { CustomerOrderDetail } from "@/types/orders/customer/customer-order-detail";
-
-const labels: Record<string, string> = {
-  PENDING_PAYMENT: "A aguardar pagamento",
-  CREATED: "Criada",
-  WAITING_FOR_FLORISTS: "À espera de floristas",
-  ASSIGNED: "Florista atribuída",
-  IN_PRODUCTION: "Em preparação",
-  PROCESSING: "Em processamento",
-  IN_PREPARATION: "Em preparação",
-  READY_FOR_DELIVERY: "Pronta para entrega",
-  DELIVERED: "Entregue",
-  CANCELLED: "Cancelada",
-};
+import { getCustomerOrderStatusLabel } from "@/lib/orders/customer-order-status";
 
 const money = (value: number) =>
   new Intl.NumberFormat("pt-PT", {
@@ -193,7 +181,6 @@ export default function AccountOrderDetailPage() {
         ...currentOrder,
         status: "CANCELLED",
         cancelledAt: new Date().toISOString(),
-        cancellationReason: "CUSTOMER_REQUEST",
       });
     } catch (err) {
       setCancelError(
@@ -306,7 +293,7 @@ export default function AccountOrderDetailPage() {
                   <Clock3 size={14} />
                 )}
 
-                {labels[order.status] ?? order.status}
+                {getCustomerOrderStatusLabel(order.status)}
               </span>
             </div>
 

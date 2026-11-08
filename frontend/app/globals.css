@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafaf7;
-  --foreground: #2f3b2a;
-
-  --primary: #d6dec8;
-  --primary-dark: #bcc7aa;
-
-  --card: #ffffff;
-
-  --muted: #6b7280;
+  --background: #f7f7f3;
+  --foreground: #203128;
+  --surface: #ffffff;
+  --surface-muted: #f1f4f0;
+  --border: #e1e5df;
+  --primary: #26392f;
+  --primary-hover: #1d2d25;
+  --accent: #dfe8df;
+  --muted: #6d776f;
 }
 
 @theme inline {
@@ -35,6 +35,7 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  font-feature-settings: "kern" 1, "liga" 1;
 }
 
 img {
@@ -58,14 +59,32 @@ textarea {
   font: inherit;
 }
 
+input,
+select,
+textarea {
+  color: var(--foreground);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #98a099;
+}
+
 ::selection {
-  background: #d6dec8;
-  color: #2f3b2a;
+  background: #dfe8df;
+  color: #203128;
 }
 
 :focus-visible {
-  outline: 2px solid #71805f;
+  outline: 2px solid #52705d;
   outline-offset: 3px;
+}
+
+@media (hover: hover) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #c8d0c9 transparent;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

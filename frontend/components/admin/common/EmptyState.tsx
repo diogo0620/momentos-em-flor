@@ -18,12 +18,14 @@ export default function EmptyState({
                 flex-col
                 items-center
                 justify-center
-                rounded-3xl
+                rounded-2xl
+                border
+                border-[#e1e5df]
                 bg-white
                 px-8
                 py-20
                 text-center
-                shadow-sm
+                shadow-[0_1px_2px_rgba(25,42,33,0.03)]
             "
         >
             <div
@@ -35,20 +37,20 @@ export default function EmptyState({
                     items-center
                     justify-center
                     rounded-full
-                    bg-[#F3F5EE]
+                    bg-[#eef2ed]
                 "
             >
                 <Icon
                     size={36}
-                    className="text-[#55624A]"
+                    className="text-[#42604d]"
                 />
             </div>
 
-            <h3 className="text-2xl font-semibold text-[#2F3B2A]">
+            <h3 className="text-2xl font-semibold tracking-tight text-[#203128]">
                 {title}
             </h3>
 
-            <p className="mt-3 max-w-md text-gray-500">
+            <p className="mt-3 max-w-md text-[#6d776f]">
                 {description}
             </p>
         </div>

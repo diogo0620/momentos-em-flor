@@ -1,15 +1,15 @@
 import { BaseQueryDto } from "@/common/dto/base-query.dto";
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { OrderStatus } from "@prisma/client";
-import { IsOptional, IsString } from "class-validator";
+import { IsEnum, IsOptional } from "class-validator";
+import { CustomerOrderStatus } from "../customer-order-status";
 
 export class CustomerOrderQueryDto extends BaseQueryDto {
 
     @ApiPropertyOptional({
-        example: "Aveiro",
-        description: 'Filter by district',
+        enum: CustomerOrderStatus,
+        description: 'Estado público da encomenda',
     })
     @IsOptional()
-    @IsString()
-    status?: OrderStatus;
+    @IsEnum(CustomerOrderStatus)
+    status?: CustomerOrderStatus;
 }

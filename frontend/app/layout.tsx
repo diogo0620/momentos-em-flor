@@ -10,11 +10,11 @@ export const metadata: Metadata = {
         template: "%s · Momentos em Flor",
     },
     description:
-        "Flores preparadas por floristas locais para todos os momentos especiais.",
+        "Flores preparadas com cuidado para todos os momentos especiais.",
     applicationName: "Momentos em Flor",
     openGraph: {
         title: "Momentos em Flor",
-        description: "Flores preparadas por floristas locais para todos os momentos especiais.",
+        description: "Flores preparadas com cuidado para todos os momentos especiais.",
         type: "website",
         locale: "pt_PT",
     },

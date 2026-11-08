@@ -6,6 +6,7 @@ import { Order, Prisma } from '@prisma/client';
 import { CustomerOrderListResponseDto } from '../dtos/customer-order-list-response.dto';
 import { CustomerOrderResponseDto } from '../dtos/customer-order-response.dto';
 import { SupabaseStorageService } from '@/storage/supabase-storage.service';
+import { toCustomerOrderStatus } from '../customer-order-status';
 
 type OrderWithItems = Prisma.OrderGetPayload<{
     include: {
@@ -66,7 +67,7 @@ export class CustomerOrdersMapper extends BaseMapper<
             deliveryFee: Number(order.deliveryFee),
             discount: Number(order.discount),
             total: Number(order.total),
-            status: order.status,
+            status: toCustomerOrderStatus(order.status),
             invoiceAvailable: Boolean(order.moloniFiscalDocument?.invoiceId),
             items: order.items.map((item) => ({
                 id: item.id,
@@ -85,8 +86,6 @@ export class CustomerOrdersMapper extends BaseMapper<
                 taxRate: Number(item.taxRate),
                 taxAmount: Number(item.taxAmount),
                 grossAmount: Number(item.grossAmount),
-
-                taxCodeId: item.taxCodeId
             })),
             review: order.review ? {
                 id: order.review.id,
@@ -103,7 +102,6 @@ export class CustomerOrdersMapper extends BaseMapper<
             } : null,
             createdAt: order.createdAt,
             cancelledAt: order.cancelledAt,
-            cancellationReason: order.cancellationReason
         }
     }
 
@@ -119,7 +117,7 @@ export class CustomerOrdersMapper extends BaseMapper<
             id: order.id,
             orderNumber: order.orderNumber,
             total: Number(order.total),
-            status: order.status,
+            status: toCustomerOrderStatus(order.status),
             createdAt: order.createdAt
         };
     }

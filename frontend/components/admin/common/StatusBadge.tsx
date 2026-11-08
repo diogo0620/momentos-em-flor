@@ -22,6 +22,27 @@ const styles: Record<
         "bg-green-100 text-green-700",
 };
 
+const labels: Record<string, string> = {
+    ACTIVE: "Ativo",
+    INACTIVE: "Inativo",
+    PENDING: "Pendente",
+    VIEWED: "Visualizada",
+    ACCEPTED: "Aceite",
+    DECLINED: "Recusada",
+    CANCELLED: "Cancelada",
+    PENDING_PAYMENT: "Pagamento pendente",
+    CREATED: "Criada",
+    WAITING_FOR_FLORISTS: "A aguardar atribuição",
+    ASSIGNED: "Atribuída",
+    IN_PRODUCTION: "Em preparação",
+    READY_FOR_DELIVERY: "Pronta para entrega",
+    DELIVERED: "Entregue",
+    PAID: "Pago",
+    FAILED: "Falhou",
+    REFUNDED: "Reembolsado",
+    DUE: "Por pagar",
+};
+
 export default function StatusBadge({
     status,
 }: Props) {
@@ -36,7 +57,7 @@ export default function StatusBadge({
                 ${styles[status] ?? "bg-gray-100 text-gray-700"}
             `}
         >
-            {status}
+            {labels[status] ?? status}
         </span>
     );
 }

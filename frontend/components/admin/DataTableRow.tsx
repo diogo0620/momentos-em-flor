@@ -11,14 +11,15 @@ export default function DataTableRow({
 }: Props) {
     const className = `
         grid
+        min-w-[720px]
         items-center
         border-b
-        border-gray-100
+        border-[#e8ebe7]
         px-6
         py-5
         transition-all
         duration-200
-        hover:bg-[#F8F9F5]
+        hover:bg-[#f7f9f6]
     `;
 
     if (href) {

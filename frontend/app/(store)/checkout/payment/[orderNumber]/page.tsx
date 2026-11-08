@@ -130,9 +130,8 @@ export default function CheckoutPaymentPage() {
                 const latestOrder = await customerOrdersApi.getByOrderNumber(orderNumber);
 
                 const successfulOrderStatuses = [
-                    "WAITING_FOR_FLORISTS",
-                    "ASSIGNED",
-                    "IN_PRODUCTION",
+                    "RECEIVED",
+                    "IN_PREPARATION",
                     "READY_FOR_DELIVERY",
                     "DELIVERED",
                 ] as const;

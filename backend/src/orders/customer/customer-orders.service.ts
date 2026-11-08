@@ -19,6 +19,7 @@ import { StripeService } from '@/payments/stripe.service';
 import { normalizeOptionalPhoneNumber } from '@/common/phone/phone-number';
 import { DeliveryAreaService } from '@/store-settings/delivery-area.service';
 import { CustomerCreateOrderReviewDto } from './dtos/customer-create-order-review.dto';
+import { toInternalOrderStatusFilter } from './customer-order-status';
 
 
 @Injectable()
@@ -124,7 +125,9 @@ export class CustomerOrdersService {
                 ],
             }),
             ...{ customerId: user.id },
-            ...(status !== undefined && { status }),
+            ...(status !== undefined && {
+                status: toInternalOrderStatusFilter(status),
+            }),
         };
 
         const [orders, total] = await Promise.all([
@@ -185,7 +188,7 @@ export class CustomerOrdersService {
         if (!order) Exceptions.notFound(ERROR_MESSAGES.ORDER_NOT_FOUND);
         if (order.status !== OrderStatus.DELIVERED || !order.assignedFloristId) {
             throw new BadRequestException(
-                'Só é possível avaliar uma encomenda entregue por uma florista.',
+                'Só é possível avaliar uma encomenda depois de esta ser entregue.',
             );
         }
         if (order.review) {

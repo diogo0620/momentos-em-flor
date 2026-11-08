@@ -10,6 +10,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 export class SupabaseStorageService {
     private readonly client: SupabaseClient;
     private readonly bucket: string;
+    private readonly environment: 'dev' | 'test' | 'prod';
 
     constructor(config: ConfigService) {
         this.client = createClient(
@@ -20,6 +21,15 @@ export class SupabaseStorageService {
         this.bucket = config.getOrThrow<string>(
             'SUPABASE_PRODUCT_IMAGES_BUCKET',
         );
+
+        const nodeEnvironment = config.get<string>('NODE_ENV');
+
+        this.environment =
+            nodeEnvironment === 'production'
+                ? 'prod'
+                : nodeEnvironment === 'test'
+                  ? 'test'
+                  : 'dev';
     }
 
     async upload(
@@ -29,7 +39,7 @@ export class SupabaseStorageService {
     ): Promise<void> {
         const { error } = await this.client.storage
             .from(this.bucket)
-            .upload(path, buffer, {
+            .upload(this.toStoragePath(path), buffer, {
                 contentType,
                 cacheControl: '31536000',
                 upsert: false,
@@ -45,7 +55,7 @@ export class SupabaseStorageService {
     async remove(path: string): Promise<void> {
         const { error } = await this.client.storage
             .from(this.bucket)
-            .remove([path]);
+            .remove([this.toStoragePath(path)]);
 
         if (error) {
             throw new ServiceUnavailableException(
@@ -57,8 +67,20 @@ export class SupabaseStorageService {
     getPublicUrl(path: string): string {
         const { data } = this.client.storage
             .from(this.bucket)
-            .getPublicUrl(path);
+            .getPublicUrl(this.toStoragePath(path));
 
         return data.publicUrl;
+    }
+
+    private toStoragePath(path: string): string {
+        const normalizedPath = path
+            .replace(/\\/g, '/')
+            .replace(/^\/+/, '');
+
+        if (/^(dev|test|prod)\//.test(normalizedPath)) {
+            return normalizedPath;
+        }
+
+        return `${this.environment}/${normalizedPath}`;
     }
 }

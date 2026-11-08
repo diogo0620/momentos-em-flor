@@ -1,6 +1,6 @@
 
 import { ApiProperty } from '@nestjs/swagger';
-import { OrderStatus } from '@prisma/client';
+import { CustomerOrderStatus } from '../customer-order-status';
 
 export class CustomerOrderListResponseDto {
   @ApiProperty()
@@ -13,9 +13,9 @@ export class CustomerOrderListResponseDto {
   total! : number;
 
   @ApiProperty({
-    enum: OrderStatus,
+    enum: CustomerOrderStatus,
   })
-  status!: OrderStatus;
+  status!: CustomerOrderStatus;
 
   @ApiProperty()
   createdAt!: Date;

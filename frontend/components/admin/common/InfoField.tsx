@@ -9,11 +9,11 @@ export default function InfoField({
 }: Props) {
     return (
         <div>
-            <p className="text-sm font-medium text-gray-500">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#7b857d]">
                 {label}
             </p>
 
-            <div className="mt-1 text-[#2F3B2A] font-medium">
+            <div className="mt-1.5 font-medium text-[#203128]">
                 {value}
             </div>
         </div>

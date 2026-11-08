@@ -19,7 +19,7 @@ export default function TermsPage() {
 
             <LegalSection title="3. Encomenda, preço e pagamento">
                 <p>Antes do pagamento são apresentados os produtos, impostos, taxa de entrega e total. A encomenda só entra em processamento após confirmação do pagamento. A fatura é emitida com os dados indicados pelo cliente.</p>
-                <p>Uma confirmação automática de pagamento não elimina a necessidade de validação operacional. Em situações excecionais e objetivas — nomeadamente indisponibilidade imprevisível de flores frescas, capacidade da rede de floristas, cobertura de entrega ou força maior — poderemos não conseguir executar a encomenda.</p>
+                <p>Uma confirmação automática de pagamento não elimina a necessidade de validação operacional. Em situações excecionais e objetivas — nomeadamente indisponibilidade imprevisível de flores frescas, limitações de capacidade, cobertura de entrega ou força maior — poderemos não conseguir executar a encomenda.</p>
                 <p>Nesse caso, o cliente será informado com brevidade e receberá o reembolso integral do montante pago, pelo mesmo meio sempre que possível e sem demora injustificada.</p>
             </LegalSection>
 

@@ -14,34 +14,18 @@ import {
 } from "lucide-react";
 import { customerOrdersApi } from "@/lib/api/orders/customer-orders";
 import { CustomerOrderList, CustomerOrderStatus } from "@/types/orders/customer/customer-order-list";
+import {
+  customerOrderStatusOptions,
+  getCustomerOrderStatusLabel,
+} from "@/lib/orders/customer-order-status";
 
 const statusOptions: {
   value: CustomerOrderStatus | "ALL";
   label: string;
 }[] = [
   { value: "ALL", label: "Todos os estados" },
-  { value: "PENDING_PAYMENT", label: "A aguardar pagamento" },
-  { value: "CREATED", label: "Criada" },
-  { value: "WAITING_FOR_FLORISTS", label: "À espera de floristas" },
-  { value: "ASSIGNED", label: "Florista atribuída" },
-  { value: "IN_PRODUCTION", label: "Em preparação" },
-  { value: "READY_FOR_DELIVERY", label: "Pronta para entrega" },
-  { value: "DELIVERED", label: "Entregue" },
-  { value: "CANCELLED", label: "Cancelada" },
+  ...customerOrderStatusOptions,
 ];
-
-const labels: Record<string, string> = {
-  PENDING_PAYMENT: "A aguardar pagamento",
-  CREATED: "Criada",
-  PROCESSING: "Em processamento",
-  WAITING_FOR_FLORISTS: "À espera de floristas",
-  ASSIGNED: "Florista atribuída",
-  IN_PRODUCTION: "Em preparação",
-  IN_PREPARATION: "Em preparação",
-  READY_FOR_DELIVERY: "Pronta para entrega",
-  DELIVERED: "Entregue",
-  CANCELLED: "Cancelada",
-};
 
 const money = (value: number) =>
   new Intl.NumberFormat("pt-PT", {
@@ -250,7 +234,7 @@ export default function AccountOrdersPage() {
                             : "bg-[#F1F4EB] text-[#566449]"
                       }`}
                     >
-                      {labels[order.status] ?? order.status}
+                      {getCustomerOrderStatusLabel(order.status)}
                     </span>
 
                     <p className="mt-2 text-sm font-semibold text-[#2F3B2A]">

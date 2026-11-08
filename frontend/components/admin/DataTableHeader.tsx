@@ -8,8 +8,9 @@ export default function DataTableHeader({
     return (
         <div
             className="
-                border-b
-                bg-[#F8F9F5]
+                min-w-[720px]
+                border-b border-[#e1e5df]
+                bg-[#f5f7f4]
             "
         >
             {children}

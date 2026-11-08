@@ -24,7 +24,7 @@ export default function PrivacyPage() {
             </LegalSection>
 
             <LegalSection title="4. Destinatários e prestadores">
-                <p>Partilhamos apenas os dados necessários com floristas que executam a encomenda e com prestadores de pagamento, faturação, email, alojamento, armazenamento e geocodificação. Estes podem incluir Stripe, Moloni, Resend, Supabase e Google Maps, de acordo com a configuração ativa do serviço.</p>
+                <p>Partilhamos apenas os dados estritamente necessários com parceiros operacionais envolvidos na preparação e entrega, bem como com prestadores de pagamento, faturação, email, alojamento, armazenamento e geocodificação. Estes podem incluir Stripe, Moloni, Resend, Supabase e Google Maps, de acordo com a configuração ativa do serviço.</p>
                 <p>Não vendemos dados pessoais. Quando um prestador tratar dados fora do Espaço Económico Europeu, serão aplicadas as garantias legalmente exigidas.</p>
             </LegalSection>
 
