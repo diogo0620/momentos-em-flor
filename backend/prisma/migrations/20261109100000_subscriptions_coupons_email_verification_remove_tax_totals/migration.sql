@@ -100,7 +100,7 @@ ALTER TABLE "FloristSubscription" ADD CONSTRAINT "FloristSubscription_floristId_
 ALTER TABLE "FloristSubscription" ADD CONSTRAINT "FloristSubscription_planId_fkey" FOREIGN KEY ("planId") REFERENCES "FloristSubscriptionPlan"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 INSERT INTO "FloristSubscriptionPlan" ("code", "name", "description", "monthlyPrice", "currency", "free", "active", "sortOrder", "updatedAt")
-VALUES ('FREE', 'Gratuito', 'Acesso gratuito à plataforma.', 0, 'EUR', true, true, 0);
+VALUES ('FREE', 'Gratuito', 'Acesso gratuito à plataforma.', 0, 'EUR', true, true, 0, CURRENT_TIMESTAMP);
 
 INSERT INTO "FloristSubscription" ("floristId", "planId", "status", "updatedAt")
 SELECT f."id", p."id", 'FREE'::"FloristSubscriptionStatus", CURRENT_TIMESTAMP
