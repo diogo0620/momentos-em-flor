@@ -16,6 +16,12 @@ import { CustomerCreateOrderItemDto } from './customer-create-order-item.dto';
 import { Type } from 'class-transformer';
 
 export class CustomerCreateOrderDto {
+    @ApiPropertyOptional({ example: 'BEMVINDO10' })
+    @IsOptional()
+    @IsString()
+    @MaxLength(50)
+    couponCode?: string;
+
     @ApiPropertyOptional({
         example: '+351912345678',
         description:

@@ -39,6 +39,9 @@ export type CustomerCreateOrderItem = {
 }
 
 export type CustomerCreateOrder = {
+    /** Código promocional opcional. */
+    couponCode?: string;
+
     /** NIF do comprador. */
     customerTaxNumber?: string;
 

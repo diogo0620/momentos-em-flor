@@ -12,6 +12,8 @@ import {
     Tags,
     UserRound,
     Users,
+    CreditCard,
+    TicketPercent,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -33,6 +35,8 @@ export const adminNavigation: NavigationItem[] = [
     { href: "/admin/florists", label: "Floristas", icon: Flower2 },
     { href: "/admin/users", label: "Utilizadores", icon: Users },
     { href: "/admin/settings", label: "Definições", icon: Settings },
+    { href: "/admin/coupons", label: "Cupões", icon: TicketPercent },
+    { href: "/admin/subscription-plans", label: "Subscrições", icon: CreditCard },
 ];
 
 export const floristNavigation: NavigationItem[] = [
@@ -40,6 +44,7 @@ export const floristNavigation: NavigationItem[] = [
     { href: "/florist/offers", label: "Propostas", icon: ClipboardList },
     { href: "/florist/orders", label: "Encomendas", icon: ShoppingBag },
     { href: "/florist/compensations", label: "Pagamentos", icon: Banknote },
+    { href: "/florist/subscription", label: "Subscrição", icon: CreditCard },
 ];
 
 export const accountNavigation: NavigationItem[] = [

@@ -43,6 +43,9 @@ export class AutomaticOrderOffersService {
       where: {
         active: true,
         acceptingOrders: true,
+        subscriptions: {
+          some: { status: { in: ['FREE', 'TRIALING', 'ACTIVE'] }, endedAt: null },
+        },
         addressLatitude: { not: null },
         addressLongitude: { not: null },
         ...(excludedFloristIds.length > 0 && { id: { notIn: excludedFloristIds } }),

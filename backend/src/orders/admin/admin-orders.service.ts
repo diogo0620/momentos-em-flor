@@ -91,11 +91,6 @@ export class AdminOrdersService {
                         }
                     }
                 },
-                taxTotals: {
-                    include: {
-                        taxCode: true
-                    }
-                },
                 payment: {
                     include: {
                         refund: true,

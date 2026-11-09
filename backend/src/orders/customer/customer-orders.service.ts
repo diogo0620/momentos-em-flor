@@ -20,6 +20,7 @@ import { normalizeOptionalPhoneNumber } from '@/common/phone/phone-number';
 import { DeliveryAreaService } from '@/store-settings/delivery-area.service';
 import { CustomerCreateOrderReviewDto } from './dtos/customer-create-order-review.dto';
 import { toInternalOrderStatusFilter } from './customer-order-status';
+import { CouponsService } from '@/coupons/coupons.service';
 
 
 @Injectable()
@@ -31,6 +32,7 @@ export class CustomerOrdersService {
         private readonly storeSettingsService: AdminStoreSettingsService,
         private readonly stripeService: StripeService,
         private readonly deliveryArea: DeliveryAreaService,
+        private readonly coupons: CouponsService,
     ) { }
 
     async cancelPendingPayment(
@@ -110,6 +112,8 @@ export class CustomerOrdersService {
                     },
                 });
             }
+
+            await tx.couponRedemption.deleteMany({ where: { orderId: order.id } });
         });
     }
 
@@ -591,75 +595,17 @@ export class CustomerOrdersService {
             productTaxAmount + deliveryTaxAmount,
         );
 
-        const discount = 0;
+        const amountBeforeDiscount = roundMoney(
+            subtotal + deliveryGrossAmount,
+        );
+        const couponResult = dto.couponCode
+            ? await this.coupons.validate(dto.couponCode, user.id, amountBeforeDiscount)
+            : null;
+        const discount = couponResult?.discount ?? 0;
 
         const total = roundMoney(
-            subtotal + deliveryGrossAmount - discount,
+            amountBeforeDiscount - discount,
         );
-
-        /*
-         * 9. Aggregate tax totals by tax code
-         */
-
-        const taxTotalsMap = new Map<
-            number,
-            {
-                taxCodeId: number;
-                netAmount: number;
-                taxAmount: number;
-                grossAmount: number;
-            }
-        >();
-
-        for (const item of calculatedItems) {
-            const existing = taxTotalsMap.get(item.taxCodeId);
-
-            if (existing) {
-                existing.netAmount = roundMoney(
-                    existing.netAmount + item.netAmount,
-                );
-
-                existing.taxAmount = roundMoney(
-                    existing.taxAmount + item.taxAmount,
-                );
-
-                existing.grossAmount = roundMoney(
-                    existing.grossAmount + item.grossAmount,
-                );
-            } else {
-                taxTotalsMap.set(item.taxCodeId, {
-                    taxCodeId: item.taxCodeId,
-                    netAmount: item.netAmount,
-                    taxAmount: item.taxAmount,
-                    grossAmount: item.grossAmount,
-                });
-            }
-        }
-
-        {
-            const existing = taxTotalsMap.get(deliveryTaxCodeId);
-
-            if (existing) {
-                existing.netAmount = roundMoney(
-                    existing.netAmount + deliveryNetAmount,
-                );
-
-                existing.taxAmount = roundMoney(
-                    existing.taxAmount + deliveryTaxAmount,
-                );
-
-                existing.grossAmount = roundMoney(
-                    existing.grossAmount + deliveryGrossAmount,
-                );
-            } else {
-                taxTotalsMap.set(deliveryTaxCodeId, {
-                    taxCodeId: deliveryTaxCodeId,
-                    netAmount: deliveryNetAmount,
-                    taxAmount: deliveryTaxAmount,
-                    grossAmount: deliveryGrossAmount,
-                });
-            }
-        }
 
         /*
          * 10. Generate order number
@@ -678,7 +624,7 @@ export class CustomerOrdersService {
         const deliveryCoordinates = deliveryArea.coordinates;
 
         /*
-         * 11. Create the order, items and tax totals atomically
+         * 11. Create the order and item snapshots atomically
          */
 
         const order = await this.prisma.$transaction(async (tx) => {
@@ -724,6 +670,17 @@ export class CustomerOrdersService {
                     taxAmount,
                     deliveryFee,
                     discount,
+                    couponCode: couponResult?.code ?? null,
+                    ...(couponResult && {
+                        coupon: { connect: { id: couponResult.coupon.id } },
+                        couponRedemption: {
+                            create: {
+                                couponId: couponResult.coupon.id,
+                                customerId: user.id,
+                                discountAmount: couponResult.discount,
+                            },
+                        },
+                    }),
                     total,
                     expectedFloristTotal,
 
@@ -733,20 +690,6 @@ export class CustomerOrdersService {
                         create: itemsToCreate,
                     },
 
-                    taxTotals: {
-                        create: Array.from(taxTotalsMap.values()).map(
-                            (taxTotal) => ({
-                                netAmount: taxTotal.netAmount,
-                                taxAmount: taxTotal.taxAmount,
-                                grossAmount: taxTotal.grossAmount,
-                                taxCode: {
-                                    connect: {
-                                        id: taxTotal.taxCodeId,
-                                    },
-                                },
-                            }),
-                        ),
-                    },
                 },
             });
         });

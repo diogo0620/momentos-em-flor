@@ -88,6 +88,14 @@ export class StripeService {
         );
     }
 
+    async cancelSubscription(subscriptionId: string) {
+        return this.stripe.subscriptions.cancel(subscriptionId);
+    }
+
+    async createBillingPortalSession(customerId: string, returnUrl: string) {
+        return this.stripe.billingPortal.sessions.create({ customer: customerId, return_url: returnUrl });
+    }
+
     constructWebhookEvent(
         payload: string | Buffer,
         signature: string,

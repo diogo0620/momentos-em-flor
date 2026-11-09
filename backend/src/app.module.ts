@@ -23,6 +23,8 @@ import { FloristCompensationsModule } from './florist-compensations/florist-comp
 import { validateEnvironment } from '@/config/environment.validation';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { CouponsModule } from './coupons/coupons.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -48,6 +50,8 @@ import { AppService } from './app.service';
     EventsModule,
     MoloniModule,
     FloristCompensationsModule,
+    CouponsModule,
+    SubscriptionsModule,
     LoggerModule
   ],
   controllers: [AppController],

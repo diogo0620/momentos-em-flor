@@ -1343,55 +1343,6 @@ export default function EditOrderPage() {
                             </div>
                         </div>
 
-                        {order.taxTotals.length > 0 && (
-                            <div className="mt-6">
-                                <h3 className="mb-3 text-sm font-semibold text-[#2F3B2A]">
-                                    Discriminação de IVA
-                                </h3>
-
-                                <div className="overflow-x-auto rounded-2xl border border-[#E8EBE4]">
-                                    <table className="w-full text-left text-sm">
-                                        <thead className="bg-[#FAFBF8] text-xs text-[#7A8474]">
-                                            <tr>
-                                                <th className="px-4 py-3 font-medium">
-                                                    Código de IVA
-                                                </th>
-                                                <th className="px-4 py-3 font-medium">
-                                                    Valor sem IVA
-                                                </th>
-                                                <th className="px-4 py-3 font-medium">
-                                                    IVA
-                                                </th>
-                                                <th className="px-4 py-3 font-medium">
-                                                    Total
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {order.taxTotals.map((tax) => (
-                                                <tr
-                                                    key={tax.id}
-                                                    className="border-t border-[#EEF0EB]"
-                                                >
-                                                    <td className="px-4 py-3 font-medium text-[#374132]">
-                                                        {tax.taxCode.name}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-gray-600">
-                                                        {formatPrice(tax.netAmount)}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-gray-600">
-                                                        {formatPrice(tax.taxAmount)}
-                                                    </td>
-                                                    <td className="px-4 py-3 font-medium text-[#374132]">
-                                                        {formatPrice(tax.grossAmount)}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
                     </Section>
 
                     <Section

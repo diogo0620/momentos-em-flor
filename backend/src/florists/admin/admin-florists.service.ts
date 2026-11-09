@@ -123,7 +123,13 @@ export class AdminFloristsService {
                     addressLongitude: coordinates.longitude,
                     deliveryRadiusKm: dto.deliveryRadiusKm,
                     acceptingOrders: dto.acceptingOrders ?? true,
-                    active: dto.active ?? true
+                    active: dto.active ?? true,
+                    subscriptions: {
+                        create: {
+                            plan: { connect: { code: 'FREE' } },
+                            status: 'FREE',
+                        },
+                    },
                 },
             });
 

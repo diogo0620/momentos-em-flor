@@ -14,6 +14,7 @@ import { customerOrdersApi } from "@/lib/api/orders/customer-orders";
 import { storeSettingsApi } from "@/lib/api/store-settings/store-settings";
 import PhoneInput from "@/components/forms/PhoneInput";
 import { isValidPhone } from "@/lib/validation/auth";
+import { customerCouponsApi } from "@/lib/api/coupons/customer-coupons";
 
 
 const PORTUGAL_DISTRICTS = [
@@ -141,6 +142,11 @@ export default function CheckoutPage() {
     const [error, setError] =
         useState<string | null>(null);
 
+    const [couponInput, setCouponInput] = useState("");
+    const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
+    const [couponError, setCouponError] = useState<string | null>(null);
+    const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+
     const total = items.reduce(
         (sum, item) =>
             sum +
@@ -232,8 +238,24 @@ export default function CheckoutPage() {
 
     const grandTotal =
         deliveryFee !== null
-            ? total + deliveryFee
+            ? Math.max(0, total + deliveryFee - (appliedCoupon?.discount ?? 0))
             : null;
+
+    async function applyCoupon() {
+        if (!couponInput.trim() || deliveryFee === null) return;
+        try {
+            setIsApplyingCoupon(true);
+            setCouponError(null);
+            const result = await customerCouponsApi.validate(couponInput.trim(), total + deliveryFee);
+            setAppliedCoupon({ code: result.code, discount: result.discount });
+            setCouponInput(result.code);
+        } catch (err) {
+            setAppliedCoupon(null);
+            setCouponError(err instanceof Error ? err.message : "Não foi possível aplicar o cupão.");
+        } finally {
+            setIsApplyingCoupon(false);
+        }
+    }
 
     async function handleSubmit(
         event: React.FormEvent<HTMLFormElement>,
@@ -329,6 +351,8 @@ export default function CheckoutPage() {
             setError(null);
 
             const data: CustomerCreateOrder = {
+
+                ...(appliedCoupon ? { couponCode: appliedCoupon.code } : {}),
 
                 items: items.map(
                     (item) => ({
@@ -1474,6 +1498,23 @@ export default function CheckoutPage() {
                                         </span>
 
                                     </div>
+
+                                    <div className="rounded-2xl border border-[#E2E7DD] bg-white p-3">
+                                        <label htmlFor="coupon-code" className="text-xs font-semibold text-[#566449]">Cupão de desconto</label>
+                                        <div className="mt-2 flex gap-2">
+                                            <input id="coupon-code" value={couponInput} onChange={(event) => { setCouponInput(event.target.value.toUpperCase()); setAppliedCoupon(null); }} placeholder="Introduza o código" className="min-w-0 flex-1 rounded-xl border border-[#E2E7DD] px-3 py-2.5 text-sm uppercase outline-none focus:border-[#71805F]" />
+                                            <button type="button" onClick={() => void applyCoupon()} disabled={isApplyingCoupon || !couponInput.trim() || deliveryFee === null} className="rounded-xl bg-[#55624A] px-4 text-sm font-semibold text-white disabled:opacity-50">{isApplyingCoupon ? "A validar..." : "Aplicar"}</button>
+                                        </div>
+                                        {couponError && <p className="mt-2 text-xs text-red-700">{couponError}</p>}
+                                        {appliedCoupon && <p className="mt-2 text-xs font-semibold text-green-700">Cupão {appliedCoupon.code} aplicado.</p>}
+                                    </div>
+
+                                    {appliedCoupon && (
+                                        <div className="flex justify-between font-medium text-green-700">
+                                            <span>Desconto</span>
+                                            <span>− {formatPrice(appliedCoupon.discount)}</span>
+                                        </div>
+                                    )}
 
                                 </div>
 

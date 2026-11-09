@@ -35,11 +35,6 @@ type AdminOrderWithRelations = Prisma.OrderGetPayload<{
                 };
             };
         };
-        taxTotals: {
-            include: {
-                taxCode: true;
-            };
-        };
         payment: {
             include: {
                 refund: true;
@@ -209,21 +204,6 @@ export class AdminOrdersMapper extends BaseMapper<
                 florist: {
                     id: offer.florist.id,
                     name: offer.florist.name
-                },
-            })),
-
-            taxTotals: order.taxTotals.map((taxTotal) => ({
-                id: taxTotal.id,
-                orderId: taxTotal.orderId,
-                taxCodeId: taxTotal.taxCodeId,
-                netAmount: Number(taxTotal.netAmount),
-                taxAmount: Number(taxTotal.taxAmount),
-                grossAmount: Number(taxTotal.grossAmount),
-                createdAt: taxTotal.createdAt,
-                updatedAt: taxTotal.updatedAt,
-                taxCode: {
-                    id: taxTotal.taxCode.id,
-                    name: taxTotal.taxCode.name,
                 },
             })),
 

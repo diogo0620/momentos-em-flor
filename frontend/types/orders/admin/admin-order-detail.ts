@@ -68,18 +68,6 @@ export type AdminOrderOffer = {
     florist: AdminOrderFlorist;
 };
 
-export type AdminOrderTaxTotal = {
-    id: number;
-    orderId: number;
-    taxCodeId: number;
-    netAmount: number;
-    taxAmount: number;
-    grossAmount: number;
-    createdAt: string;
-    updatedAt: string;
-    taxCode: AdminOrderTaxCode;
-};
-
 export type AdminOrder = {
     id: number;
     orderNumber: string;
@@ -127,8 +115,6 @@ export type AdminOrder = {
 
     items: AdminOrderItem[];
     offers: AdminOrderOffer[];
-    taxTotals: AdminOrderTaxTotal[];
-
     payment: {
         id: number;
         status: "PENDING" | "PAID" | "FAILED" | "CANCELLED" | "REFUNDED";

@@ -249,18 +249,22 @@ async function clearDatabase(): Promise<void> {
     // Encomendas e pagamentos
     await tx.orderOffer.deleteMany();
     await tx.payment.deleteMany();
-    await tx.orderTaxTotal.deleteMany();
+    await tx.couponRedemption.deleteMany();
     await tx.orderItemComponent.deleteMany();
     await tx.orderItem.deleteMany();
     await tx.order.deleteMany();
 
     // Autenticação
+    await tx.emailVerificationToken.deleteMany();
     await tx.passwordResetToken.deleteMany();
     await tx.refreshToken.deleteMany();
 
     // Utilizadores e floristas
     await tx.user.deleteMany();
+    await tx.floristSubscription.deleteMany();
     await tx.florist.deleteMany();
+    await tx.floristSubscriptionPlan.deleteMany();
+    await tx.coupon.deleteMany();
 
     // Catálogo
     await tx.productVariant.deleteMany();
@@ -291,6 +295,12 @@ async function main() {
   const taxCode = await createTaxCode();
   const categories = await createCategories();
   const florist = await createFlorist();
+  const freePlan = await prisma.floristSubscriptionPlan.create({
+    data: { code: 'FREE', name: 'Gratuito', description: 'Acesso gratuito à plataforma.', monthlyPrice: 0, free: true },
+  });
+  await prisma.floristSubscription.create({
+    data: { floristId: florist.id, planId: freePlan.id, status: 'FREE' },
+  });
   const users = await createUsers(florist.id);
   const products = await createProducts(taxCode.id, categories);
 

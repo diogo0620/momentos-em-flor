@@ -110,7 +110,7 @@ export default function RegisterPage() {
                 password,
             });
 
-            router.push("/login?registered=1");
+            router.push(`/verify-email?email=${encodeURIComponent(email.trim().toLowerCase())}`);
         } catch (error) {
             setError(
                 error instanceof Error

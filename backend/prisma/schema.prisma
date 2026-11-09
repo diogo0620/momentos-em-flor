@@ -50,11 +50,11 @@ enum FloristCompensationStatus {
 }
 
 enum PaymentStatus {
-    PENDING
-    PAID
-    FAILED
-    CANCELLED
-    REFUNDED
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
 }
 
 enum PaymentRefundStatus {
@@ -62,6 +62,20 @@ enum PaymentRefundStatus {
   SUCCEEDED
   FAILED
   CANCELLED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum FloristSubscriptionStatus {
+  FREE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  INCOMPLETE
 }
 
 //
@@ -157,18 +171,18 @@ enum ReviewCategory {
 //
 
 model Category {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
-  slug        String    @unique
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  slug        String  @unique
   description String?
-  imagePath String?
-  featured     Boolean   @default(false)
-  active      Boolean   @default(true)
+  imagePath   String?
+  featured    Boolean @default(false)
+  active      Boolean @default(true)
 
-  products    Product[] @relation("ProductCategories")
+  products Product[] @relation("ProductCategories")
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([active])
 }
@@ -194,26 +208,27 @@ model Florist {
   active          Boolean @default(true)
   acceptingOrders Boolean @default(true)
 
-  addressStreet  String
+  addressStreet       String
   addressStreetNumber String
-  addressStreet2 String?
-  addressPostalCode  String
-  addressCity        String
-  addressDistrict    String
-  addressCountryCode String @db.Char(2)
-  addressLatitude  Decimal? @db.Decimal(9, 6)
-  addressLongitude Decimal? @db.Decimal(9, 6)
+  addressStreet2      String?
+  addressPostalCode   String
+  addressCity         String
+  addressDistrict     String
+  addressCountryCode  String   @db.Char(2)
+  addressLatitude     Decimal? @db.Decimal(9, 6)
+  addressLongitude    Decimal? @db.Decimal(9, 6)
 
   deliveryRadiusKm Decimal @db.Decimal(5, 2)
-  averageRating Decimal @default(0) @db.Decimal(3, 2)
-  reviewCount Int @default(0)
+  averageRating    Decimal @default(0) @db.Decimal(3, 2)
+  reviewCount      Int     @default(0)
 
   users User[]
 
-  orderOffers                       OrderOffer[]
-  orderReviews                      OrderReview[]
-  assignedOrders                    Order[]                            @relation("OrderAssignedFlorist")
-  compensations                     FloristCompensation[]
+  orderOffers    OrderOffer[]
+  orderReviews   OrderReview[]
+  assignedOrders Order[]               @relation("OrderAssignedFlorist")
+  compensations  FloristCompensation[]
+  subscriptions  FloristSubscription[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -227,39 +242,54 @@ model Florist {
 //
 
 model PasswordResetToken {
-  id        Int      @id @default(autoincrement())
-  tokenHash String   @unique
+  id        Int       @id @default(autoincrement())
+  tokenHash String    @unique
   userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model EmailVerificationToken {
+  id        Int       @id @default(autoincrement())
+  tokenHash String    @unique
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 
   @@index([userId])
   @@index([expiresAt])
 }
 
 model User {
-  id Int @id @default(autoincrement())
-  firstName String
-  lastName  String
-  email        String @unique
-  passwordHash String
-  phone String
-  taxNumber String?
-  role UserRole
-  emailVerified Boolean @default(false)
-  lastLoginAt DateTime?
-  refreshTokens RefreshToken[]
-  passwordResetTokens PasswordResetToken[]
-  floristId Int?
-  florist   Florist? @relation(fields: [floristId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  orderReviews       OrderReview[]
-  orders Order[]
+  id                      Int                      @id @default(autoincrement())
+  firstName               String
+  lastName                String
+  email                   String                   @unique
+  passwordHash            String
+  phone                   String
+  taxNumber               String?
+  role                    UserRole
+  emailVerified           Boolean                  @default(false)
+  lastLoginAt             DateTime?
+  refreshTokens           RefreshToken[]
+  passwordResetTokens     PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  floristId               Int?
+  florist                 Florist?                 @relation(fields: [floristId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  orderReviews            OrderReview[]
+  orders                  Order[]
+  couponRedemptions       CouponRedemption[]
 
   moloniSync MoloniSync?
 
-  active        Boolean @default(true)
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -295,21 +325,19 @@ model RefreshToken {
 //
 
 model TaxCode {
-  id Int @id @default(autoincrement())
-  name String @unique
-  description String
-  rate Decimal @db.Decimal(5, 2)
-  products Product[]
-  orderItems OrderItem[]
-  orderTaxTotals OrderTaxTotal[]
+  id                    Int             @id @default(autoincrement())
+  name                  String          @unique
+  description           String
+  rate                  Decimal         @db.Decimal(5, 2)
+  products              Product[]
+  orderItems            OrderItem[]
   deliveryStoreSettings StoreSettings[]
 
   moloniSync MoloniSync?
 
-  active Boolean @default(true)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([active])
 }
@@ -321,25 +349,25 @@ model TaxCode {
 model Product {
   id Int @id @default(autoincrement())
 
-  name        String @unique
-  slug        String @unique
-  description String?
-  imagePath String?
-  type          ProductType @default(SALE)
-  featured      Boolean     @default(false)
-  rentalDeposit Decimal?    @db.Decimal(10, 2)
-  customerPrice Decimal @db.Decimal(10, 2)
-  floristPrice  Decimal @db.Decimal(10, 2)
-  taxCodeId Int
-  taxCode   TaxCode @relation(fields: [taxCodeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  categories Category[] @relation("ProductCategories")
-  components ProductComponent[]
-  variants   ProductVariant[]
-  orderItems OrderItem[]
+  name          String             @unique
+  slug          String             @unique
+  description   String?
+  imagePath     String?
+  type          ProductType        @default(SALE)
+  featured      Boolean            @default(false)
+  rentalDeposit Decimal?           @db.Decimal(10, 2)
+  customerPrice Decimal            @db.Decimal(10, 2)
+  floristPrice  Decimal            @db.Decimal(10, 2)
+  taxCodeId     Int
+  taxCode       TaxCode            @relation(fields: [taxCodeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  categories    Category[]         @relation("ProductCategories")
+  components    ProductComponent[]
+  variants      ProductVariant[]
+  orderItems    OrderItem[]
 
   moloniSync MoloniSync?
 
-  active        Boolean     @default(true)
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -377,7 +405,7 @@ model ProductComponent {
   maxQuantity         Int
 
   customerPricePerAdditionalUnit Decimal @db.Decimal(10, 2)
-  floristPricePerAdditionalUnit Decimal @db.Decimal(10, 2)
+  floristPricePerAdditionalUnit  Decimal @db.Decimal(10, 2)
 
   sortOrder Int @default(0)
 
@@ -429,7 +457,6 @@ model ProductVariant {
   customerPrice Decimal @db.Decimal(10, 2)
   floristPrice  Decimal @db.Decimal(10, 2)
 
-
   sortOrder Int @default(0)
 
   active Boolean @default(true)
@@ -444,7 +471,6 @@ model ProductVariant {
   @@index([type])
   @@index([active])
 }
-
 
 //
 // ORDER
@@ -497,9 +523,9 @@ model Order {
   // Delivery Address Snapshot
   //
 
-  deliveryStreet  String
+  deliveryStreet       String
   deliveryStreetNumber String
-  deliveryStreet2 String?
+  deliveryStreet2      String?
 
   deliveryPostalCode  String
   deliveryCity        String
@@ -523,17 +549,19 @@ model Order {
 
   review OrderReview?
 
-  subtotal    Decimal @db.Decimal(10, 2)
-  taxAmount   Decimal @db.Decimal(10, 2)
-  deliveryFee Decimal @db.Decimal(10, 2)
-  discount    Decimal @db.Decimal(10, 2)
-  total       Decimal @db.Decimal(10, 2)
+  subtotal             Decimal @db.Decimal(10, 2)
+  taxAmount            Decimal @db.Decimal(10, 2)
+  deliveryFee          Decimal @db.Decimal(10, 2)
+  discount             Decimal @db.Decimal(10, 2)
+  couponId             Int?
+  coupon               Coupon? @relation(fields: [couponId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  couponCode           String?
+  total                Decimal @db.Decimal(10, 2)
   expectedFloristTotal Decimal @default(0) @db.Decimal(10, 2)
 
-  payment Payment?
-  floristCompensation FloristCompensation?
+  payment              Payment?
+  floristCompensation  FloristCompensation?
   moloniFiscalDocument MoloniFiscalDocument?
-
 
   status OrderStatus @default(CREATED)
 
@@ -541,26 +569,102 @@ model Order {
   // Relations
   //
 
-  items         OrderItem[]
-  offers        OrderOffer[]
-  taxTotals OrderTaxTotal[]
+  items            OrderItem[]
+  offers           OrderOffer[]
+  couponRedemption CouponRedemption?
 
-  createdAt DateTime @default(now())
-  paidAt      DateTime?
-  assignedAt DateTime?
-  inProductionAt        DateTime?
-  readyForDeliveryAt    DateTime?
-  deliveredAt           DateTime?
-  updatedAt DateTime @updatedAt
+  createdAt          DateTime  @default(now())
+  paidAt             DateTime?
+  assignedAt         DateTime?
+  inProductionAt     DateTime?
+  readyForDeliveryAt DateTime?
+  deliveredAt        DateTime?
+  updatedAt          DateTime  @updatedAt
 
-  cancelledAt        DateTime?
-  cancellationReason OrderCancellationReason?
-  cancellationReasonDetails   String?
+  cancelledAt               DateTime?
+  cancellationReason        OrderCancellationReason?
+  cancellationReasonDetails String?
 
   @@index([customerId])
   @@index([assignedFloristId])
   @@index([status])
   @@index([deliveryDate])
+  @@index([couponId])
+}
+
+model Coupon {
+  id                            Int                @id @default(autoincrement())
+  code                          String             @unique
+  name                          String
+  description                   String?
+  type                          DiscountType
+  value                         Decimal            @db.Decimal(10, 2)
+  minimumOrderAmount            Decimal?           @db.Decimal(10, 2)
+  maximumDiscountAmount         Decimal?           @db.Decimal(10, 2)
+  startsAt                      DateTime?
+  expiresAt                     DateTime?
+  maximumRedemptions            Int?
+  maximumRedemptionsPerCustomer Int                @default(1)
+  active                        Boolean            @default(true)
+  orders                        Order[]
+  redemptions                   CouponRedemption[]
+  createdAt                     DateTime           @default(now())
+  updatedAt                     DateTime           @updatedAt
+
+  @@index([active, startsAt, expiresAt])
+}
+
+model CouponRedemption {
+  id             Int      @id @default(autoincrement())
+  couponId       Int
+  coupon         Coupon   @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  customerId     Int
+  customer       User     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  orderId        Int      @unique
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  discountAmount Decimal  @db.Decimal(10, 2)
+  createdAt      DateTime @default(now())
+
+  @@index([couponId, customerId])
+  @@index([couponId, createdAt])
+}
+
+model FloristSubscriptionPlan {
+  id            Int                   @id @default(autoincrement())
+  code          String                @unique
+  name          String
+  description   String?
+  monthlyPrice  Decimal               @db.Decimal(10, 2)
+  currency      String                @default("EUR")
+  stripePriceId String?               @unique
+  free          Boolean               @default(false)
+  active        Boolean               @default(true)
+  sortOrder     Int                   @default(0)
+  subscriptions FloristSubscription[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@index([active, sortOrder])
+}
+
+model FloristSubscription {
+  id                   Int                       @id @default(autoincrement())
+  floristId            Int
+  florist              Florist                   @relation(fields: [floristId], references: [id], onDelete: Cascade)
+  planId               Int
+  plan                 FloristSubscriptionPlan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+  status               FloristSubscriptionStatus @default(FREE)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?                   @unique
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean                   @default(false)
+  endedAt              DateTime?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+
+  @@index([floristId, status])
+  @@index([planId])
 }
 
 //
@@ -599,7 +703,7 @@ model OrderItem {
 
   name        String
   description String?
-  imagePath String?
+  imagePath   String?
 
   //
   // Selected variant snapshot
@@ -637,7 +741,7 @@ model OrderItem {
 
   taxCodeId Int?
   taxCode   TaxCode? @relation(fields: [taxCodeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  taxRate    Decimal? @db.Decimal(5, 2)
+  taxRate   Decimal? @db.Decimal(5, 2)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -676,8 +780,6 @@ model OrderItemComponent {
   @@index([componentId])
 }
 
-
-
 //
 // ORDER OFFER
 //
@@ -687,7 +789,7 @@ model OrderItemComponent {
 //
 
 model OrderOffer {
-  id Int @id @default(autoincrement())
+  id            Int     @id @default(autoincrement())
   automationKey String? @unique
 
   //
@@ -718,21 +820,21 @@ model OrderOffer {
 
   distanceKm Decimal @db.Decimal(8, 2)
 
-  viewedAt   DateTime?
-  acceptedAt DateTime?
-  declinedAt DateTime?
-  expiresAt  DateTime
-  notificationSentAt DateTime?
-  notificationAttempts Int @default(0)
+  viewedAt                  DateTime?
+  acceptedAt                DateTime?
+  declinedAt                DateTime?
+  expiresAt                 DateTime
+  notificationSentAt        DateTime?
+  notificationAttempts      Int       @default(0)
   notificationLastAttemptAt DateTime?
-  notificationLastError String?
-  cancelledAt DateTime?
+  notificationLastError     String?
+  cancelledAt               DateTime?
 
-  declineReason         OrderOfferDeclineReason?
-  declineReasonDetails  String?
+  declineReason        OrderOfferDeclineReason?
+  declineReasonDetails String?
 
-  cancellationReason          OrderOfferCancellationReason?
-  compensation               FloristCompensation?
+  cancellationReason OrderOfferCancellationReason?
+  compensation       FloristCompensation?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -747,24 +849,24 @@ model OrderOffer {
 model FloristCompensation {
   id Int @id @default(autoincrement())
 
-  orderId Int @unique
+  orderId Int   @unique
   order   Order @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-  orderOfferId Int @unique
+  orderOfferId Int        @unique
   orderOffer   OrderOffer @relation(fields: [orderOfferId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   floristId Int
   florist   Florist @relation(fields: [floristId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-  amount Decimal @db.Decimal(10, 2)
+  amount Decimal                   @db.Decimal(10, 2)
   status FloristCompensationStatus @default(PENDING_DELIVERY)
 
-  dueAt DateTime?
-  paidAt DateTime?
+  dueAt            DateTime?
+  paidAt           DateTime?
   paymentReference String?
-  paymentNotes String?
+  paymentNotes     String?
 
-  cancelledAt DateTime?
+  cancelledAt        DateTime?
   cancellationReason String?
 
   createdAt DateTime @default(now())
@@ -819,21 +921,20 @@ model OrderReviewRating {
 }
 
 model StoreSettings {
-  id          Int      @id @default(1)
-  deliveryFee Decimal  @db.Decimal(10, 2)
-  deliveryTaxCodeId Int?
-  deliveryTaxCode TaxCode? @relation(fields: [deliveryTaxCodeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  deliveryAreaEnabled Boolean @default(true)
-  deliveryAreaName String @default("Santa Maria da Feira e arredores")
-  deliveryCenterLatitude Decimal @default(40.924574) @db.Decimal(9, 6)
-  deliveryCenterLongitude Decimal @default(-8.543956) @db.Decimal(9, 6)
-  deliveryRadiusKm Decimal @default(15) @db.Decimal(8, 2)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                      Int      @id @default(1)
+  deliveryFee             Decimal  @db.Decimal(10, 2)
+  deliveryTaxCodeId       Int?
+  deliveryTaxCode         TaxCode? @relation(fields: [deliveryTaxCodeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  deliveryAreaEnabled     Boolean  @default(true)
+  deliveryAreaName        String   @default("Santa Maria da Feira e arredores")
+  deliveryCenterLatitude  Decimal  @default(40.924574) @db.Decimal(9, 6)
+  deliveryCenterLongitude Decimal  @default(-8.543956) @db.Decimal(9, 6)
+  deliveryRadiusKm        Decimal  @default(15) @db.Decimal(8, 2)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   @@index([deliveryTaxCodeId])
 }
-
 
 model MoloniSettings {
   id Int @id @default(1)
@@ -845,20 +946,20 @@ model MoloniSettings {
   username String
   password String
 
-  accessToken           String?
-  refreshToken          String?
-  accessTokenExpiresAt  DateTime?
+  accessToken          String?
+  refreshToken         String?
+  accessTokenExpiresAt DateTime?
 
   lastConnectionCheckAt DateTime?
-  lastConnectionError    String?
-  connected              Boolean @default(false)
+  lastConnectionError   String?
+  connected             Boolean   @default(false)
 
-  invoiceDocumentSetId String?
-  creditNoteDocumentSetId String?
-  receiptDocumentSetId String?
-  paymentMethodId      String?
-  defaultCustomerId    String?
-  defaultProductId     String?
+  invoiceDocumentSetId     String?
+  creditNoteDocumentSetId  String?
+  receiptDocumentSetId     String?
+  paymentMethodId          String?
+  defaultCustomerId        String?
+  defaultProductId         String?
   issueReceiptAfterPayment Boolean @default(false)
 
   createdAt DateTime @default(now())
@@ -868,28 +969,28 @@ model MoloniSettings {
 model MoloniFiscalDocument {
   id Int @id @default(autoincrement())
 
-  orderId Int @unique
+  orderId Int   @unique
   order   Order @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   moloniCustomerId String?
 
-  invoiceStatus MoloniDocumentStatus @default(QUEUED)
-  invoiceId     String? @unique
-  invoiceIssuedAt DateTime?
-  invoiceEmailId String?
-  invoiceEmailSentAt DateTime?
+  invoiceStatus         MoloniDocumentStatus @default(QUEUED)
+  invoiceId             String?              @unique
+  invoiceIssuedAt       DateTime?
+  invoiceEmailId        String?
+  invoiceEmailSentAt    DateTime?
   invoiceEmailLastError String?
 
-  receiptStatus MoloniDocumentStatus @default(NOT_REQUIRED)
-  receiptId     String? @unique
+  receiptStatus   MoloniDocumentStatus @default(NOT_REQUIRED)
+  receiptId       String?              @unique
   receiptIssuedAt DateTime?
 
   creditNoteRequiredAt DateTime?
   creditNoteStatus     MoloniDocumentStatus @default(NOT_REQUIRED)
-  creditNoteId         String? @unique
+  creditNoteId         String?              @unique
   creditNoteRecordedAt DateTime?
 
-  attempts      Int @default(0)
+  attempts      Int       @default(0)
   lastAttemptAt DateTime?
   lastError     String?
 
@@ -909,20 +1010,20 @@ model MoloniSync {
   moloniId String?
 
   // Synchronization state
-  status MoloniSyncStatus @default(NOT_SYNCED)
-  message String?
+  status        MoloniSyncStatus @default(NOT_SYNCED)
+  message       String?
   lastAttemptAt DateTime?
-  syncedAt DateTime?
+  syncedAt      DateTime?
 
   // Related entities (one-to-one)
-  productId Int? @unique
-  product Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId Int?     @unique
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  taxCodeId Int? @unique
-  taxCode TaxCode? @relation(fields: [taxCodeId], references: [id], onDelete: Cascade)
+  taxCodeId Int?     @unique
+  taxCode   TaxCode? @relation(fields: [taxCodeId], references: [id], onDelete: Cascade)
 
-  userId Int? @unique
-  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int?  @unique
+  user   User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -931,66 +1032,43 @@ model MoloniSync {
   @@index([moloniId])
 }
 
-
-
 model Payment {
-    id                    Int           @id @default(autoincrement())
-
-    orderId               Int           @unique
-    order                 Order         @relation(fields: [orderId], references: [id])
-
-    status                PaymentStatus @default(PENDING)
-
-    amount                Decimal       @db.Decimal(10, 2)
-    currency              String        @default("EUR")
-
-    stripeSessionId       String?       @unique
-    stripePaymentIntentId String?       @unique
-
-    paidAt                DateTime?
-    refund                PaymentRefund?
-
-    createdAt             DateTime      @default(now())
-    updatedAt             DateTime      @updatedAt
-
-    @@index([status])
-}
-
-model PaymentRefund {
-    id                    Int                 @id @default(autoincrement())
-    paymentId             Int                 @unique
-    payment               Payment             @relation(fields: [paymentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-    stripeRefundId        String?             @unique
-    status                PaymentRefundStatus @default(PENDING)
-    amount                Decimal             @db.Decimal(10, 2)
-    currency              String              @default("EUR")
-    reason                String
-    requestedByUserId     Int
-    failureReason         String?
-    requestedAt           DateTime            @default(now())
-    completedAt           DateTime?
-    updatedAt             DateTime            @updatedAt
-
-    @@index([status])
-}
-
-model OrderTaxTotal {
   id Int @id @default(autoincrement())
 
-  orderId Int
-  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderId Int   @unique
+  order   Order @relation(fields: [orderId], references: [id])
 
-  taxCodeId Int
-  taxCode   TaxCode @relation(fields: [taxCodeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  status PaymentStatus @default(PENDING)
 
-  netAmount   Decimal @db.Decimal(10, 2)
-  taxAmount   Decimal @db.Decimal(10, 2)
-  grossAmount Decimal @db.Decimal(10, 2)
+  amount   Decimal @db.Decimal(10, 2)
+  currency String  @default("EUR")
+
+  stripeSessionId       String? @unique
+  stripePaymentIntentId String? @unique
+
+  paidAt DateTime?
+  refund PaymentRefund?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([orderId, taxCodeId])
-  @@index([orderId])
-  @@index([taxCodeId])
+  @@index([status])
+}
+
+model PaymentRefund {
+  id                Int                 @id @default(autoincrement())
+  paymentId         Int                 @unique
+  payment           Payment             @relation(fields: [paymentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  stripeRefundId    String?             @unique
+  status            PaymentRefundStatus @default(PENDING)
+  amount            Decimal             @db.Decimal(10, 2)
+  currency          String              @default("EUR")
+  reason            String
+  requestedByUserId Int
+  failureReason     String?
+  requestedAt       DateTime            @default(now())
+  completedAt       DateTime?
+  updatedAt         DateTime            @updatedAt
+
+  @@index([status])
 }

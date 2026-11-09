@@ -48,6 +48,8 @@ const ERROR_MESSAGES: Record<string, string> = {
     UNAUTHORIZED: "A sessão expirou ou as credenciais estão incorretas.",
     FORBIDDEN: "Não tens permissão para realizar esta ação.",
     INVALID_PASSWORD_RESET_TOKEN: "A ligação de recuperação é inválida ou expirou.",
+    INVALID_EMAIL_VERIFICATION_TOKEN: "A ligação de confirmação é inválida ou expirou.",
+    EMAIL_NOT_VERIFIED: "Confirma o teu email antes de iniciares sessão.",
 };
 
 const VALIDATION_TRANSLATIONS: Array<[RegExp, string]> = [

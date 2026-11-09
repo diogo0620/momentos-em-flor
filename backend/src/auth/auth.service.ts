@@ -20,6 +20,8 @@ import { EmailService } from '@/email/email.service';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { getRefreshCookieOptions } from './refresh-cookie';
+import { UserRole } from '@prisma/client';
+import { ForbiddenException } from '@nestjs/common';
 
 @Injectable()
 export class AuthService {
@@ -55,6 +57,10 @@ export class AuthService {
 
         if (!user.active) {
             Exceptions.unauthorized();
+        }
+
+        if (user.role === UserRole.CUSTOMER && !user.emailVerified) {
+            throw new ForbiddenException({ code: 'EMAIL_NOT_VERIFIED', message: 'Confirme o seu email antes de iniciar sessão.' });
         }
 
         await this.prisma.user.update({
@@ -152,6 +158,10 @@ export class AuthService {
 
         if (!storedToken.user.active) {
             Exceptions.unauthorized();
+        }
+
+        if (storedToken.user.role === UserRole.CUSTOMER && !storedToken.user.emailVerified) {
+            throw new ForbiddenException({ code: 'EMAIL_NOT_VERIFIED', message: 'Confirme o seu email antes de aceder à plataforma.' });
         }
 
         const newRefreshToken =

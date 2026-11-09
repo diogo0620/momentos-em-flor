@@ -258,35 +258,6 @@ export class AdminOrderPaymentResponseDto {
     refund!: AdminOrderPaymentRefundResponseDto | null;
 }
 
-export class AdminOrderTaxTotalResponseDto {
-    @ApiProperty()
-    id!: number;
-
-    @ApiProperty()
-    orderId!: number;
-
-    @ApiProperty()
-    taxCodeId!: number;
-
-    @ApiProperty({ type: Number })
-    netAmount!: number;
-
-    @ApiProperty({ type: Number })
-    taxAmount!: number;
-
-    @ApiProperty({ type: Number })
-    grossAmount!: number;
-
-    @ApiProperty()
-    createdAt!: Date;
-
-    @ApiProperty()
-    updatedAt!: Date;
-
-    @ApiProperty({ type: AdminOrderTaxCodeResponseDto })
-    taxCode!: AdminOrderTaxCodeResponseDto;
-}
-
 export class AdminOrderMoloniFiscalResponseDto {
     @ApiPropertyOptional({ nullable: true })
     invoiceId!: string | null;
@@ -442,9 +413,6 @@ export class AdminOrderResponseDto {
 
     @ApiProperty({ type: [AdminOrderOfferResponseDto] })
     offers!: AdminOrderOfferResponseDto[];
-
-    @ApiProperty({ type: [AdminOrderTaxTotalResponseDto] })
-    taxTotals!: AdminOrderTaxTotalResponseDto[];
 
     @ApiPropertyOptional({ type: AdminOrderPaymentResponseDto, nullable: true })
     payment!: AdminOrderPaymentResponseDto | null;

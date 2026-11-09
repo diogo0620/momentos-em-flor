@@ -15,6 +15,7 @@ import { PaymentsModule } from '@/payments/payments.module';
 import { FloristCompensationsModule } from '@/florist-compensations/florist-compensations.module';
 import { StoreSettingsModule } from '@/store-settings/store-settings.module';
 import { MoloniModule } from '@/moloni/moloni.module';
+import { CouponsModule } from '@/coupons/coupons.module';
 
 
 
@@ -27,6 +28,7 @@ import { MoloniModule } from '@/moloni/moloni.module';
     FloristCompensationsModule,
     StoreSettingsModule,
     MoloniModule,
+    CouponsModule,
   ],
   controllers: [
     CustomerOrdersController,

@@ -571,6 +571,47 @@ export class PaymentsService {
                 break;
             }
 
+            case 'checkout.session.completed': {
+                const session = event.data.object;
+                if (session.mode !== 'subscription') break;
+                const floristId = Number(session.metadata?.floristId);
+                const planId = Number(session.metadata?.planId);
+                const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+                const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
+                if (!floristId || !planId || !subscriptionId) break;
+                await this.prisma.$transaction(async (tx) => {
+                    await tx.floristSubscription.updateMany({ where: { floristId, endedAt: null }, data: { status: 'CANCELLED', endedAt: new Date() } });
+                    await tx.floristSubscription.upsert({
+                        where: { stripeSubscriptionId: subscriptionId },
+                        create: { floristId, planId, status: 'ACTIVE', stripeSubscriptionId: subscriptionId, stripeCustomerId: customerId },
+                        update: { planId, status: 'ACTIVE', stripeCustomerId: customerId, endedAt: null },
+                    });
+                });
+                break;
+            }
+
+            case 'customer.subscription.updated':
+            case 'customer.subscription.deleted': {
+                const subscription = event.data.object;
+                const status = subscription.status === 'active' ? 'ACTIVE'
+                    : subscription.status === 'trialing' ? 'TRIALING'
+                    : subscription.status === 'past_due' || subscription.status === 'unpaid' ? 'PAST_DUE'
+                    : subscription.status === 'canceled' ? 'CANCELLED'
+                    : 'INCOMPLETE';
+                const item = subscription.items.data[0];
+                await this.prisma.floristSubscription.updateMany({
+                    where: { stripeSubscriptionId: subscription.id },
+                    data: {
+                        status,
+                        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+                        currentPeriodStart: item?.current_period_start ? new Date(item.current_period_start * 1000) : null,
+                        currentPeriodEnd: item?.current_period_end ? new Date(item.current_period_end * 1000) : null,
+                        endedAt: status === 'CANCELLED' ? new Date() : null,
+                    },
+                });
+                break;
+            }
+
             default:
                 break;
         }

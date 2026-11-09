@@ -80,6 +80,8 @@ const fiscalDocumentInclude = {
       deliveryCity: true,
       deliveryCountryCode: true,
       discount: true,
+      subtotal: true,
+      deliveryFee: true,
       total: true,
       paidAt: true,
       payment: { select: { status: true, currency: true } },
@@ -214,7 +216,10 @@ export class AdminMoloniFiscalDocumentsService {
               customer_id: Number(customerId),
               our_reference: String(record.order.id),
               your_reference: record.order.orderNumber,
-              special_discount: Number(record.order.discount),
+              special_discount: this.toMoloniDiscountPercentage(
+                Number(record.order.discount),
+                Number(record.order.subtotal) + Number(record.order.deliveryFee),
+              ),
               products,
               notes: `Encomenda ${record.order.orderNumber}`,
               status: 1,
@@ -638,6 +643,11 @@ export class AdminMoloniFiscalDocumentsService {
     }
 
     return matches[0].tax_id!;
+  }
+
+  private toMoloniDiscountPercentage(discount: number, grossBeforeDiscount: number): number {
+    if (discount <= 0 || grossBeforeDiscount <= 0) return 0;
+    return Number(((discount / grossBeforeDiscount) * 100).toFixed(8));
   }
 
   private async sendInvoiceEmailIfNeeded(

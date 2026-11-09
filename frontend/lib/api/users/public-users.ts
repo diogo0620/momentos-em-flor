@@ -15,4 +15,10 @@ export const publicUsersApi = {
             body: JSON.stringify(data),
         });
     },
+    verifyEmail(token: string): Promise<void> {
+        return apiFetch("/users/verify-email", { method: "POST", body: JSON.stringify({ token }), skipRefresh: true });
+    },
+    resendVerification(email: string): Promise<void> {
+        return apiFetch("/users/resend-verification", { method: "POST", body: JSON.stringify({ email }), skipRefresh: true });
+    },
 };

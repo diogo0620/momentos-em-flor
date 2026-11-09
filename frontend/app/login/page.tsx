@@ -11,6 +11,7 @@ import Link from "next/link";
 
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { getRedirectPath } from "@/lib/auth/auth";
+import { ApiError } from "@/lib/errors/api-errors";
 import { isValidEmail } from "@/lib/validation/auth";
 
 export default function LoginPage() {
@@ -93,6 +94,16 @@ export default function LoginPage() {
                 ),
             );
         } catch (error) {
+            if (
+                error instanceof ApiError &&
+                error.code === "EMAIL_NOT_VERIFIED"
+            ) {
+                router.push(
+                    `/verify-email?email=${encodeURIComponent(email.trim())}`,
+                );
+                return;
+            }
+
             setError(
                 error instanceof Error
                     ? error.message

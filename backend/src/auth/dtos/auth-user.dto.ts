@@ -24,6 +24,9 @@ export class AuthUserDto {
   @ApiProperty({ example: true })
   active!: boolean;
 
+  @ApiProperty()
+  emailVerified!: boolean;
+
   @ApiPropertyOptional({ example: 1 })
   floristId?: number | null;
 

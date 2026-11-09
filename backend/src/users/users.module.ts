@@ -13,12 +13,14 @@ import { CustomerUsersMapper } from './customer/mappers/customer-users.mapper';
 import { FloristUsersController } from './florist/florist-users.controller';
 import { FloristUsersService } from './florist/florist-users.service';
 import { FloristUsersMapper } from './florist/mappers/florist-users.mapper';
+import { EmailModule } from '@/email/email.module';
 
 
 
 @Module({
   imports: [
     PrismaModule,
+    EmailModule,
   ],
   controllers: [
     AdminUsersController,
