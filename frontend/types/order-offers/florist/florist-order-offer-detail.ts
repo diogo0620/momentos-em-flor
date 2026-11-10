@@ -18,6 +18,15 @@ export type FloristOrderOfferDetailOrder = {
     deliveryTimeSlot: string;
     deliveryDistrict: string;
     deliveryCity: string;
+    recipientFirstName?: string;
+    recipientLastName?: string | null;
+    recipientPhone?: string | null;
+    deliveryStreet?: string;
+    deliveryStreetNumber?: string;
+    deliveryStreet2?: string | null;
+    deliveryPostalCode?: string;
+    deliveryInstructions?: string | null;
+    cardMessage?: string | null;
     
     items: FloristOrderOfferItem[];
 };

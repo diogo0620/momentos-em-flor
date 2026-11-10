@@ -9,10 +9,8 @@ import {
     Flower2,
     LayoutGrid,
     Package,
-    Plus,
     RefreshCw,
     ShoppingBag,
-    Sparkles,
     Store,
     Truck,
     Users,
@@ -35,6 +33,9 @@ type DashboardState = {
     orders: AdminOrderList[];
     totalOrders: number;
     totalProducts: number;
+    pendingPayment: number;
+    awaitingFlorists: number;
+    inProgress: number;
 };
 
 const STATUS_CONFIG: Record<AdminOrderStatus, { label: string; className: string; dot: string }> = {
@@ -58,15 +59,8 @@ function formatDate(value: string) {
     return new Intl.DateTimeFormat("pt-PT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
-function greeting() {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Bom dia";
-    if (hour < 19) return "Boa tarde";
-    return "Boa noite";
-}
-
 export default function AdminDashboardPage() {
-    const [data, setData] = useState<DashboardState>({ orders: [], totalOrders: 0, totalProducts: 0 });
+    const [data, setData] = useState<DashboardState>({ orders: [], totalOrders: 0, totalProducts: 0, pendingPayment: 0, awaitingFlorists: 0, inProgress: 0 });
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -77,9 +71,14 @@ export default function AdminDashboardPage() {
             else setLoading(true);
             setError(null);
 
-            const [ordersResponse, productsResponse] = await Promise.all([
+            const [ordersResponse, productsResponse, pendingResponse, awaitingResponse, assignedResponse, productionResponse, deliveryResponse] = await Promise.all([
                 adminOrdersApi.getAll({ page: 1, pageSize: 8, sort: "createdAt", order: "desc" }),
                 adminProductsApi.getAll({ page: 1, pageSize: 1, sort: "name", order: "asc" }),
+                adminOrdersApi.getAll({ page: 1, pageSize: 1, status: "PENDING_PAYMENT" }),
+                adminOrdersApi.getAll({ page: 1, pageSize: 1, status: "WAITING_FOR_FLORISTS" }),
+                adminOrdersApi.getAll({ page: 1, pageSize: 1, status: "ASSIGNED" }),
+                adminOrdersApi.getAll({ page: 1, pageSize: 1, status: "IN_PRODUCTION" }),
+                adminOrdersApi.getAll({ page: 1, pageSize: 1, status: "READY_FOR_DELIVERY" }),
             ]);
 
             const orderResult = ordersResponse as DashboardOrderResponse;
@@ -87,6 +86,9 @@ export default function AdminDashboardPage() {
                 orders: orderResult.items ?? [],
                 totalOrders: Number(orderResult.total ?? 0),
                 totalProducts: Number(productsResponse.total ?? 0),
+                pendingPayment: Number(pendingResponse.total ?? 0),
+                awaitingFlorists: Number(awaitingResponse.total ?? 0),
+                inProgress: Number(assignedResponse.total ?? 0) + Number(productionResponse.total ?? 0) + Number(deliveryResponse.total ?? 0),
             });
         } catch (err) {
             setError(err instanceof Error ? err.message : "Não foi possível carregar os dados do dashboard.");
@@ -100,9 +102,6 @@ export default function AdminDashboardPage() {
         void loadDashboard();
     }, [loadDashboard]);
 
-    const awaitingFlorists = data.orders.filter((order) => order.status === "WAITING_FOR_FLORISTS").length;
-    const pendingPayment = data.orders.filter((order) => order.status === "PENDING_PAYMENT").length;
-    const activeOrders = data.orders.filter((order) => order.status !== "DELIVERED" && order.status !== "CANCELLED").length;
     const recentOrderValue = data.orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
 
     return (
@@ -125,21 +124,17 @@ export default function AdminDashboardPage() {
                 <div className="pointer-events-none absolute -right-1 -top-14 -z-10 h-52 w-52 rounded-full border-[1px] border-white/10" />
                 <div className="pointer-events-none absolute bottom-[-95px] right-[20%] -z-10 h-52 w-52 rounded-full bg-[#AAB99A]/15 blur-2xl" />
                 <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
-                    <div className="max-w-2xl">
-                        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/85">
-                            <Sparkles size={14} /> O teu espaço de gestão
-                        </div>
-                        <h2 className="text-3xl font-medium tracking-tight sm:text-4xl">{greeting()}! <span className="text-[#D6DEC8]">Vamos fazer acontecer.</span></h2>
-                        <p className="mt-3 max-w-xl text-sm leading-6 text-white/70 sm:text-base">Acompanha as encomendas, mantém o catálogo organizado e garante que cada momento chega com flores.</p>
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#D6DEC8]">Prioridades operacionais</p>
+                        <h2 className="mt-2 text-3xl font-medium tracking-tight sm:text-4xl">Começa pelo que requer atenção.</h2>
+                        <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">Contagens globais atualizadas diretamente a partir das encomendas.</p>
                     </div>
-                    <div className="flex flex-wrap gap-3">
-                        <Link href="/admin/orders" className="inline-flex items-center gap-2 rounded-xl bg-[#D6DEC8] px-4 py-3 text-sm font-semibold text-[#2F3B2A] transition hover:bg-white">
-                            <ShoppingBag size={17} /> Ver encomendas <ArrowRight size={16} />
-                        </Link>
-                        <Link href="/admin/products/new" className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/15">
-                            <Plus size={17} /> Novo produto
-                        </Link>
-                    </div>
+                    <Link href="/admin/orders" className="inline-flex items-center gap-2 rounded-xl bg-[#D6DEC8] px-4 py-3 text-sm font-semibold text-[#2F3B2A] transition hover:bg-white">Abrir encomendas <ArrowRight size={16} /></Link>
+                </div>
+                <div className="mt-7 grid gap-3 sm:grid-cols-3">
+                    <PriorityLink href="/admin/orders" label="Pagamentos pendentes" value={data.pendingPayment} loading={loading} />
+                    <PriorityLink href="/admin/orders" label="Por atribuir" value={data.awaitingFlorists} loading={loading} />
+                    <PriorityLink href="/admin/orders" label="Em curso" value={data.inProgress} loading={loading} />
                 </div>
             </section>
 
@@ -153,8 +148,8 @@ export default function AdminDashboardPage() {
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <MetricCard title="Total de encomendas" value={loading ? "—" : data.totalOrders.toLocaleString("pt-PT")} detail="Encomendas registadas" icon={<ShoppingBag size={19} />} accent="sage" href="/admin/orders" loading={loading} />
                 <MetricCard title="Produtos no catálogo" value={loading ? "—" : data.totalProducts.toLocaleString("pt-PT")} detail="Produtos disponíveis para gerir" icon={<Package size={19} />} accent="sand" href="/admin/products" loading={loading} />
-                <MetricCard title="Por acompanhar" value={loading ? "—" : activeOrders.toString()} detail="Nas 8 encomendas mais recentes" icon={<Truck size={19} />} accent="blue" href="/admin/orders" loading={loading} />
-                <MetricCard title="À espera de floristas" value={loading ? "—" : awaitingFlorists.toString()} detail="Nas 8 encomendas mais recentes" icon={<Store size={19} />} accent="amber" href="/admin/orders" loading={loading} />
+                <MetricCard title="Em curso" value={loading ? "—" : data.inProgress.toString()} detail="Atribuídas, em preparação ou entrega" icon={<Truck size={19} />} accent="blue" href="/admin/orders" loading={loading} />
+                <MetricCard title="Por atribuir" value={loading ? "—" : data.awaitingFlorists.toString()} detail="Aguardam atribuição operacional" icon={<Store size={19} />} accent="amber" href="/admin/orders" loading={loading} />
             </section>
 
             <section className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.85fr)]">
@@ -182,7 +177,7 @@ export default function AdminDashboardPage() {
                                     {data.orders.map((order) => {
                                         const status = STATUS_CONFIG[order.status];
                                         return <tr key={order.id} className="border-t border-[#F0F2ED] transition hover:bg-[#FCFDFB]">
-                                            <td className="px-6 py-4"><Link href={`/admin/orders/${order.id}`} className="font-semibold text-[#35412F] hover:underline">{order.orderNumber}</Link></td>
+                                            <td className="px-6 py-4"><Link href={`/admin/orders/${order.id}/edit`} className="font-semibold text-[#35412F] hover:underline">{order.orderNumber}</Link></td>
                                             <td className="px-4 py-4"><p className="max-w-[180px] truncate text-sm font-medium text-[#3D4637]">{order.customerFirstName} {order.customerLastName}</p><p className="mt-0.5 max-w-[180px] truncate text-xs text-[#969D91]">{order.customerEmail}</p></td>
                                             <td className="px-4 py-4"><span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1.5 text-[11px] font-semibold ${status.className}`}><span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />{status.label}</span></td>
                                             <td className="px-4 py-4 text-sm font-semibold tabular-nums text-[#35412F]">{formatPrice(order.total)}</td>
@@ -200,8 +195,8 @@ export default function AdminDashboardPage() {
                     <div className="rounded-[24px] border border-[#E7EAE2] bg-white p-5 shadow-[0_4px_24px_rgba(47,59,42,0.035)] sm:p-6">
                         <div className="flex items-center justify-between"><div><h3 className="text-base font-semibold text-[#2F3B2A]">Resumo rápido</h3><p className="mt-1 text-sm text-[#858D7F]">Estados nas últimas 8 encomendas</p></div><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#65745A]"><LayoutGrid size={19} /></div></div>
                         <div className="mt-5 space-y-4">
-                            <StatusSummary label="Pagamento pendente" count={pendingPayment} total={data.orders.length} color="bg-amber-400" loading={loading} />
-                            <StatusSummary label="À espera de floristas" count={awaitingFlorists} total={data.orders.length} color="bg-yellow-400" loading={loading} />
+                            <StatusSummary label="Pagamento pendente" count={data.pendingPayment} total={data.totalOrders} color="bg-amber-400" loading={loading} />
+                            <StatusSummary label="Por atribuir" count={data.awaitingFlorists} total={data.totalOrders} color="bg-yellow-400" loading={loading} />
                             <StatusSummary label="Em curso" count={data.orders.filter((order) => order.status === "ASSIGNED" || order.status === "IN_PRODUCTION" || order.status === "READY_FOR_DELIVERY").length} total={data.orders.length} color="bg-[#849574]" loading={loading} />
                             <StatusSummary label="Entregues" count={data.orders.filter((order) => order.status === "DELIVERED").length} total={data.orders.length} color="bg-emerald-500" loading={loading} />
                         </div>
@@ -240,6 +235,13 @@ function MetricCard({ title, value, detail, icon, accent, href, loading }: { tit
         <p className="mt-5 text-sm font-medium text-[#858D7F]">{title}</p>
         <p className="mt-1.5 text-3xl font-semibold tracking-tight text-[#2F3B2A]">{loading ? <span className="inline-block h-9 w-16 animate-pulse rounded-lg bg-[#F0F2ED]" /> : value}</p>
         <p className="mt-2 text-xs text-[#92998D]">{detail}</p>
+    </Link>;
+}
+
+function PriorityLink({ href, label, value, loading }: { href: string; label: string; value: number; loading: boolean }) {
+    return <Link href={href} className="group flex items-center justify-between rounded-2xl border border-white/10 bg-white/10 px-4 py-4 transition hover:bg-white/15">
+        <div><p className="text-xs text-white/60">{label}</p><p className="mt-1 text-2xl font-semibold text-white">{loading ? "—" : value}</p></div>
+        <ArrowRight size={18} className="text-white/50 transition group-hover:translate-x-1 group-hover:text-white" />
     </Link>;
 }
 

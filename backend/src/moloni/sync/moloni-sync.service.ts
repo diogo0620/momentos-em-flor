@@ -97,9 +97,20 @@ export class MoloniSyncService {
         input.countryCode,
         input.configuredPaymentMethodId,
       );
+      const customerNumber = input.userId ? `MEF-${input.userId}` : `MEF-O-${input.orderId}`;
+      const existingByNumber = await this.moloniApi.getCustomersByNumber<MoloniCustomer[]>(
+        customerNumber,
+      );
+      if (existingByNumber[0]?.customer_id) {
+        if (input.userId) {
+          await this.markCustomerSynced(input.userId, existingByNumber[0].customer_id);
+        }
+        return existingByNumber[0].customer_id;
+      }
+
       const result = await this.moloniApi.insertCustomer<MoloniInsertResult>({
         vat: vat || '999999990',
-        number: input.userId ? `MEF-${input.userId}` : `MEF-O-${input.orderId}`,
+        number: customerNumber,
         name: `${input.firstName} ${input.lastName}`.trim(),
         language_id: defaults.languageId,
         address: input.address || 'Não indicada',
@@ -109,9 +120,11 @@ export class MoloniSyncService {
         email: input.email,
         phone: input.phone,
         maturity_date_id: defaults.maturityDateId,
-        document_type_id: defaults.documentTypeId,
         payment_method_id: defaults.paymentMethodId,
-        copies: 1,
+        copies: [{
+          document_type_id: defaults.documentTypeId,
+          copies: 1,
+        }],
       });
 
       if (!result.customer_id) {

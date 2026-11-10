@@ -180,7 +180,14 @@ export default function FiscalDocumentsPage() {
                                 : items.length === 0 ? <tr><td colSpan={7} className="px-6 py-16 text-center text-gray-500"><FileText className="mx-auto mb-3 text-[#7A8A6B]" />Ainda não existem encomendas pagas por faturar.</td></tr>
                                 : items.map((item) => <tr key={item.id}>
                                     <td className="px-6 py-5 font-semibold text-[#2F3B2A]"><Link href={`/admin/orders/${item.orderId}/edit`} className="hover:underline">{item.orderNumber}</Link></td>
-                                    <td className="px-6 py-5"><p className="font-medium text-gray-700">{item.customerName}</p><p className="mt-1 text-xs text-gray-400">{item.customerTaxNumber || item.customerEmail}</p></td>
+                                    <td className="px-6 py-5">
+                                        {item.customerId ? (
+                                            <Link href={`/admin/users/${item.customerId}/edit`} className="inline-flex items-center gap-1.5 font-medium text-gray-700 hover:underline">
+                                                {item.customerName} <ExternalLink size={13} />
+                                            </Link>
+                                        ) : <p className="font-medium text-gray-700">{item.customerName}</p>}
+                                        <p className="mt-1 text-xs text-gray-400">{item.customerTaxNumber || item.customerEmail}</p>
+                                    </td>
                                     <td className="px-6 py-5 font-semibold text-[#2F3B2A]">{formatCurrency(item.total, item.currency)}</td>
                                     <td className="px-6 py-5"><span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${STATUS_STYLES[item.invoiceStatus]}`}>{STATUS_LABELS[item.invoiceStatus]}</span>{item.invoiceId && <p className="mt-2 text-xs text-gray-400">ID {item.invoiceId}</p>}</td>
                                     <td className="px-6 py-5"><span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${STATUS_STYLES[item.receiptStatus]}`}>{STATUS_LABELS[item.receiptStatus]}</span>{item.receiptId && <p className="mt-2 text-xs text-gray-400">ID {item.receiptId}</p>}</td>

@@ -14,6 +14,15 @@ export class AdminOrderOfferOrderResponseDto {
     @ApiProperty() deliveryTimeSlot!: string;
     @ApiProperty() deliveryDistrict!: string;
     @ApiProperty() deliveryCity!: string;
+    @ApiPropertyOptional({ nullable: true }) recipientFirstName?: string;
+    @ApiPropertyOptional({ nullable: true }) recipientLastName?: string | null;
+    @ApiPropertyOptional({ nullable: true }) recipientPhone?: string | null;
+    @ApiPropertyOptional({ nullable: true }) deliveryStreet?: string;
+    @ApiPropertyOptional({ nullable: true }) deliveryStreetNumber?: string;
+    @ApiPropertyOptional({ nullable: true }) deliveryStreet2?: string | null;
+    @ApiPropertyOptional({ nullable: true }) deliveryPostalCode?: string;
+    @ApiPropertyOptional({ nullable: true }) deliveryInstructions?: string | null;
+    @ApiPropertyOptional({ nullable: true }) cardMessage?: string | null;
     @ApiProperty({ type: [FloristOrderOfferItemResponseDto] }) items!: FloristOrderOfferItemResponseDto[];
 }
 

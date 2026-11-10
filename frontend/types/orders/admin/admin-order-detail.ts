@@ -117,6 +117,8 @@ export type AdminOrder = {
     offers: AdminOrderOffer[];
     payment: {
         id: number;
+        stripeSessionId: string | null;
+        stripePaymentIntentId: string | null;
         status: "PENDING" | "PAID" | "FAILED" | "CANCELLED" | "REFUNDED";
         amount: number;
         currency: string;

@@ -816,6 +816,7 @@ export class AdminMoloniFiscalDocumentsService {
       id: record.id,
       orderId: record.orderId,
       orderNumber: record.order.orderNumber,
+      customerId: record.order.customerId,
       customerName: `${record.order.customerFirstName} ${record.order.customerLastName}`.trim(),
       customerEmail: record.order.customerEmail,
       customerTaxNumber: record.order.customerTaxNumber,

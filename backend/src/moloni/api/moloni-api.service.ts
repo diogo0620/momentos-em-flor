@@ -111,6 +111,10 @@ export class MoloniApiService {
     return this.post<T>('customers/getByVat/', { vat, qty: 1 });
   }
 
+  async getCustomersByNumber<T>(number: string): Promise<T> {
+    return this.post<T>('customers/getByNumber/', { number, qty: 1 });
+  }
+
   async getLanguages<T>(): Promise<T> {
     return this.post<T>('languages/getAll/', {}, false);
   }
@@ -248,6 +252,23 @@ export class MoloniApiService {
       throw new ServiceUnavailableException(
         'A Moloni não conseguiu processar o pedido.',
       );
+    }
+
+    if (Array.isArray(result)) {
+      const validationErrors = result
+        .filter((item): item is { code: string; description: string } =>
+          Boolean(item) && typeof item === 'object' &&
+          'code' in item && 'description' in item &&
+          typeof item.code === 'string' && typeof item.description === 'string',
+        )
+        .map((item) => item.description || item.code)
+        .filter((message): message is string => Boolean(message));
+
+      if (validationErrors.length > 0) {
+        throw new ServiceUnavailableException(
+          `A Moloni rejeitou os dados enviados: ${validationErrors.join('; ')}`,
+        );
+      }
     }
 
     if (

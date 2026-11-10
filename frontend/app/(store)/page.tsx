@@ -8,20 +8,53 @@ import {
     ArrowRight,
     Heart,
     Camera,
-    Play,
     Sparkles,
 } from "lucide-react";
 import { publicCategoriesApi } from "@/lib/api/categories/public-categories";
 import { publicProductsApi } from "@/lib/api/products/public-products";
+import ProductCard from "@/components/store/products/ProductCard";
 
 const reviews: { quote: string; name: string }[] = [];
-const reels: { id: string; poster: string; label: string; tag: string }[] = [];
+
+function getSocialVideoEmbed(url: string) {
+    try {
+        const parsed = new URL(url);
+        if (parsed.hostname.includes("instagram.com")) {
+            return { kind: "iframe" as const, src: `${url.replace(/\/$/, "")}/embed` };
+        }
+        if (parsed.hostname.includes("tiktok.com")) {
+            const videoId = parsed.pathname.match(/\/video\/(\d+)/)?.[1];
+            return videoId ? { kind: "iframe" as const, src: `https://www.tiktok.com/embed/v2/${videoId}` } : null;
+        }
+        if (parsed.hostname.includes("youtube.com")) {
+            const videoId = parsed.searchParams.get("v") || parsed.pathname.match(/\/shorts\/([^/]+)/)?.[1];
+            return videoId ? { kind: "iframe" as const, src: `https://www.youtube-nocookie.com/embed/${videoId}` } : null;
+        }
+        if (parsed.hostname === "youtu.be") {
+            const videoId = parsed.pathname.slice(1);
+            return videoId ? { kind: "iframe" as const, src: `https://www.youtube-nocookie.com/embed/${videoId}` } : null;
+        }
+        if (/\.(mp4|webm)$/i.test(parsed.pathname)) {
+            return { kind: "video" as const, src: url };
+        }
+    } catch {
+        return null;
+    }
+    return null;
+}
 
 export default function HomePage() {
     const [collections, setCollections] = useState<PublicCategoryList[]>([]);
     const [featuredProducts, setFeaturedProducts] = useState<PublicProductList[]>([]);
     const [isLoadingFeatured, setIsLoadingFeatured] = useState(true);
     const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL;
+    const socialVideos = (process.env.NEXT_PUBLIC_SOCIAL_VIDEO_URLS ?? "")
+        .split(",")
+        .map((url) => url.trim())
+        .filter(Boolean)
+        .map(getSocialVideoEmbed)
+        .filter((video): video is NonNullable<ReturnType<typeof getSocialVideoEmbed>> => Boolean(video))
+        .slice(0, 4);
 
     useEffect(() => {
         let cancelled = false;
@@ -69,12 +102,6 @@ export default function HomePage() {
             cancelled = true;
         };
     }, []);
-
-    const formatPrice = (price: number) =>
-        new Intl.NumberFormat("pt-PT", {
-            style: "currency",
-            currency: "EUR",
-        }).format(price);
 
     return (
         <div className="bg-[#F8F9F5] text-[#2F3B2A]">
@@ -242,45 +269,7 @@ export default function HomePage() {
                                 <div className="aspect-[0.82] animate-pulse bg-[#EEF1EB]" />
                                 <div className="space-y-3 px-1 pt-4"><div className="h-4 w-2/3 animate-pulse rounded bg-[#E7EBE2]" /><div className="h-3 w-1/2 animate-pulse rounded bg-[#EEF1EB]" /></div>
                             </div>
-                        )) : featuredProducts.map((product) => (
-                            <Link
-                                key={product.id}
-                                href={`/products/${product.slug}`}
-                                className="group"
-                            >
-                                <div className="relative aspect-[0.82] overflow-hidden rounded-[1.5rem] bg-[#EEF1EB] shadow-[0_10px_28px_rgba(47,59,42,0.06)]">
-
-                                    <img
-                                        src={product.image || "/images/floral-placeholder.svg"}
-                                        alt={product.name}
-                                        className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.045]"
-                                    />
-
-                                    <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.13em] text-[#55624A] backdrop-blur-sm">
-                                        {product.type === "RENTAL" ? "Aluguer" : "Flores"}
-                                    </span>
-
-                                    <span className="absolute bottom-4 right-4 flex h-10 w-10 translate-y-2 items-center justify-center rounded-full bg-white text-[#35412F] opacity-0 shadow-sm transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-                                        <ArrowRight size={16} />
-                                    </span>
-                                </div>
-
-                                <div className="px-1 pt-4">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <h3 className="text-sm font-medium text-[#2F3B2A] sm:text-base">
-                                            {product.name}
-                                        </h3>
-
-                                        <p className="shrink-0 text-sm font-semibold text-[#55624A]">
-                                            {formatPrice(product.price)}
-                                        </p>
-                                    </div>
-                                    <p className="mt-2 text-xs text-[#8A9284]">
-                                        Preparado com cuidado, pensado para surpreender.
-                                    </p>
-                                </div>
-                            </Link>
-                        ))}
+                        )) : featuredProducts.map((product) => <ProductCard key={product.id} product={product} />)}
                     </div>
                 </div>
             </section>
@@ -385,7 +374,7 @@ export default function HomePage() {
             )}
 
             {/* SOCIAL / REELS */}
-            {instagramUrl && (
+            {(instagramUrl || socialVideos.length > 0) && (
             <section className="relative overflow-hidden bg-[#F0F3EB] px-5 py-20 sm:px-8 lg:px-10 lg:py-28">
                 <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/60 blur-3xl" />
                 <div className="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-[#D6DEC8]/50 blur-3xl" />
@@ -425,44 +414,26 @@ export default function HomePage() {
                         )}
                     </div>
 
-                    <div className="mt-10 grid grid-cols-2 gap-3 sm:mt-12 sm:gap-5 lg:grid-cols-4">
-                        {reels.map((reel, index) => (
-                            <article
-                                key={reel.id}
-                                className={`group relative isolate aspect-[0.72] overflow-hidden rounded-[1.6rem] bg-[#DDE4D5] shadow-[0_14px_40px_rgba(47,59,42,0.10)] transition duration-500 hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(47,59,42,0.18)] ${
-                                    index === 0 ? "ring-2 ring-white ring-offset-2 ring-offset-[#F0F3EB]" : ""
-                                }`}
-                            >
-                                <img
-                                    src={reel.poster}
-                                    alt={reel.label}
-                                    loading="lazy"
-                                    className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
-                                />
-
-                                <div className="absolute inset-0 bg-gradient-to-t from-[#172015]/85 via-[#172015]/10 to-black/10" />
-
-                                <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-3 sm:p-4">
-                                    <span className="rounded-full border border-white/25 bg-black/20 px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-white backdrop-blur-md sm:text-[10px]">
-                                        {reel.tag}
-                                    </span>
-                                    <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-white/15 text-white backdrop-blur-md transition group-hover:scale-110 group-hover:bg-white group-hover:text-[#35412F]">
-                                        <Play size={12} fill="currentColor" />
-                                    </span>
-                                </div>
-
-                                <div className="absolute inset-x-0 bottom-0 p-4 text-white sm:p-5">
-                                    <span className="mb-2 block text-[10px] font-medium uppercase tracking-[0.16em] text-white/65">
-                                        Momentos em Flor
-                                    </span>
-                                    <h3 className="max-w-[220px] text-sm font-semibold leading-5 sm:text-base sm:leading-6">
-                                        {reel.label}
-                                    </h3>
-                                    <div className="mt-3 h-px w-8 bg-white/70 transition-all duration-300 group-hover:w-14" />
-                                </div>
-                            </article>
-                        ))}
-                    </div>
+                    {socialVideos.length > 0 && (
+                        <div className="mt-10 grid grid-cols-1 gap-4 sm:mt-12 sm:grid-cols-2 lg:grid-cols-4">
+                            {socialVideos.map((video, index) => (
+                                <article key={`${video.src}-${index}`} className="aspect-[9/16] overflow-hidden bg-[#DDE4D5] shadow-[0_14px_40px_rgba(47,59,42,0.10)]">
+                                    {video.kind === "video" ? (
+                                        <video src={video.src} controls playsInline preload="metadata" className="h-full w-full object-cover" aria-label={`Vídeo Momentos em Flor ${index + 1}`} />
+                                    ) : (
+                                        <iframe
+                                            src={video.src}
+                                            title={`Vídeo Momentos em Flor ${index + 1}`}
+                                            loading="lazy"
+                                            allow="autoplay; encrypted-media; picture-in-picture"
+                                            allowFullScreen
+                                            className="h-full w-full border-0"
+                                        />
+                                    )}
+                                </article>
+                            ))}
+                        </div>
+                    )}
 
                     <p className="mt-6 text-center text-xs leading-5 text-[#77816F]">
                         Um gesto, uma flor, uma memória. Descobre a inspiração por detrás de cada ramo.

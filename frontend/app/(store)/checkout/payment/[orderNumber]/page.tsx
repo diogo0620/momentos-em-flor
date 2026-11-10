@@ -318,13 +318,13 @@ export default function CheckoutPaymentPage() {
                             <div className="my-5 border-t border-[#E5E9E1]" />
 
                             <div className="space-y-4">
-                                {order.items.map((item) => (
+                                {order.items.filter((item) => item.type !== "DELIVERY_FEE").map((item) => (
                                     <div key={item.id} className="flex gap-3">
                                         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-[#F1F3EC]">
-                                            {item.type === "DELIVERY_FEE" || item.image ? (
+                                            {item.image ? (
                                                 <Image
-                                                    src={item.type === "DELIVERY_FEE" ? "/images/delivery-fee.svg" : item.image!}
-                                                    alt={item.type === "DELIVERY_FEE" ? "Taxa de entrega" : item.productName}
+                                                    src={item.image}
+                                                    alt={item.productName}
                                                     fill
                                                     sizes="64px"
                                                     className="object-cover"

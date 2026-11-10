@@ -1452,35 +1452,6 @@ export default function CheckoutPage() {
 
                                     })}
 
-                                    <div className="overflow-hidden rounded-2xl border border-[#E7EBE2] bg-[#FBFCFA]">
-                                        <div className="flex gap-4 p-4">
-                                            <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-[#F0F3EC]">
-                                                <Image
-                                                    src="/images/delivery-fee.svg"
-                                                    alt="Taxa de entrega"
-                                                    fill
-                                                    sizes="96px"
-                                                    className="object-cover"
-                                                />
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div>
-                                                        <p className="text-sm font-bold text-[#2F3B2A]">Taxa de entrega</p>
-                                                        <p className="mt-1 text-xs text-gray-500">Calculada a partir da morada de entrega</p>
-                                                    </div>
-                                                    <p className="whitespace-nowrap text-sm font-bold text-[#2F3B2A]">
-                                                        {!hasCompleteDeliveryAddress || isLoadingDeliveryFee
-                                                            ? "A calcular..."
-                                                            : deliveryFee !== null
-                                                                ? formatPrice(deliveryFee)
-                                                                : "Indisponível"}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
                                 </div>
 
                                 <div className="my-6 border-t border-dashed border-[#DDE2D8]" />

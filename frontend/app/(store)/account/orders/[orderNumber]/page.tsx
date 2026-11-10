@@ -423,16 +423,16 @@ export default function AccountOrderDetailPage() {
         </h3>
 
         <div className="mt-5 divide-y divide-[#EEF0EA]">
-          {(order.items ?? []).map((item) => (
+          {(order.items ?? []).filter((item) => item.type !== "DELIVERY_FEE").map((item) => (
             <div
               key={item.id}
               className="flex gap-4 py-4 first:pt-0 last:pb-0"
             >
               <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-[#F5F6F1]">
-                {item.type === "DELIVERY_FEE" || item.image ? (
+                {item.image ? (
                   <img
-                    src={item.type === "DELIVERY_FEE" ? "/images/delivery-fee.svg" : item.image!}
-                    alt={item.type === "DELIVERY_FEE" ? "Taxa de entrega" : item.productName}
+                    src={item.image}
+                    alt={item.productName}
                     className="h-full w-full object-cover"
                   />
                 ) : (

@@ -644,7 +644,7 @@ export default function AdminOrderOffersPage() {
                                     >
                                         <td className="px-5 py-5">
                                             <Link
-                                                href={`/admin/orders/${offer.order.id}`}
+                                                href={`/admin/orders/${offer.order.id}/edit`}
                                                 className="font-semibold text-[#55624A] hover:underline"
                                             >
                                                 {offer.order.orderNumber}

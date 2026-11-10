@@ -25,6 +25,7 @@ import {
     History,
     LoaderCircle,
     FileDown,
+    ExternalLink,
 } from "lucide-react";
 
 import { adminOrdersApi } from "@/lib/api/orders/admin-orders";
@@ -48,6 +49,11 @@ import type {
 } from "@/types/orders/admin/admin-order-status";
 
 const ORDER_LIST_URL = "/admin/orders";
+
+function getStripePaymentUrl(paymentIntentId: string) {
+    const testMode = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.startsWith("pk_test_");
+    return `https://dashboard.stripe.com/${testMode ? "test/" : ""}payments/${encodeURIComponent(paymentIntentId)}`;
+}
 
 const STATUS_LABELS: Record<AdminOrderStatus, string> = {
     CREATED: "Criada",
@@ -330,9 +336,12 @@ function OrderItemCard({ item }: { item: AdminOrderItem }) {
                     )}
 
                     {item.product && (
-                        <p className="mt-2 text-xs text-gray-400">
-                            Produto: {item.product.name}
-                        </p>
+                        <Link
+                            href={`/admin/products/${item.product.id}/edit`}
+                            className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-[#647158] hover:text-[#374132] hover:underline"
+                        >
+                            Produto: {item.product.name} <ExternalLink size={12} />
+                        </Link>
                     )}
 
                 </div>
@@ -456,7 +465,9 @@ function OfferCard({
                             <Store size={19} />
                         </div>
                         <div className="min-w-0">
-                            <h3 className="font-semibold text-[#2F3B2A]">{offer.florist.name}</h3>
+                            <Link href={`/admin/florists/${offer.florist.id}/edit`} className="inline-flex items-center gap-1.5 font-semibold text-[#2F3B2A] hover:underline">
+                                {offer.florist.name} <ExternalLink size={13} />
+                            </Link>
                             <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-500"><MapPin size={14} /> {formatDistance(offer.distanceKm)}</p>
                         </div>
                     </div>
@@ -1063,6 +1074,16 @@ export default function EditOrderPage() {
                                     <CircleCheck size={16} /> Pagamento reembolsado
                                 </p>
                             )}
+                            {order.payment?.stripePaymentIntentId && (
+                                <a
+                                    href={getStripePaymentUrl(order.payment.stripePaymentIntentId)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center gap-2 rounded-full border border-[#DDE2D8] bg-white px-4 py-2.5 text-sm font-medium text-[#55624A] hover:bg-[#F3F5EE]"
+                                >
+                                    <ExternalLink size={16} /> Abrir pagamento na Stripe
+                                </a>
+                            )}
                             {order.moloniFiscalDocument?.creditNoteRequiredAt && !order.moloniFiscalDocument.creditNoteId && (
                                 <Link href="/admin/fiscal-documents" className="flex items-center gap-2 rounded-full bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800 hover:bg-amber-100">
                                     <AlertTriangle size={16} /> Emite a nota de crédito Moloni antes de cancelar
@@ -1110,7 +1131,11 @@ export default function EditOrderPage() {
                             <DetailField
                                 label="Florista atribuída"
                                 value={
-                                    order.assignedFlorist?.name ?? (
+                                    order.assignedFlorist ? (
+                                        <Link href={`/admin/florists/${order.assignedFlorist.id}/edit`} className="inline-flex items-center gap-1.5 hover:underline">
+                                            {order.assignedFlorist.name} <ExternalLink size={13} />
+                                        </Link>
+                                    ) : (
                                         <EmptyValue>Sem florista atribuída</EmptyValue>
                                     )
                                 }
@@ -1175,7 +1200,11 @@ export default function EditOrderPage() {
                             <DetailField
                                 label="ID do cliente"
                                 value={
-                                    order.customerId ?? <EmptyValue>Compra sem conta associada</EmptyValue>
+                                    order.customerId ? (
+                                        <Link href={`/admin/users/${order.customerId}/edit`} className="inline-flex items-center gap-1.5 hover:underline">
+                                            Cliente #{order.customerId} <ExternalLink size={13} />
+                                        </Link>
+                                    ) : <EmptyValue>Compra sem conta associada</EmptyValue>
                                 }
                             />
                         </div>

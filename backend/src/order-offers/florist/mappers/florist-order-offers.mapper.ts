@@ -37,6 +37,18 @@ export class FloristOrderOffersMapper {
                 deliveryDistrict: offer.order.deliveryDistrict,
                 deliveryCity: offer.order.deliveryCity,
 
+                ...(offer.status === 'ACCEPTED' && {
+                    recipientFirstName: offer.order.recipientFirstName,
+                    recipientLastName: offer.order.recipientLastName,
+                    recipientPhone: offer.order.recipientPhone,
+                    deliveryStreet: offer.order.deliveryStreet,
+                    deliveryStreetNumber: offer.order.deliveryStreetNumber,
+                    deliveryStreet2: offer.order.deliveryStreet2,
+                    deliveryPostalCode: offer.order.deliveryPostalCode,
+                    deliveryInstructions: offer.order.deliveryInstructions,
+                    cardMessage: offer.order.cardMessage,
+                }),
+
                 items: offer.order.items.map((item) => ({
                     id: item.id,
                     name: item.name,

@@ -15,6 +15,7 @@ import {
     LoaderCircle,
     LockKeyhole,
     MapPin,
+    Phone,
     Package,
     ShieldCheck,
     Sparkles,
@@ -226,6 +227,15 @@ export default function FloristOfferDetailPage() {
     const order = offer.order;
     const items = order.items ?? [];
     const location = [order?.deliveryCity, order?.deliveryDistrict].filter(Boolean).join(", ") || "Localidade não indicada";
+    const isAccepted = offer.status === "ACCEPTED";
+    const recipientName = [order.recipientFirstName, order.recipientLastName]
+        .filter(Boolean)
+        .join(" ") || "Não indicado";
+    const deliveryAddress = [
+        [order.deliveryStreet, order.deliveryStreetNumber].filter(Boolean).join(" "),
+        order.deliveryStreet2,
+        [order.deliveryPostalCode, order.deliveryCity].filter(Boolean).join(" "),
+    ].filter(Boolean).join(", ") || "Não indicada";
 
     return (
         <div className="mx-auto max-w-6xl space-y-6 pb-10">
@@ -271,19 +281,29 @@ export default function FloristOfferDetailPage() {
 
                     {/* A área protegida tem altura natural, padding e overlay interno: evita cortar o conteúdo em ecrãs estreitos. */}
                     <section className="rounded-3xl bg-white shadow-sm">
-                        <div className="flex items-center gap-3 border-b border-gray-100 p-5 sm:p-6"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]"><ShieldCheck size={19} /></div><div><h2 className="font-semibold text-[#2F3B2A]">Informação do destinatário e da entrega</h2><p className="mt-1 text-xs text-gray-400">Protegida até a proposta ser aceite.</p></div></div>
-                        <div className="relative isolate min-h-[340px] p-5 sm:min-h-[300px] sm:p-6">
-                            <div aria-hidden="true" className="pointer-events-none select-none space-y-6 blur-[5px]">
-                                <div className="grid gap-6 sm:grid-cols-2"><DetailRow icon={<UserRound size={18} />} label="Destinatário" value="Nome do destinatário" /><DetailRow icon={<MapPin size={18} />} label="Morada completa" value="Rua, número, código postal e localidade" /><DetailRow icon={<Package size={18} />} label="Instruções de entrega" value="Instruções especiais para a entrega" /><DetailRow icon={<Sparkles size={18} />} label="Mensagem do cartão" value="Mensagem personalizada" /></div>
+                        <div className="flex items-center gap-3 border-b border-gray-100 p-5 sm:p-6"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]"><ShieldCheck size={19} /></div><div><h2 className="font-semibold text-[#2F3B2A]">Informação do destinatário e da entrega</h2><p className="mt-1 text-xs text-gray-400">{isAccepted ? "Dados necessários para preparar e entregar a encomenda." : "Protegida até a proposta ser aceite."}</p></div></div>
+                        {isAccepted ? (
+                            <div className="grid gap-6 p-5 sm:grid-cols-2 sm:p-6">
+                                <DetailRow icon={<UserRound size={18} />} label="Destinatário" value={recipientName} />
+                                <DetailRow icon={<Phone size={18} />} label="Contacto" value={order.recipientPhone || "Não indicado"} />
+                                <div className="sm:col-span-2"><DetailRow icon={<MapPin size={18} />} label="Morada completa" value={deliveryAddress} /></div>
+                                <DetailRow icon={<Package size={18} />} label="Instruções de entrega" value={order.deliveryInstructions || "Sem instruções adicionais"} />
+                                <DetailRow icon={<Sparkles size={18} />} label="Mensagem do cartão" value={order.cardMessage || "Sem mensagem"} />
                             </div>
-                            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-3xl bg-white/65 p-5 sm:p-7">
-                                <div className="w-full max-w-sm rounded-2xl border border-[#E2E8D9] bg-white/95 p-5 text-center shadow-lg backdrop-blur-sm sm:p-6">
-                                    <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#F3F5EE] text-[#55624A]"><LockKeyhole size={20} /></div>
-                                    <h3 className="mt-3 font-semibold text-[#2F3B2A]">Informação confidencial</h3>
-                                    <p className="mt-2 text-sm leading-5 text-gray-500">Depois de aceitares a proposta, poderás consultar os dados necessários para preparar e entregar a encomenda.</p>
+                        ) : (
+                            <div className="relative isolate min-h-[340px] p-5 sm:min-h-[300px] sm:p-6">
+                                <div aria-hidden="true" className="pointer-events-none select-none space-y-6 blur-[5px]">
+                                    <div className="grid gap-6 sm:grid-cols-2"><DetailRow icon={<UserRound size={18} />} label="Destinatário" value="Nome do destinatário" /><DetailRow icon={<MapPin size={18} />} label="Morada completa" value="Rua, número, código postal e localidade" /><DetailRow icon={<Package size={18} />} label="Instruções de entrega" value="Instruções especiais para a entrega" /><DetailRow icon={<Sparkles size={18} />} label="Mensagem do cartão" value="Mensagem personalizada" /></div>
+                                </div>
+                                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-3xl bg-white/65 p-5 sm:p-7">
+                                    <div className="w-full max-w-sm rounded-2xl border border-[#E2E8D9] bg-white/95 p-5 text-center shadow-lg backdrop-blur-sm sm:p-6">
+                                        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#F3F5EE] text-[#55624A]"><LockKeyhole size={20} /></div>
+                                        <h3 className="mt-3 font-semibold text-[#2F3B2A]">Informação confidencial</h3>
+                                        <p className="mt-2 text-sm leading-5 text-gray-500">Depois de aceitares a proposta, poderás consultar os dados necessários para preparar e entregar a encomenda.</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </section>
                 </div>
 
