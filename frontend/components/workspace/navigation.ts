@@ -14,6 +14,8 @@ import {
     Users,
     CreditCard,
     TicketPercent,
+    Clapperboard,
+    Percent,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -24,21 +26,63 @@ export type NavigationItem = {
     exact?: boolean;
 };
 
-export const adminNavigation: NavigationItem[] = [
-    { href: "/admin", label: "Visão geral", icon: LayoutDashboard, exact: true },
-    { href: "/admin/orders", label: "Encomendas", icon: ShoppingBag },
-    { href: "/admin/order-offers", label: "Propostas", icon: ClipboardList },
-    { href: "/admin/compensations", label: "Compensações", icon: Banknote },
-    { href: "/admin/fiscal-documents", label: "Faturação", icon: ReceiptText },
-    { href: "/admin/categories", label: "Categorias", icon: Tags },
-    { href: "/admin/products", label: "Produtos", icon: Package },
-    { href: "/admin/florists", label: "Floristas", icon: Flower2 },
-    { href: "/admin/users", label: "Utilizadores", icon: Users },
-    { href: "/admin/settings", label: "Definições", icon: Settings },
-    { href: "/admin/home-videos", label: "Vídeos da homepage", icon: Settings },
-    { href: "/admin/coupons", label: "Cupões", icon: TicketPercent },
-    { href: "/admin/subscription-plans", label: "Subscrições", icon: CreditCard },
+export type NavigationGroup = {
+    id: string;
+    label: string;
+    items: NavigationItem[];
+    defaultOpen?: boolean;
+    collapsible?: boolean;
+};
+
+export const adminNavigationGroups: NavigationGroup[] = [
+    {
+        id: "overview",
+        label: "Geral",
+        defaultOpen: true,
+        collapsible: false,
+        items: [{ href: "/admin", label: "Visão geral", icon: LayoutDashboard, exact: true }],
+    },
+    {
+        id: "operations",
+        label: "Operações",
+        defaultOpen: true,
+        items: [
+            { href: "/admin/orders", label: "Encomendas", icon: ShoppingBag },
+            { href: "/admin/order-offers", label: "Propostas", icon: ClipboardList },
+            { href: "/admin/compensations", label: "Compensações", icon: Banknote },
+            { href: "/admin/fiscal-documents", label: "Faturação", icon: ReceiptText },
+        ],
+    },
+    {
+        id: "catalog",
+        label: "Catálogo e marketing",
+        items: [
+            { href: "/admin/products", label: "Produtos", icon: Package },
+            { href: "/admin/categories", label: "Categorias", icon: Tags },
+            { href: "/admin/coupons", label: "Cupões", icon: TicketPercent },
+            { href: "/admin/home-videos", label: "Vídeos da homepage", icon: Clapperboard },
+        ],
+    },
+    {
+        id: "network",
+        label: "Rede e acessos",
+        items: [
+            { href: "/admin/florists", label: "Floristas", icon: Flower2 },
+            { href: "/admin/users", label: "Utilizadores", icon: Users },
+            { href: "/admin/subscription-plans", label: "Subscrições", icon: CreditCard },
+        ],
+    },
+    {
+        id: "configuration",
+        label: "Configuração",
+        items: [
+            { href: "/admin/settings", label: "Definições", icon: Settings },
+            { href: "/admin/tax-codes", label: "Códigos de IVA", icon: Percent },
+        ],
+    },
 ];
+
+export const adminNavigation = adminNavigationGroups.flatMap((group) => group.items);
 
 export const floristNavigation: NavigationItem[] = [
     { href: "/florist", label: "Visão geral", icon: LayoutDashboard, exact: true },

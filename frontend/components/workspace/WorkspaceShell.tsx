@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import AreaNavigation from "./AreaNavigation";
 import {
     adminNavigation,
+    adminNavigationGroups,
     floristNavigation,
     isNavigationItemActive,
 } from "./navigation";
@@ -57,7 +58,7 @@ export default function WorkspaceShell({
                 </p>
             </div>
             <div className="flex-1 overflow-y-auto p-3">
-                <AreaNavigation items={navigation} onNavigate={() => setMenuOpen(false)} />
+                <AreaNavigation items={navigation} groups={area === "admin" ? adminNavigationGroups : undefined} onNavigate={() => setMenuOpen(false)} />
             </div>
             <div className="border-t border-[#e6eae5] p-3">
                 <Button variant="ghost" className="w-full justify-start text-red-700 hover:bg-red-50 hover:text-red-800" onClick={handleLogout}>
