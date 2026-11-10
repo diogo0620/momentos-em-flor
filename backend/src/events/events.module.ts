@@ -11,6 +11,7 @@ import { AutomaticOrderOffersService } from './orders/automatic-order-offers.ser
 import { OrderPaidAutomationListener } from './orders/order-paid-automation.listener';
 import { OrderOfferNotificationAutomationService } from './order-offers/order-offer-notification-automation.service';
 import { StorageModule } from '@/storage/storage.module';
+import { OrderPaymentEmailService } from './orders/order-payment-email.service';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { StorageModule } from '@/storage/storage.module';
     AutomaticOrderOffersService,
     OrderPaidAutomationListener,
     OrderOfferNotificationAutomationService,
+    OrderPaymentEmailService,
   ],
 })
 export class EventsModule {}

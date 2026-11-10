@@ -14,6 +14,7 @@ import type { AuthenticatedUser } from '@/auth/interfaces/authenticated-user.int
 import { MoloniFiscalLifecycleService } from '@/moloni/fiscal/moloni-fiscal-lifecycle.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrderPaidEvent } from '@/events/orders/order-paid.event';
+import type Stripe from 'stripe';
 
 @Injectable()
 export class PaymentsService {
@@ -120,10 +121,35 @@ export class PaymentsService {
                 return this.createPaymentIntent(user, orderNumber);
             }
 
+            if (existingIntent.status === 'succeeded') {
+                await this.completeSucceededPayment(existingIntent);
+
+                return {
+                    status: 'PAID' as const,
+                    clientSecret: null,
+                };
+            }
+
             if (
-                existingIntent.client_secret
+                existingIntent.status === 'processing' ||
+                existingIntent.status === 'requires_capture'
             ) {
                 return {
+                    status: 'PROCESSING' as const,
+                    clientSecret: null,
+                };
+            }
+
+            if (
+                existingIntent.client_secret &&
+                [
+                    'requires_payment_method',
+                    'requires_confirmation',
+                    'requires_action',
+                ].includes(existingIntent.status)
+            ) {
+                return {
+                    status: 'REQUIRES_PAYMENT' as const,
                     clientSecret: existingIntent.client_secret,
                 };
             }
@@ -159,6 +185,7 @@ export class PaymentsService {
         });
 
         return {
+            status: 'REQUIRES_PAYMENT' as const,
             clientSecret:
                 paymentIntent.client_secret,
         };
@@ -296,6 +323,94 @@ export class PaymentsService {
         }
     }
 
+    private async completeSucceededPayment(
+        paymentIntent: Stripe.PaymentIntent,
+    ): Promise<void> {
+        const paymentId = Number(paymentIntent.metadata?.paymentId);
+        const orderId = Number(paymentIntent.metadata?.orderId);
+
+        if (!paymentId || !orderId) {
+            throw new BadRequestException(
+                'Stripe PaymentIntent is missing order metadata.',
+            );
+        }
+
+        const payment = await this.prisma.payment.findUnique({
+            where: { id: paymentId },
+        });
+
+        if (!payment) {
+            throw new NotFoundException('Payment not found.');
+        }
+
+        if (
+            payment.orderId !== orderId ||
+            payment.stripePaymentIntentId !== paymentIntent.id ||
+            paymentIntent.amount !== Math.round(Number(payment.amount) * 100) ||
+            paymentIntent.currency.toLowerCase() !== payment.currency.toLowerCase()
+        ) {
+            throw new BadRequestException(
+                'Stripe PaymentIntent does not match the pending payment.',
+            );
+        }
+
+        // Stripe pode entregar o mesmo evento mais do que uma vez e o cliente
+        // também pode regressar à página antes de o webhook ser processado.
+        if (payment.status === PaymentStatus.PAID) {
+            await this.prisma.moloniFiscalDocument.upsert({
+                where: { orderId },
+                create: { orderId },
+                update: {},
+            });
+
+            this.eventEmitter.emit('order.paid', new OrderPaidEvent(orderId));
+            return;
+        }
+
+        const paidAt = new Date();
+        const completed = await this.prisma.$transaction(async (tx) => {
+            const updatedPayment = await tx.payment.updateMany({
+                where: {
+                    id: payment.id,
+                    status: {
+                        in: [PaymentStatus.PENDING, PaymentStatus.FAILED],
+                    },
+                    stripePaymentIntentId: paymentIntent.id,
+                },
+                data: {
+                    status: PaymentStatus.PAID,
+                    paidAt,
+                },
+            });
+
+            if (updatedPayment.count !== 1) return false;
+
+            const updatedOrder = await tx.order.updateMany({
+                where: {
+                    id: orderId,
+                    status: OrderStatus.PENDING_PAYMENT,
+                },
+                data: {
+                    status: OrderStatus.WAITING_FOR_FLORISTS,
+                    paidAt,
+                },
+            });
+
+            if (updatedOrder.count !== 1) {
+                throw new BadRequestException(
+                    'Order is not awaiting payment.',
+                );
+            }
+
+            await this.moloniFiscalLifecycle.queuePaidOrder(tx, orderId);
+            return true;
+        });
+
+        if (completed) {
+            this.eventEmitter.emit('order.paid', new OrderPaidEvent(orderId));
+        }
+    }
+
 
 
 
@@ -312,105 +427,7 @@ export class PaymentsService {
         switch (event.type) {
 
             case 'payment_intent.succeeded': {
-                const paymentIntent =
-                    event.data.object;
-
-                const paymentId =
-                    Number(
-                        paymentIntent.metadata?.paymentId,
-                    );
-
-                const orderId =
-                    Number(
-                        paymentIntent.metadata?.orderId,
-                    );
-
-                if (!paymentId || !orderId) {
-                    throw new BadRequestException(
-                        'Stripe PaymentIntent is missing order metadata.',
-                    );
-                }
-
-                const payment =
-                    await this.prisma.payment.findUnique({
-                        where: {
-                            id: paymentId,
-                        },
-                    });
-
-                if (!payment) {
-                    throw new NotFoundException(
-                        'Payment not found.',
-                    );
-                }
-
-                const paidAt = new Date();
-
-                if (
-                    payment.orderId !== orderId ||
-                    payment.stripePaymentIntentId !== paymentIntent.id ||
-                    paymentIntent.amount !== Math.round(Number(payment.amount) * 100) ||
-                    paymentIntent.currency.toLowerCase() !== payment.currency.toLowerCase()
-                ) {
-                    throw new BadRequestException(
-                        'Stripe PaymentIntent does not match the pending payment.',
-                    );
-                }
-
-                // Stripe can send the same webhook more than once.
-                if (payment.status === 'PAID') {
-                    await this.prisma.moloniFiscalDocument.upsert({
-                        where: { orderId },
-                        create: { orderId },
-                        update: {},
-                    });
-
-                    this.eventEmitter.emit('order.paid', new OrderPaidEvent(orderId));
-
-                    return {
-                        received: true,
-                    };
-                }
-
-                await this.prisma.$transaction(async (tx) => {
-                    const updatedPayment = await tx.payment.updateMany({
-                        where: {
-                            id: payment.id,
-                            status: PaymentStatus.PENDING,
-                            stripePaymentIntentId: paymentIntent.id,
-                        },
-                        data: {
-                            status: PaymentStatus.PAID,
-                            paidAt,
-                        },
-                    });
-
-                    if (updatedPayment.count !== 1) {
-                        return;
-                    }
-
-                    const updatedOrder = await tx.order.updateMany({
-                        where: {
-                            id: orderId,
-                            status: OrderStatus.PENDING_PAYMENT,
-                        },
-                        data: {
-                            status: OrderStatus.WAITING_FOR_FLORISTS,
-                            paidAt,
-                        },
-                    });
-
-                    if (updatedOrder.count !== 1) {
-                        throw new BadRequestException(
-                            'Order is not awaiting payment.',
-                        );
-                    }
-
-
-                    await this.moloniFiscalLifecycle.queuePaidOrder(tx, orderId);
-                });
-
-                this.eventEmitter.emit('order.paid', new OrderPaidEvent(orderId));
+                await this.completeSucceededPayment(event.data.object);
 
                 break;
             }

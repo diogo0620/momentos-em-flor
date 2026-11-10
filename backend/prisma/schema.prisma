@@ -1047,12 +1047,17 @@ model Payment {
   stripePaymentIntentId String? @unique
 
   paidAt DateTime?
+  confirmationEmailSentAt        DateTime?
+  confirmationEmailAttempts      Int       @default(0)
+  confirmationEmailLastAttemptAt DateTime?
+  confirmationEmailLastError     String?
   refund PaymentRefund?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([status])
+  @@index([confirmationEmailSentAt])
 }
 
 model PaymentRefund {

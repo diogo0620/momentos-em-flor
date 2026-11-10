@@ -88,6 +88,17 @@ export default function CheckoutPaymentPage() {
 
                 if (cancelled) return;
 
+                if (paymentResponse.status === "PAID") {
+                    router.replace(`/account/orders/${orderNumber}`);
+                    return;
+                }
+
+                if (paymentResponse.status === "PROCESSING") {
+                    throw new Error(
+                        "O pagamento ainda está a ser processado pela Stripe. Aguarda alguns instantes e atualiza a encomenda.",
+                    );
+                }
+
                 const secret = paymentResponse.clientSecret;
 
                 if (!secret) {
@@ -278,6 +289,7 @@ export default function CheckoutPaymentPage() {
                         </div>
 
                         <Elements
+                            key={clientSecret}
                             stripe={stripePromise}
                             options={{ clientSecret, appearance }}
                         >

@@ -46,7 +46,7 @@ O backend aplica automaticamente as migrations pendentes antes de arrancar. O es
 - autorizar os domínios públicos nas configurações da Stripe, Supabase e Google Maps;
 - confirmar o domínio de envio no Resend;
 - enquanto o domínio não estiver confirmado, definir `RESEND_RECIPIENT_OVERRIDE` com o único destinatário autorizado; remover o valor depois da confirmação;
-- definir `RESEND_BRAND_LOGO_URL` com um URL HTTPS público e os seis `RESEND_TEMPLATE_*` com os aliases publicados no Resend;
+- definir `RESEND_BRAND_LOGO_URL` com um URL HTTPS público e os sete `RESEND_TEMPLATE_*` com os aliases publicados no Resend;
 - definir `SUPABASE_BUCKET` explicitamente como `dev`, `test` ou `prod`, conforme o ambiente;
 - configurar `FRONTEND_URL`/`PUBLIC_WEB_URL` corretamente para as ligações de recuperação de password.
 
