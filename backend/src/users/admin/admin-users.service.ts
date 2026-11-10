@@ -60,6 +60,7 @@ export class AdminUsersService {
         const user = await this.prisma.user.findUnique({
             where: { id },
             include: {
+                moloniSync: true,
                 florist: {
                     select: {
                         id: true,

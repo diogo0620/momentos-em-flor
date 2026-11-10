@@ -3,6 +3,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 
 export class AdminUserResponseDto {
+    moloniId!: string | null;
   @ApiProperty({ example: 1 })
   id!: number;
 

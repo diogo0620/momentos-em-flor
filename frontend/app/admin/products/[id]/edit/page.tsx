@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import ProductForm from "@/components/admin/products/ProductForm";
+import MoloniReference from "@/components/admin/common/MoloniReference";
 import { adminProductsApi } from "@/lib/api/products/admin-products";
 import type { AdminProductDetail } from "@/types/products/admin/admin-product-detail";
 
@@ -89,6 +90,7 @@ export default function EditProductPage() {
 
     return (
         <div className="space-y-6 pb-10">
+            <MoloniReference id={product.moloniId} />
             <ProductForm product={product} />
         </div>
     );

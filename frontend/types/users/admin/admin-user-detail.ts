@@ -1,4 +1,5 @@
 export type AdminUserDetail = {
+    moloniId?: string | null;
     id: number;
     firstName: string;
     lastName: string;

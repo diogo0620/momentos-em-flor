@@ -136,6 +136,7 @@ export class AdminProductVariantDto {
  */
 
 export class AdminProductResponseDto {
+    moloniId!: string | null;
 
     @ApiProperty({
         example: 1,

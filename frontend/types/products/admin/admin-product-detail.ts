@@ -1,4 +1,5 @@
 export type AdminProductDetail = {
+    moloniId?: string | null;
     id: number;
     name: string;
     slug: string;

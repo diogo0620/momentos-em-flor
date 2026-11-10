@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { publicProductsApi } from "@/lib/api/products/public-products";
+import ProductRecommendations from "@/components/store/products/ProductRecommendations";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { PublicProductComponent, PublicProductDetail } from "@/types/products/public/public-product-detail";
@@ -82,6 +83,8 @@ export default function PublicProductDetailPage() {
             }
 
             setProduct(response);
+            setQuantity(1);
+            setAddedToCart(false);
             setSelectedVariantId(response.variants?.[0]?.id ?? null);
             setComponentQuantities(Object.fromEntries(
                 (response.components ?? []).map((component) => [
@@ -276,7 +279,7 @@ export default function PublicProductDetailPage() {
                         )}
                     </section>
 
-                    <section className="lg:sticky lg:top-8">
+                    <section className="rounded-[2rem] bg-white p-6 shadow-[0_20px_70px_-35px_rgba(47,59,42,0.2)] sm:p-9 lg:sticky lg:top-8">
                         {product.categories.length > 0 && (
                             <div className="flex flex-wrap gap-2">
                                 {product.categories.map((category) => (
@@ -407,6 +410,7 @@ export default function PublicProductDetailPage() {
                         </div>
                     </section>
                 </div>
+                <ProductRecommendations productId={product.id} categoryId={product.categories[0]?.id} />
             </div>
         </main>
     );

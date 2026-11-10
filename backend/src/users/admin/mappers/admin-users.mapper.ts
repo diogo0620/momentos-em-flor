@@ -9,6 +9,7 @@ import { AdminUserListResponseDto } from '../dtos/admin-user-list-response.dto';
 
 type UserWithFlorist = Prisma.UserGetPayload<{
   include: {
+    moloniSync: true;
     florist: {
       select: {
         id: true;
@@ -27,6 +28,7 @@ export class AdminUsersMapper extends BaseMapper<
   toDetailResponse(user: UserWithFlorist): AdminUserResponseDto {
     return {
       id: user.id,
+      moloniId: user.moloniSync?.moloniId ?? null,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,

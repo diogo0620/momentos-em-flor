@@ -9,6 +9,7 @@ import { SupabaseStorageService } from '@/storage/supabase-storage.service';
 
 type AdminProductDetail = Prisma.ProductGetPayload<{
     include: {
+        moloniSync: true;
         categories: { select: { id: true; name: true; } };
         taxCode: true,
         components: true;
@@ -36,6 +37,7 @@ export class AdminProductsMapper extends BaseMapper<
     ): AdminProductResponseDto {
         return {
             id: product.id,
+            moloniId: product.moloniSync?.moloniId ?? null,
             name: product.name,
             slug: product.slug,
             description: product.description,

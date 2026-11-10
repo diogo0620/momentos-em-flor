@@ -69,6 +69,7 @@ export class AdminProductsService {
         const product = await this.prisma.product.findUnique({
             where: { id },
             include: {
+                moloniSync: true,
                 categories: {select: {id: true,name: true,},},
                 components: {orderBy: {sortOrder: 'asc'}},
                 variants: {orderBy: {sortOrder: 'asc'}},
