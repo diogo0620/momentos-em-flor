@@ -135,10 +135,7 @@ export async function apiFetch<T>(
         fetchOptions.headers,
     );
 
-    headers.set(
-        "Content-Type",
-        "application/json",
-    );
+    if (!(fetchOptions.body instanceof FormData)) headers.set("Content-Type", "application/json");
 
     if (accessToken) {
         headers.set(

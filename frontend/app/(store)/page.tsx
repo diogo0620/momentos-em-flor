@@ -13,6 +13,7 @@ import {
 import { publicCategoriesApi } from "@/lib/api/categories/public-categories";
 import { publicProductsApi } from "@/lib/api/products/public-products";
 import ProductCard from "@/components/store/products/ProductCard";
+import { apiFetch } from "@/lib/api/common/client";
 
 const reviews: { quote: string; name: string }[] = [];
 
@@ -48,13 +49,14 @@ export default function HomePage() {
     const [featuredProducts, setFeaturedProducts] = useState<PublicProductList[]>([]);
     const [isLoadingFeatured, setIsLoadingFeatured] = useState(true);
     const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL;
-    const socialVideos = (process.env.NEXT_PUBLIC_SOCIAL_VIDEO_URLS ?? "")
-        .split(",")
-        .map((url) => url.trim())
-        .filter(Boolean)
-        .map(getSocialVideoEmbed)
-        .filter((video): video is NonNullable<ReturnType<typeof getSocialVideoEmbed>> => Boolean(video))
-        .slice(0, 4);
+    const [socialVideos, setSocialVideos] = useState<NonNullable<ReturnType<typeof getSocialVideoEmbed>>[]>([]);
+    useEffect(() => {
+        let cancelled = false;
+        void apiFetch<{ data: { url: string }[] }>('/home-videos').then(result => {
+            if (!cancelled) setSocialVideos(result.data.slice(0, 4).map(video => ({ kind: 'video', src: video.url })));
+        }).catch(() => { /* A indisponibilidade dos vídeos não impede a compra. */ });
+        return () => { cancelled = true; };
+    }, []);
 
     useEffect(() => {
         let cancelled = false;

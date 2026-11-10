@@ -17,7 +17,7 @@ export default function ProductCard({ product }: Props) {
     });
 
     return (
-        <article className="group flex h-full flex-col">
+        <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#e5e8df] bg-white p-3 shadow-sm transition-shadow hover:shadow-lg">
             <div className="relative aspect-[4/5] overflow-hidden bg-[#E9ECE4]">
                 <Link href={href} className="block h-full" aria-label={`Ver ${product.name}`}>
                     {product.image ? (

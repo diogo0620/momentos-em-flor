@@ -1,5 +1,6 @@
 
 import { Module } from '@nestjs/common';
+import { MoloniMappingsController } from './admin/moloni-mappings.controller';
 
 import { MoloniEncryptionService } from './encryption/moloni-encryption.service';
 import { MoloniAuthService } from './auth/moloni-auth.service';
@@ -21,6 +22,7 @@ import { StorageModule } from '@/storage/storage.module';
 @Module({
   imports: [EmailModule, StorageModule],
   controllers: [
+    MoloniMappingsController,
     AdminMoloniController,
     AdminMoloniFiscalDocumentsController,
   ],

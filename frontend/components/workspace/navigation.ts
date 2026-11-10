@@ -35,6 +35,8 @@ export const adminNavigation: NavigationItem[] = [
     { href: "/admin/florists", label: "Floristas", icon: Flower2 },
     { href: "/admin/users", label: "Utilizadores", icon: Users },
     { href: "/admin/settings", label: "Definições", icon: Settings },
+    { href: "/admin/home-videos", label: "Vídeos da homepage", icon: Settings },
+    { href: "/admin/fiscal-mappings", label: "Associações Moloni", icon: Settings },
     { href: "/admin/coupons", label: "Cupões", icon: TicketPercent },
     { href: "/admin/subscription-plans", label: "Subscrições", icon: CreditCard },
 ];

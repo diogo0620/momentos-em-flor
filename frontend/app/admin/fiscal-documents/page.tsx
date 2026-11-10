@@ -151,7 +151,7 @@ export default function FiscalDocumentsPage() {
 
     return (
         <div className="space-y-6 pb-10">
-            <PageHeader title="Faturação Moloni" subtitle="Emite faturas de encomendas pagas e acompanha falhas sem duplicar documentos." />
+            <PageHeader title="Faturação Moloni" subtitle="Emite faturas de encomendas pagas e acompanha falhas sem duplicar documentos." buttonText="Corrigir associações" buttonHref="/admin/fiscal-mappings" />
 
             <section className="rounded-3xl bg-white p-5 shadow-sm sm:p-6">
                 <form className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto]" onSubmit={submitSearch}>
