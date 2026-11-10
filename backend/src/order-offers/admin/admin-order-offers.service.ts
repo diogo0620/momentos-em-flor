@@ -112,6 +112,7 @@ export class AdminOrderOffersService {
                     id: true,
                     status: true,
                     total: true,
+                    expectedFloristTotal: true,
                     deliveryStreet: true,
                     deliveryStreetNumber: true,
                     deliveryStreet2: true,
@@ -149,10 +150,10 @@ export class AdminOrderOffersService {
         if (order.status !== OrderStatus.WAITING_FOR_FLORISTS)
             Exceptions.badRequest(ERROR_MESSAGES.ORDER_NOT_WAITING_FOR_FLORIST);
 
-        const orderTotal = Number(order.total);
+        const orderTotal = Number(order.expectedFloristTotal);
 
         if (dto.price > orderTotal)
-            Exceptions.badRequest(ERROR_MESSAGES.ORDER_OFFER_PRICE_EXCEEDS_ORDER);
+            Exceptions.badRequest({ code: 'ORDER_OFFER_PRICE_EXCEEDS_COMPENSATION', message: 'O valor da proposta excede a compensação prevista da florista após descontos.' });
 
         const existingOffer = await this.prisma.orderOffer.findFirst({
             where: {

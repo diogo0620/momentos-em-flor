@@ -136,6 +136,12 @@ export class AdminCreateProductDto {
     @Type(() => AdminCreateProductVariantDto)
     variants?: AdminCreateProductVariantDto[];
 
+    @ApiPropertyOptional({ type: [Number], description: 'Produtos complementares sugeridos como add-ons.' })
+    @IsOptional()
+    @IsArray()
+    @IsInt({ each: true })
+    addonProductIds?: number[];
+
     /*
     @ApiPropertyOptional({
         type: [CreateProductImageDto],

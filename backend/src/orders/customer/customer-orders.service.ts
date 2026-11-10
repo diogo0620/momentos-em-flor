@@ -612,6 +612,15 @@ export class CustomerOrdersService {
             amountBeforeDiscount - discount,
         );
 
+        // O cupão reduz proporcionalmente a componente de produto que financia
+        // a compensação da florista. A entrega não aumenta esta compensação.
+        const discountedProductRatio = subtotal > 0
+            ? Math.max(0, subtotal - Math.min(discount, subtotal)) / subtotal
+            : 0;
+        expectedFloristTotal = roundMoney(
+            expectedFloristTotal * discountedProductRatio,
+        );
+
         /*
          * 10. Generate order number
          */

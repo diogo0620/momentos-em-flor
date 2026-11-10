@@ -136,6 +136,7 @@ export class AdminProductVariantDto {
  */
 
 export class AdminProductResponseDto {
+    addonProducts!: Array<{ id: number; name: string }>;
     moloniId!: string | null;
 
     @ApiProperty({

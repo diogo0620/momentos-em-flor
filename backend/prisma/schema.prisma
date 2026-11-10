@@ -363,6 +363,8 @@ model Product {
   categories    Category[]         @relation("ProductCategories")
   components    ProductComponent[]
   variants      ProductVariant[]
+  addons        ProductAddon[] @relation("ProductAddons")
+  addonFor      ProductAddon[] @relation("AddonProducts")
   orderItems    OrderItem[]
 
   moloniSync MoloniSync?
@@ -373,6 +375,22 @@ model Product {
 
   @@index([active])
   @@index([taxCodeId])
+}
+
+model ProductAddon {
+  id Int @id @default(autoincrement())
+  productId Int
+  product Product @relation("ProductAddons", fields: [productId], references: [id], onDelete: Cascade)
+  addonProductId Int
+  addonProduct Product @relation("AddonProducts", fields: [addonProductId], references: [id], onDelete: Cascade)
+  sortOrder Int @default(0)
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, addonProductId])
+  @@index([productId, active, sortOrder])
+  @@index([addonProductId])
 }
 
 //

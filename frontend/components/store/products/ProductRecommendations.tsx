@@ -4,15 +4,15 @@ import ProductCard from "./ProductCard";
 import { publicProductsApi } from "@/lib/api/products/public-products";
 import type { PublicProductList } from "@/types/products/public/public-product-list";
 
-export default function ProductRecommendations({ productId, categoryId }: { productId: number; categoryId?: number }) {
+export default function ProductRecommendations({ productId, categoryId, configuredAddons = [] }: { productId: number; categoryId?: number; configuredAddons?: PublicProductList[] }) {
     const [related, setRelated] = useState<PublicProductList[]>([]);
-    const [extras, setExtras] = useState<PublicProductList[]>([]);
+    const [extras, setExtras] = useState<PublicProductList[]>(configuredAddons);
     useEffect(() => {
         let cancelled = false;
-        setRelated([]); setExtras([]);
+        setRelated([]); setExtras(configuredAddons);
         void Promise.allSettled([
             publicProductsApi.getAll({ categoryId, pageSize: 8 }),
-            publicProductsApi.getAll({ search: "chocolate", type: "SALE", pageSize: 4 }),
+            configuredAddons.length > 0 ? Promise.resolve({ items: configuredAddons }) : publicProductsApi.getAll({ search: "chocolate", type: "SALE", pageSize: 4 }),
         ]).then(([suggestions, complements]) => {
             if (cancelled) return;
             const additions = complements.status === "fulfilled" ? complements.value.items.filter(item => item.id !== productId) : [];
@@ -20,7 +20,7 @@ export default function ProductRecommendations({ productId, categoryId }: { prod
             if (suggestions.status === "fulfilled") setRelated(suggestions.value.items.filter(item => item.id !== productId && !additions.some(extra => extra.id === item.id)).slice(0, 4));
         });
         return () => { cancelled = true; };
-    }, [productId, categoryId]);
+    }, [productId, categoryId, configuredAddons]);
     return <>
         {[{ title: "Um pequeno extra, um gesto ainda maior.", text: "Descobre os chocolates disponíveis e escolhe os detalhes antes de adicionar ao carrinho.", items: extras }, { title: "Outras formas de dizer o mesmo.", text: "Continua a explorar a coleção e encontra a composição certa para este momento.", items: related }].map(section => section.items.length > 0 && (
             <section key={section.title} className="mt-20 border-t border-[#d8ddcf] pt-12 sm:mt-28">

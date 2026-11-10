@@ -178,4 +178,7 @@ export class PublicProductResponseDto {
         description: 'Refundable deposit for rental products.',
     })
     rentalDeposit?: number | null;
+
+    @ApiProperty({ isArray: true })
+    addons!: Array<{ id: number; name: string; slug: string; price: number; image?: string; type: ProductType; featured: boolean }>;
 }

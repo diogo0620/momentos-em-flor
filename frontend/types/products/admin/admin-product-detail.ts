@@ -12,6 +12,7 @@ export type AdminProductDetail = {
     image: string;
     components: ProductComponent[];
     variants: ProductVariant[];
+    addonProducts: { id: number; name: string }[];
     taxCode: ProductTaxCode;
     active: boolean;
     rentalDeposit?: number;

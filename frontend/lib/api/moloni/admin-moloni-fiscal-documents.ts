@@ -16,6 +16,11 @@ class AdminMoloniFiscalDocumentsApi extends BaseApi<
         await apiFetch(`${this.endpoint}/${id}/issue`, { method: "POST" });
     }
 
+    async getRepairContext<T>(id: number): Promise<T> {
+        const response = await apiFetch<{ data: T }>(`${this.endpoint}/${id}/repair-context`);
+        return response.data;
+    }
+
     async recordCreditNote(id: number, creditNoteId: string): Promise<void> {
         await apiFetch(`${this.endpoint}/${id}/record-credit-note`, {
             method: "POST",

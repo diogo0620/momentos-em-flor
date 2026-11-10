@@ -14,6 +14,7 @@ type AdminProductDetail = Prisma.ProductGetPayload<{
         taxCode: true,
         components: true;
         variants: true;
+        addons: { include: { addonProduct: true } };
     };
 }>;
 
@@ -71,6 +72,7 @@ export class AdminProductsMapper extends BaseMapper<
                 floristPrice: Number(variant.floristPrice),
                 image: variant.imagePath ? this.storageService.getPublicUrl(variant.imagePath) : undefined,
             })),
+            addonProducts: product.addons.map(({ addonProduct }) => ({ id: addonProduct.id, name: addonProduct.name })),
             taxCode: {
                 id: product.taxCode.id,
                 name: product.taxCode.name

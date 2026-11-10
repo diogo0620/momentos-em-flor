@@ -9,6 +9,7 @@ export type AdminUpdateProduct = {
     //images: string[];
     components: ProductComponent[];
     variants: ProductVariant[];
+    addonProductIds?: number[];
     active: boolean;
     rentalDeposit?: number;
 }

@@ -11,6 +11,7 @@ export type PublicProductDetail = {
     type: ProductType;
     featured: boolean;
     rentalDeposit?: number | null;
+    addons: Array<{ id: number; name: string; slug: string; price: number; image: string; type: ProductType; featured: boolean }>;
 }
 
 export type PublicProductCategory = {

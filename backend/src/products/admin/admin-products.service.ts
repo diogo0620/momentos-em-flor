@@ -73,6 +73,7 @@ export class AdminProductsService {
                 categories: {select: {id: true,name: true,},},
                 components: {orderBy: {sortOrder: 'asc'}},
                 variants: {orderBy: {sortOrder: 'asc'}},
+                addons: { orderBy: { sortOrder: 'asc' }, include: { addonProduct: true } },
                 taxCode: true
             },
         });
@@ -129,6 +130,9 @@ export class AdminProductsService {
                             active: component.active ?? true,
                             sortOrder: component.sortOrder ?? index,
                         })),
+                    },
+                    addons: {
+                        create: (dto.addonProductIds ?? []).map((addonProductId, sortOrder) => ({ addonProductId, sortOrder })),
                     },
                     active: dto.active ?? true,
 
@@ -304,6 +308,14 @@ export class AdminProductsService {
                             });
                         }
                     }
+                }
+
+                if (dto.addonProductIds !== undefined) {
+                    if (dto.addonProductIds.includes(id)) Exceptions.badRequest({ code: 'INVALID_PRODUCT_ADDON', message: 'Um produto não pode ser add-on de si próprio.' });
+                    await tx.productAddon.deleteMany({ where: { productId: id } });
+                    if (dto.addonProductIds.length > 0) await tx.productAddon.createMany({
+                        data: dto.addonProductIds.map((addonProductId, sortOrder) => ({ productId: id, addonProductId, sortOrder })),
+                    });
                 }
             });
 

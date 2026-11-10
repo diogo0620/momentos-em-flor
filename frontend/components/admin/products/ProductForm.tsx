@@ -15,12 +15,14 @@ import {
 import { adminProductsApi } from "@/lib/api/products/admin-products";
 import { adminTaxCodesApi } from "@/lib/api/tax-codes/admin-tax-codes";
 import { publicCategoriesApi } from "@/lib/api/categories/public-categories";
+import { publicProductsApi } from "@/lib/api/products/public-products";
 
 import type { AdminProductDetail } from "@/types/products/admin/admin-product-detail";
 import type { AdminCreateProduct } from "@/types/products/admin/admin-create-product";
 import type { AdminUpdateProduct } from "@/types/products/admin/admin-update-product";
 import type { ProductType } from "@/types/products/admin/admin-product-list";
 import type { PublicCategoryList } from "@/types/categories/public/public-category-list";
+import type { PublicProductList } from "@/types/products/public/public-product-list";
 import type { AdminTaxCodeList } from "@/types/tax-codes/admin/admin-tax-code-list";
 import { adminUploadsApi } from "@/lib/api/uploads/admin-uploads";
 
@@ -183,6 +185,8 @@ export default function ProductForm({ product }: ProductFormProps) {
     );
 
     const [taxCodes, setTaxCodes] = useState<AdminTaxCodeList[]>([]);
+    const [productOptions, setProductOptions] = useState<PublicProductList[]>([]);
+    const [addonProductIds, setAddonProductIds] = useState<number[]>(product?.addonProducts?.map((addon) => addon.id) ?? []);
     const [loadingOptions, setLoadingOptions] = useState(true);
 
     const [productImage] = useState<string | null>(
@@ -235,7 +239,7 @@ export default function ProductForm({ product }: ProductFormProps) {
             setLoadingOptions(true);
 
             try {
-                const [categoryResponse, taxCodeResponse] = await Promise.all([
+                const [categoryResponse, taxCodeResponse, productResponse] = await Promise.all([
                     publicCategoriesApi.getAll({
                         page: 1,
                         pageSize: 100,
@@ -247,11 +251,13 @@ export default function ProductForm({ product }: ProductFormProps) {
                         order: "asc",
                         active: true,
                     }),
+                    publicProductsApi.getAll({ page: 1, pageSize: 100, active: true }),
                 ]);
 
                 if (!cancelled) {
                     setCategories(categoryResponse.items);
                     setTaxCodes(taxCodeResponse.items);
+                    setProductOptions(productResponse.items.filter((option) => option.id !== product?.id));
                 }
             } catch (err) {
                 if (!cancelled) {
@@ -508,6 +514,7 @@ export default function ProductForm({ product }: ProductFormProps) {
                     customerPrice: variant.customerPrice,
                     floristPrice: variant.floristPrice,
                 })),
+                addonProductIds,
                 active,
                 ...(type === "RENTAL"
                     ? { rentalDeposit: toNumber(rentalDeposit) }
@@ -838,6 +845,20 @@ export default function ProductForm({ product }: ProductFormProps) {
                             </div>
                         )}
                     </div>
+                </div>
+            </section>
+
+            <section className={sectionClassName}>
+                <SectionHeading title="Add-ons e bundles" description="Seleciona produtos que combinam com este artigo. Serão sugeridos na página do produto, mantendo preço, IVA e stock próprios." />
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {productOptions.map((option) => {
+                        const selected = addonProductIds.includes(option.id);
+                        return <button key={option.id} type="button" onClick={() => setAddonProductIds((current) => selected ? current.filter((id) => id !== option.id) : [...current, option.id])} className={`flex items-center justify-between rounded-2xl border p-4 text-left ${selected ? "border-[#55624A] bg-[#F3F5EE]" : "border-[#E2E6DD] bg-white"}`}>
+                            <span><span className="block text-sm font-semibold">{option.name}</span><span className="mt-1 block text-xs text-[#7A8474]">{formatPrice(option.price)}</span></span>
+                            <span className={`flex h-6 w-6 items-center justify-center rounded-full border ${selected ? "border-[#55624A] bg-[#55624A] text-white" : "border-[#CDD4C7]"}`}>{selected ? "✓" : ""}</span>
+                        </button>;
+                    })}
+                    {!loadingOptions && productOptions.length === 0 && <p className="text-sm text-[#7A8474]">Cria outros produtos para os poder associar como add-ons.</p>}
                 </div>
             </section>
 

@@ -151,7 +151,7 @@ export default function FiscalDocumentsPage() {
 
     return (
         <div className="space-y-6 pb-10">
-            <PageHeader title="Faturação Moloni" subtitle="Emite faturas de encomendas pagas e acompanha falhas sem duplicar documentos." buttonText="Corrigir associações" buttonHref="/admin/fiscal-mappings" />
+            <PageHeader title="Faturação Moloni" subtitle="Emite faturas de encomendas pagas e acompanha falhas sem duplicar documentos." />
 
             <section className="rounded-3xl bg-white p-5 shadow-sm sm:p-6">
                 <form className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto]" onSubmit={submitSearch}>
@@ -194,6 +194,7 @@ export default function FiscalDocumentsPage() {
                                     <td className="max-w-xs px-6 py-5 text-xs text-gray-500">{item.creditNoteRequiredAt && !item.creditNoteId ? <span className="font-semibold text-amber-700">Nota de crédito pendente após reembolso</span> : item.creditNoteId ? `Nota de crédito Moloni ID ${item.creditNoteId}` : item.lastError ? <span className="font-semibold text-red-700">{item.lastError}</span> : item.invoiceEmailSentAt ? "Fatura emitida e enviada por email" : item.invoiceEmailLastError || (item.invoiceStatus === "ISSUED" ? "Fatura emitida; envio de email pendente" : "Aguarda emissão")}</td>
                                     <td className="px-6 py-5">
                                         <div className="flex min-w-40 flex-wrap justify-end gap-2">
+                                            {(item.invoiceStatus === "FAILED" || item.receiptStatus === "FAILED") && <Link href={`/admin/fiscal-documents/${item.id}/repair`} className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">Corrigir integração</Link>}
                                             {(item.invoiceStatus !== "ISSUED" || item.receiptStatus === "FAILED") && (
                                                 <button onClick={() => void issue(item)} disabled={issuingId === item.id || item.invoiceStatus === "PROCESSING"} className="inline-flex items-center gap-2 rounded-xl bg-[#55624A] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">
                                                     {issuingId === item.id ? <Loader2 size={15} className="animate-spin" /> : <ReceiptText size={15} />}

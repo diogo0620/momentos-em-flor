@@ -12,6 +12,7 @@ type PublicProductDetail = Prisma.ProductGetPayload<{
         categories: { select: { id: true; name: true } };
         components: true;
         variants: true;
+        addons: { include: { addonProduct: true } };
     };
 }>;
 
@@ -60,6 +61,15 @@ export class PublicProductsMapper extends BaseMapper<
                 description: variant.description,
                 price: Number(variant.customerPrice),
                 image: variant.imagePath ? this.storageService.getPublicUrl(variant.imagePath) : '',
+            })),
+            addons: product.addons.map(({ addonProduct }) => ({
+                id: addonProduct.id,
+                name: addonProduct.name,
+                slug: addonProduct.slug,
+                price: Number(addonProduct.customerPrice),
+                image: addonProduct.imagePath ? this.storageService.getPublicUrl(addonProduct.imagePath) : '',
+                type: addonProduct.type,
+                featured: addonProduct.featured,
             })),
 
             type: product.type,

@@ -166,6 +166,40 @@ export class AdminMoloniFiscalDocumentsService {
     );
   }
 
+  async getRepairContext(id: number) {
+    const document = await this.prisma.moloniFiscalDocument.findUnique({
+      where: { id },
+      include: {
+        order: {
+          include: {
+            customer: { include: { moloniSync: true } },
+            items: {
+              include: {
+                product: { include: { moloniSync: true } },
+                taxCode: { include: { moloniSync: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!document) throw new NotFoundException('Documento fiscal não encontrado.');
+    const products = new Map<number, { localId: number; name: string; moloniId: string | null }>();
+    const taxes = new Map<number, { localId: number; name: string; rate: number; moloniId: string | null }>();
+    for (const item of document.order.items) {
+      if (item.product) products.set(item.product.id, { localId: item.product.id, name: item.product.name, moloniId: item.product.moloniSync?.moloniId ?? null });
+      if (item.taxCode) taxes.set(item.taxCode.id, { localId: item.taxCode.id, name: item.taxCode.name, rate: Number(item.taxCode.rate), moloniId: item.taxCode.moloniSync?.moloniId ?? null });
+    }
+    return ApiResponse.success({
+      fiscalDocumentId: document.id,
+      orderNumber: document.order.orderNumber,
+      lastError: document.lastError,
+      customer: document.order.customerId ? { localId: document.order.customerId, name: `${document.order.customerFirstName} ${document.order.customerLastName}`.trim(), moloniId: document.order.customer?.moloniSync?.moloniId ?? null } : null,
+      products: [...products.values()],
+      taxes: [...taxes.values()],
+    });
+  }
+
   async issue(id: number) {
     const record = await this.getRecord(id);
 
@@ -612,7 +646,7 @@ export class AdminMoloniFiscalDocumentsService {
 
       const rate = Number(item.taxRate);
       if (!taxIds.has(item.taxCodeId)) {
-        taxIds.set(item.taxCodeId, await this.resolveMoloniTaxId(rate));
+        taxIds.set(item.taxCodeId, await this.resolveMoloniTaxId(item.taxCodeId, rate));
       }
     }
 
@@ -656,7 +690,13 @@ export class AdminMoloniFiscalDocumentsService {
     return products;
   }
 
-  private async resolveMoloniTaxId(rate: number): Promise<number> {
+  private async resolveMoloniTaxId(taxCodeId: number, rate: number): Promise<number> {
+    const mapped = await this.prisma.moloniSync.findUnique({
+      where: { taxCodeId },
+      select: { moloniId: true },
+    });
+    if (mapped?.moloniId) return Number(mapped.moloniId);
+
     const taxes = await this.moloniApi.getTaxes<MoloniTax[]>({
       value: rate,
       type: 1,
@@ -675,8 +715,13 @@ export class AdminMoloniFiscalDocumentsService {
         `Não foi possível identificar de forma inequívoca o IVA de ${rate}% na Moloni.`,
       );
     }
-
-    return matches[0].tax_id!;
+    const moloniId = matches[0].tax_id!;
+    await this.prisma.moloniSync.upsert({
+      where: { taxCodeId },
+      create: { taxCodeId, moloniId: String(moloniId), status: 'SYNCED', syncedAt: new Date() },
+      update: { moloniId: String(moloniId), status: 'SYNCED', syncedAt: new Date(), message: null },
+    });
+    return moloniId;
   }
 
   private toMoloniDiscountPercentage(discount: number, grossBeforeDiscount: number): number {

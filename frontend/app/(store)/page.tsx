@@ -13,6 +13,7 @@ import {
 import { publicCategoriesApi } from "@/lib/api/categories/public-categories";
 import { publicProductsApi } from "@/lib/api/products/public-products";
 import ProductCard from "@/components/store/products/ProductCard";
+import SocialVideoCarousel from "@/components/store/home/SocialVideoCarousel";
 import { apiFetch } from "@/lib/api/common/client";
 
 const reviews: { quote: string; name: string }[] = [];
@@ -416,26 +417,7 @@ export default function HomePage() {
                         )}
                     </div>
 
-                    {socialVideos.length > 0 && (
-                        <div className="mt-10 grid grid-cols-1 gap-4 sm:mt-12 sm:grid-cols-2 lg:grid-cols-4">
-                            {socialVideos.map((video, index) => (
-                                <article key={`${video.src}-${index}`} className="aspect-[9/16] overflow-hidden bg-[#DDE4D5] shadow-[0_14px_40px_rgba(47,59,42,0.10)]">
-                                    {video.kind === "video" ? (
-                                        <video src={video.src} controls playsInline preload="metadata" className="h-full w-full object-cover" aria-label={`Vídeo Momentos em Flor ${index + 1}`} />
-                                    ) : (
-                                        <iframe
-                                            src={video.src}
-                                            title={`Vídeo Momentos em Flor ${index + 1}`}
-                                            loading="lazy"
-                                            allow="autoplay; encrypted-media; picture-in-picture"
-                                            allowFullScreen
-                                            className="h-full w-full border-0"
-                                        />
-                                    )}
-                                </article>
-                            ))}
-                        </div>
-                    )}
+                    <SocialVideoCarousel videos={socialVideos} />
 
                     <p className="mt-6 text-center text-xs leading-5 text-[#77816F]">
                         Um gesto, uma flor, uma memória. Descobre a inspiração por detrás de cada ramo.

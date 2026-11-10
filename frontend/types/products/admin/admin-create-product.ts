@@ -10,6 +10,7 @@ export type AdminCreateProduct = {
     taxCodeId: number;
     components: ProductComponent[];
     variants: ProductVariant[];
+    addonProductIds?: number[];
     active: boolean;
     rentalDeposit?: number;
 }

@@ -66,7 +66,12 @@ export class PublicProductsService {
             include: {
                 categories: { select: { id: true, name: true }, where: { active: true } },
                 components: { where: { active: true }, orderBy: { sortOrder: 'asc' } },
-                variants: { where: { active: true }, orderBy: { sortOrder: 'asc', } }
+                variants: { where: { active: true }, orderBy: { sortOrder: 'asc', } },
+                addons: {
+                    where: { active: true, addonProduct: { active: true } },
+                    orderBy: { sortOrder: 'asc' },
+                    include: { addonProduct: true },
+                },
             },
         });
 

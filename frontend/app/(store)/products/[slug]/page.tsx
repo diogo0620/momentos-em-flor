@@ -410,7 +410,7 @@ export default function PublicProductDetailPage() {
                         </div>
                     </section>
                 </div>
-                <ProductRecommendations productId={product.id} categoryId={product.categories[0]?.id} />
+                <ProductRecommendations productId={product.id} categoryId={product.categories[0]?.id} configuredAddons={product.addons} />
             </div>
         </main>
     );
