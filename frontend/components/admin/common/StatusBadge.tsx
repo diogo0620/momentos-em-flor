@@ -35,7 +35,7 @@ const labels: Record<string, string> = {
     WAITING_FOR_FLORISTS: "A aguardar atribuição",
     ASSIGNED: "Atribuída",
     IN_PRODUCTION: "Em preparação",
-    READY_FOR_DELIVERY: "Pronta para entrega",
+    READY_FOR_DELIVERY: "Em entrega",
     DELIVERED: "Entregue",
     PAID: "Pago",
     FAILED: "Falhou",

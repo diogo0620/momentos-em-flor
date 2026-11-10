@@ -37,7 +37,7 @@ const STATUS_OPTIONS: { value: AdminOrderStatus; label: string }[] = [
     { value: "WAITING_FOR_FLORISTS", label: "À espera de floristas" },
     { value: "ASSIGNED", label: "Atribuída" },
     { value: "IN_PRODUCTION", label: "Em preparação" },
-    { value: "READY_FOR_DELIVERY", label: "Pronta para entrega" },
+    { value: "READY_FOR_DELIVERY", label: "Em entrega" },
     { value: "DELIVERED", label: "Entregue" },
     { value: "CANCELLED", label: "Cancelada" },
 ];

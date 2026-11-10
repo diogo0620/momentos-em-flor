@@ -56,7 +56,7 @@ const STATUS_LABELS: Record<AdminOrderStatus, string> = {
     WAITING_FOR_FLORISTS: "À espera de floristas",
     ASSIGNED: "Atribuída",
     IN_PRODUCTION: "Em preparação",
-    READY_FOR_DELIVERY: "Pronta para entrega",
+    READY_FOR_DELIVERY: "Em entrega",
     DELIVERED: "Entregue",
     CANCELLED: "Cancelada",
 };
@@ -136,7 +136,7 @@ const STATUS_ACTIONS: Partial<
         action: "startProduction",
     },
     IN_PRODUCTION: {
-        label: "Marcar como pronta para entrega",
+        label: "Iniciar entrega",
         action: "setReadyForDelivery",
     },
     READY_FOR_DELIVERY: {
@@ -1381,7 +1381,7 @@ export default function EditOrderPage() {
                                 { label: "Pagamento confirmado", date: order.paidAt, detail: "A encomenda ficou disponível para propostas de floristas.", tone: "bg-amber-500" },
                                 { label: "Florista atribuída", date: order.assignedAt, detail: order.assignedFlorist?.name ? `Atribuída a ${order.assignedFlorist.name}.` : "Florista associada à encomenda.", tone: "bg-green-500" },
                                 { label: "Em preparação", date: order.inProductionAt, detail: "A florista iniciou a preparação da encomenda.", tone: "bg-indigo-500" },
-                                { label: "Pronta para entrega", date: order.readyForDeliveryAt, detail: "A encomenda ficou pronta para ser entregue.", tone: "bg-violet-500" },
+                                { label: "Em entrega", date: order.readyForDeliveryAt, detail: "A encomenda saiu para entrega.", tone: "bg-violet-500" },
                                 { label: "Entregue", date: order.deliveredAt, detail: "A entrega foi confirmada.", tone: "bg-green-600" },
                                 { label: "Encomenda cancelada", date: order.cancelledAt, detail: order.cancellationReason ? `${CANCELLATION_REASON_LABELS[order.cancellationReason]}${order.cancellationReasonDetails ? ` — ${order.cancellationReasonDetails}` : ""}` : "Encomenda cancelada.", tone: "bg-red-500" },
                             ].filter((event) => Boolean(event.date)).map((event) => (

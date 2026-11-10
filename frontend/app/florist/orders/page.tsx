@@ -34,7 +34,7 @@ type QueryParams = PaginationParams & { status?: FloristOrderStatus };
 const STATUS_OPTIONS: { value: FloristOrderStatus; label: string }[] = [
     { value: "ASSIGNED", label: "Atribuída" },
     { value: "IN_PRODUCTION", label: "Em preparação" },
-    { value: "READY_FOR_DELIVERY", label: "Pronta para entrega" },
+    { value: "READY_FOR_DELIVERY", label: "Em entrega" },
     { value: "DELIVERED", label: "Entregue" },
     { value: "CANCELLED", label: "Cancelada" },
 ];
@@ -45,7 +45,7 @@ const STATUS_LABELS: Record<FloristOrderStatus, string> = {
     WAITING_FOR_FLORISTS: "À espera de floristas",
     ASSIGNED: "Atribuída",
     IN_PRODUCTION: "Em preparação",
-    READY_FOR_DELIVERY: "Pronta para entrega",
+    READY_FOR_DELIVERY: "Em entrega",
     DELIVERED: "Entregue",
     CANCELLED: "Cancelada",
 };

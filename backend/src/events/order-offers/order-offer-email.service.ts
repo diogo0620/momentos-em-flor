@@ -4,6 +4,7 @@ import { DeliveryTimeSlot, UserRole } from '@prisma/client';
 
 import { PrismaService } from '@/prisma/prisma.service';
 import { EmailService } from '@/email/email.service';
+import { SupabaseStorageService } from '@/storage/supabase-storage.service';
 
 @Injectable()
 export class OrderOfferEmailService {
@@ -13,16 +14,17 @@ export class OrderOfferEmailService {
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
+    private readonly storageService: SupabaseStorageService,
   ) {}
 
   async sendCreatedNotification(orderOfferId: number): Promise<void> {
     const templateId = this.configService.getOrThrow<string>(
-      'RESEND_ORDER_OFFER_CREATED_TEMPLATE_ID',
+      'RESEND_TEMPLATE_ORDER_OFFER_CREATED',
     );
 
-    const portalOffersUrl = this.configService.getOrThrow<string>(
-      'FLORIST_ORDER_OFFERS_URL',
-    ).replace(/\/+$/, '');
+    const portalOffersUrl = `${this.configService.getOrThrow<string>(
+      'FRONTEND_URL',
+    ).replace(/\/+$/, '')}/florist/offers`;
 
     const locked = await this.prisma.orderOffer.updateMany({
       where: {
@@ -68,6 +70,7 @@ export class OrderOfferEmailService {
                 name: true,
                 description: true,
                 quantity: true,
+                imagePath: true,
               },
             },
           },
@@ -114,18 +117,23 @@ export class OrderOfferEmailService {
 
     const itemsHtml = offer.order.items
       .map((item) => {
+        const image = item.imagePath
+          ? `<img src="${this.escapeHtml(this.storageService.getPublicUrl(item.imagePath))}" alt="" width="72" height="72" style="display:block;width:72px;height:72px;object-fit:cover;border-radius:12px;" />`
+          : '';
         const description = item.description
           ? `<p style="margin:4px 0 0;color:#66705F;font-size:13px;line-height:1.5;">${this.escapeHtml(item.description)}</p>`
           : '';
 
         return `
-          <div style="padding:0 0 14px;margin-bottom:14px;border-bottom:1px solid #D6DEC8;">
-            <p style="margin:0;font-size:14px;line-height:1.5;">
-              <strong>${this.escapeHtml(item.name)}</strong>
-              <span> — ${item.quantity} un.</span>
-            </p>
-            ${description}
-          </div>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:0 0 14px;margin-bottom:14px;border-bottom:1px solid #D6DEC8;">
+            <tr>
+              ${image ? `<td width="88" valign="top">${image}</td>` : ''}
+              <td valign="top">
+                <p style="margin:0;font-size:14px;line-height:1.5;"><strong>${this.escapeHtml(item.name)}</strong><span> — ${item.quantity} un.</span></p>
+                ${description}
+              </td>
+            </tr>
+          </table>
         `;
       })
       .join('');

@@ -10,7 +10,6 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 export class SupabaseStorageService {
     private readonly client: SupabaseClient;
     private readonly bucket: string;
-    private readonly environment: 'dev' | 'test' | 'prod';
 
     constructor(config: ConfigService) {
         this.client = createClient(
@@ -19,17 +18,12 @@ export class SupabaseStorageService {
         );
 
         this.bucket = config.getOrThrow<string>(
-            'SUPABASE_PRODUCT_IMAGES_BUCKET',
+            'SUPABASE_BUCKET',
         );
 
-        const nodeEnvironment = config.get<string>('NODE_ENV');
-
-        this.environment =
-            nodeEnvironment === 'production'
-                ? 'prod'
-                : nodeEnvironment === 'test'
-                  ? 'test'
-                  : 'dev';
+        if (!['dev', 'test', 'prod'].includes(this.bucket)) {
+            throw new Error('SUPABASE_BUCKET deve ser dev, test ou prod.');
+        }
     }
 
     async upload(
@@ -73,14 +67,8 @@ export class SupabaseStorageService {
     }
 
     private toStoragePath(path: string): string {
-        const normalizedPath = path
+        return path
             .replace(/\\/g, '/')
             .replace(/^\/+/, '');
-
-        if (/^(dev|test|prod)\//.test(normalizedPath)) {
-            return normalizedPath;
-        }
-
-        return `${this.environment}/${normalizedPath}`;
     }
 }

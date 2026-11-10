@@ -93,8 +93,13 @@ export class PublicUsersService {
         url.searchParams.set('token', token);
         await this.emailService.sendEmail({
             to: email,
-            subject: 'Confirme o seu email — Momentos em Flor',
-            html: `<div style="font-family:Arial,sans-serif;color:#203128;line-height:1.6;max-width:620px;margin:auto"><h1>Confirme o seu email</h1><p>Olá ${this.escapeHtml(firstName)},</p><p>Confirme o endereço de email para poder aceder à sua conta.</p><p><a href="${url.toString()}" style="display:inline-block;background:#26392f;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none">Confirmar email</a></p><p>Esta ligação é válida durante 24 horas.</p></div>`,
+            templateId: this.config.getOrThrow<string>(
+                'RESEND_TEMPLATE_EMAIL_VERIFICATION',
+            ),
+            variables: {
+                CUSTOMER_NAME: this.escapeHtml(firstName),
+                VERIFY_URL: url.toString(),
+            },
         });
     }
 

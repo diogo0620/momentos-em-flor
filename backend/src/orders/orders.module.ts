@@ -16,6 +16,8 @@ import { FloristCompensationsModule } from '@/florist-compensations/florist-comp
 import { StoreSettingsModule } from '@/store-settings/store-settings.module';
 import { MoloniModule } from '@/moloni/moloni.module';
 import { CouponsModule } from '@/coupons/coupons.module';
+import { EmailModule } from '@/email/email.module';
+import { OrderStatusEmailService } from './order-status-email.service';
 
 
 
@@ -29,6 +31,7 @@ import { CouponsModule } from '@/coupons/coupons.module';
     StoreSettingsModule,
     MoloniModule,
     CouponsModule,
+    EmailModule,
   ],
   controllers: [
     CustomerOrdersController,
@@ -41,7 +44,8 @@ import { CouponsModule } from '@/coupons/coupons.module';
     AdminOrdersService,
     AdminOrdersMapper,
     FloristOrdersService,
-    FloristOrdersMapper
+    FloristOrdersMapper,
+    OrderStatusEmailService,
   ]
 })
 export class OrdersModule {}

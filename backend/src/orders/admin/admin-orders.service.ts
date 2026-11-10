@@ -16,6 +16,7 @@ import { AdminOrderQueryDto } from './dtos/admin-order-query.dto';
 import { AdminCancelOrderDto } from './dtos/admin-cancel-order.dto';
 import { StripeService } from '@/payments/stripe.service';
 import { FloristCompensationLifecycleService } from '@/florist-compensations/florist-compensation-lifecycle.service';
+import { OrderStatusEmailService } from '../order-status-email.service';
 
 
 @Injectable()
@@ -26,6 +27,7 @@ export class AdminOrdersService {
         private readonly mapper: AdminOrdersMapper,
         private readonly stripeService: StripeService,
         private readonly compensationLifecycle: FloristCompensationLifecycleService,
+        private readonly orderStatusEmail: OrderStatusEmailService,
     ) { }
 
 
@@ -308,6 +310,8 @@ export class AdminOrdersService {
                 await this.compensationLifecycle.markDue(tx, id, new Date());
             }
         });
+
+        await this.orderStatusEmail.send(id, nextStatus);
     }
 
 

@@ -29,11 +29,11 @@ import type {
 
 const STATUS_LABELS: Record<FloristOrderStatus, string> = {
     CREATED: "Criada",
-    PENDING_PAYMENT: 'Pending Payment',
+    PENDING_PAYMENT: "Pendente de pagamento",
     WAITING_FOR_FLORISTS: "À espera de florista",
     ASSIGNED: "Atribuída",
     IN_PRODUCTION: "Em preparação",
-    READY_FOR_DELIVERY: "Pronta para entrega",
+    READY_FOR_DELIVERY: "Em entrega",
     DELIVERED: "Entregue",
     CANCELLED: "Cancelada",
 };
@@ -51,11 +51,11 @@ const STATUS_STYLES: Record<FloristOrderStatus, string> = {
 
 const STATUS_DESCRIPTIONS: Record<FloristOrderStatus, string> = {
     CREATED: "A encomenda foi criada e aguarda processamento.",
-    PENDING_PAYMENT: 'Pending Payment',
+    PENDING_PAYMENT: "A encomenda aguarda a confirmação do pagamento.",
     WAITING_FOR_FLORISTS: "A encomenda está à espera que uma florista aceite a proposta.",
     ASSIGNED: "A encomenda foi atribuída à tua florista. Consulta os detalhes para preparar a entrega.",
     IN_PRODUCTION: "A encomenda está a ser preparada.",
-    READY_FOR_DELIVERY: "A encomenda está pronta para ser entregue.",
+    READY_FOR_DELIVERY: "A encomenda está a caminho do destinatário.",
     DELIVERED: "A entrega foi concluída.",
     CANCELLED: "Esta encomenda foi cancelada e já não pode ser processada.",
 };
@@ -136,7 +136,7 @@ function getTimeline(order: FloristOrderDetail) {
         { label: "Encomenda criada", date: order.createdAt, description: "A encomenda foi registada." },
         { label: "Florista atribuída", date: order.assignedAt, description: "A encomenda foi atribuída à tua florista." },
         { label: "Preparação iniciada", date: order.inProductionAt, description: "A preparação da encomenda foi iniciada." },
-        { label: "Pronta para entrega", date: order.readyForDeliveryAt, description: "A encomenda ficou pronta para entrega." },
+        { label: "Em entrega", date: order.readyForDeliveryAt, description: "A encomenda saiu para entrega." },
         { label: "Entregue", date: order.deliveredAt, description: "A entrega foi concluída." },
         { label: "Cancelada", date: order.cancelledAt, description: "A encomenda foi cancelada." },
     ].filter((item) => Boolean(item.date));
@@ -301,7 +301,7 @@ export default function FloristOrderDetailPage() {
                                     : order.status === "ASSIGNED"
                                         ? "Iniciar preparação"
                                         : order.status === "IN_PRODUCTION"
-                                            ? "Marcar como pronta para entrega"
+                                            ? "Iniciar entrega"
                                             : "Confirmar entrega"}
                             </button>
                         )}

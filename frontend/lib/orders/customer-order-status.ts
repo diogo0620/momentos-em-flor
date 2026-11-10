@@ -2,7 +2,7 @@ export const customerOrderStatusLabels = {
     PENDING_PAYMENT: "Pagamento pendente",
     RECEIVED: "Encomenda recebida",
     IN_PREPARATION: "Em preparação",
-    READY_FOR_DELIVERY: "Pronta para entrega",
+    READY_FOR_DELIVERY: "Em entrega",
     DELIVERED: "Entregue",
     CANCELLED: "Cancelada",
 } as const;

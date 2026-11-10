@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { passwordRecoveryApi } from "@/lib/api/auth/password-recovery";
 import { PASSWORD_REQUIREMENTS, validateStrongPassword } from "@/lib/validation/auth";
+import AuthBrand from "@/components/auth/AuthBrand";
 
 export default function ResetPasswordPage() {
     const [token, setToken] = useState<string | null>(null);
@@ -50,7 +51,7 @@ export default function ResetPasswordPage() {
     return (
         <main className="flex min-h-screen items-center justify-center bg-[#F7F8F4] px-6 py-12">
             <div className="w-full max-w-md rounded-[2rem] border border-white/70 bg-white p-8 shadow-[0_20px_60px_rgba(47,59,42,0.08)] sm:p-10">
-                <div className="mb-7 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#55624A] text-xl text-white">✿</div>
+                <AuthBrand className="mb-8" />
                 <h1 className="text-2xl font-semibold text-[#2F3B2A]">Definir nova password</h1>
                 <p className="mt-2 text-sm leading-6 text-gray-500">{PASSWORD_REQUIREMENTS}</p>
 

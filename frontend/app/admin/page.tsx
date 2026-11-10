@@ -43,7 +43,7 @@ const STATUS_CONFIG: Record<AdminOrderStatus, { label: string; className: string
     WAITING_FOR_FLORISTS: { label: "À espera de floristas", className: "bg-yellow-50 text-yellow-700", dot: "bg-yellow-500" },
     ASSIGNED: { label: "Atribuída", className: "bg-sky-50 text-sky-700", dot: "bg-sky-500" },
     IN_PRODUCTION: { label: "Em preparação", className: "bg-indigo-50 text-indigo-700", dot: "bg-indigo-500" },
-    READY_FOR_DELIVERY: { label: "Pronta para entrega", className: "bg-violet-50 text-violet-700", dot: "bg-violet-500" },
+    READY_FOR_DELIVERY: { label: "Em entrega", className: "bg-violet-50 text-violet-700", dot: "bg-violet-500" },
     DELIVERED: { label: "Entregue", className: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" },
     CANCELLED: { label: "Cancelada", className: "bg-rose-50 text-rose-700", dot: "bg-rose-500" },
 };

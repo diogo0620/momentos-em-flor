@@ -12,6 +12,8 @@ export class EmailService {
     private readonly resend: Resend;
     private readonly from: string;
     private readonly replyTo?: string;
+    private readonly recipientOverride?: string;
+    private readonly brandLogoUrl: string;
 
     constructor(
         private readonly configService: ConfigService,
@@ -23,13 +25,24 @@ export class EmailService {
         );
 
         this.from = this.normalizeAddress(
-            this.configService.getOrThrow<string>('EMAIL_FROM'),
+            this.configService.getOrThrow<string>('RESEND_FROM_EMAIL'),
         );
 
-        const replyTo = this.configService.get<string>('EMAIL_REPLY_TO');
+        const replyTo = this.configService.get<string>('RESEND_REPLY_TO_EMAIL');
         this.replyTo = replyTo
             ? this.normalizeAddress(replyTo)
             : undefined;
+
+        const recipientOverride = this.configService.get<string>(
+            'RESEND_RECIPIENT_OVERRIDE',
+        );
+        this.recipientOverride = recipientOverride
+            ? this.normalizeAddress(recipientOverride)
+            : undefined;
+
+        this.brandLogoUrl = this.configService.getOrThrow<string>(
+            'RESEND_BRAND_LOGO_URL',
+        );
     }
 
     async sendEmail(params: {
@@ -52,7 +65,7 @@ export class EmailService {
         try {
             const { data, error } = await this.resend.emails.send({
                 from: this.from,
-                to: params.to,
+                to: this.recipientOverride ?? params.to,
                 ...(this.replyTo && {
                     replyTo: this.replyTo,
                 }),
@@ -63,7 +76,10 @@ export class EmailService {
                     ? {
                         template: {
                             id: params.templateId,
-                            variables: params.variables ?? {},
+                            variables: {
+                                LOGO_URL: this.brandLogoUrl,
+                                ...(params.variables ?? {}),
+                            },
                         },
                     }
                     : {

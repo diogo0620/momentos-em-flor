@@ -376,7 +376,7 @@ export default function AccountOrderDetailPage() {
       </section>
 
       {order.status === "DELIVERED" && (
-        <section className="rounded-3xl border border-[#E8EBE2] bg-white p-5 sm:p-7">
+        <section id="avaliacao" className="scroll-mt-24 rounded-3xl border border-[#E8EBE2] bg-white p-5 sm:p-7">
           <div className="flex items-center gap-2">
             <Star size={19} className="text-[#71805F]" />
             <h3 className="text-lg font-semibold text-[#2F3B2A]">Avaliar a encomenda</h3>

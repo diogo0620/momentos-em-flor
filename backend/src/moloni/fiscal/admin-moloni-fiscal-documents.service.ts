@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   MoloniDocumentStatus,
   PaymentStatus,
@@ -20,6 +21,7 @@ import {
   MoloniDocumentPdfService,
   MoloniPdfDocumentKind,
 } from './moloni-document-pdf.service';
+import { SupabaseStorageService } from '@/storage/supabase-storage.service';
 
 type MoloniCustomer = { customer_id: number };
 type MoloniDocumentResult = { valid?: number; document_id?: number };
@@ -90,6 +92,7 @@ const fiscalDocumentInclude = {
           name: true,
           description: true,
           quantity: true,
+          imagePath: true,
           netAmount: true,
           grossAmount: true,
           taxCodeId: true,
@@ -111,6 +114,8 @@ export class AdminMoloniFiscalDocumentsService {
     private readonly moloniApi: MoloniApiService,
     private readonly emailService: EmailService,
     private readonly pdfService: MoloniDocumentPdfService,
+    private readonly configService: ConfigService,
+    private readonly storageService: SupabaseStorageService,
   ) {}
 
   async issueForOrder(orderId: number) {
@@ -665,17 +670,33 @@ export class AdminMoloniFiscalDocumentsService {
         `${record.order.customerFirstName} ${record.order.customerLastName}`.trim(),
       );
       const orderNumber = this.escapeHtml(record.order.orderNumber);
+      const itemsHtml = record.order.items.map((item) => {
+        const image = item.imagePath
+          ? `<img src="${this.escapeHtml(this.storageService.getPublicUrl(item.imagePath))}" alt="" width="72" height="72" style="display:block;width:72px;height:72px;object-fit:cover;border-radius:12px;" />`
+          : '';
+
+        return `
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:0 0 14px;margin-bottom:14px;border-bottom:1px solid #D6DEC8;">
+            <tr>
+              ${image ? `<td width="88" valign="top">${image}</td>` : ''}
+              <td valign="top">
+                <p style="margin:0;font-size:14px;line-height:1.5;"><strong>${this.escapeHtml(item.name)}</strong><span> — ${item.quantity} un.</span></p>
+                ${item.description ? `<p style="margin:4px 0 0;color:#66705F;font-size:13px;line-height:1.5;">${this.escapeHtml(item.description)}</p>` : ''}
+              </td>
+            </tr>
+          </table>
+        `;
+      }).join('');
       const result = await this.emailService.sendEmail({
         to: record.order.customerEmail,
-        subject: `Fatura da encomenda ${record.order.orderNumber}`,
-        html: `
-          <div style="font-family:Arial,sans-serif;color:#2F3B2A;line-height:1.6;max-width:620px;margin:auto">
-            <h1 style="font-size:24px">A sua fatura está disponível</h1>
-            <p>Olá ${customerName},</p>
-            <p>A fatura da encomenda <strong>${orderNumber}</strong> foi emitida e segue em anexo.</p>
-            <p style="font-size:13px;color:#73796D">Pode também consultar o documento nos detalhes da encomenda.</p>
-          </div>
-        `,
+        templateId: this.configService.getOrThrow<string>(
+          'RESEND_TEMPLATE_INVOICE_ISSUED',
+        ),
+        variables: {
+          CUSTOMER_NAME: customerName,
+          ORDER_NUMBER: orderNumber,
+          ITEMS_HTML: itemsHtml,
+        },
         attachments: [{
           filename: pdf.filename,
           content: pdf.buffer,

@@ -10,6 +10,7 @@ import { MoloniModule } from '@/moloni/moloni.module';
 import { AutomaticOrderOffersService } from './orders/automatic-order-offers.service';
 import { OrderPaidAutomationListener } from './orders/order-paid-automation.listener';
 import { OrderOfferNotificationAutomationService } from './order-offers/order-offer-notification-automation.service';
+import { StorageModule } from '@/storage/storage.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { OrderOfferNotificationAutomationService } from './order-offers/order-of
     EmailModule,
     GeocodingModule,
     MoloniModule,
+    StorageModule,
   ],
   providers: [
     OrderOfferCreatedListener,

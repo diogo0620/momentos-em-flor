@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { CheckCircle2, Mail, XCircle } from "lucide-react";
 import { publicUsersApi } from "@/lib/api/users/public-users";
+import AuthBrand from "@/components/auth/AuthBrand";
 
 function VerifyEmailContent() {
     const searchParams = useSearchParams();
@@ -35,6 +36,7 @@ function VerifyEmailContent() {
     return (
         <main className="flex min-h-screen items-center justify-center bg-[#f5f6f2] px-4">
             <section className="w-full max-w-md rounded-3xl border border-[#e1e5df] bg-white p-8 text-center shadow-sm">
+                <AuthBrand className="mb-8" />
                 <Icon className={`mx-auto ${status === "success" ? "text-green-700" : status === "error" ? "text-red-700" : "text-[#52705d]"}`} size={36} />
                 <h1 className="mt-5 text-2xl font-semibold text-[#203128]">Confirmar email</h1>
                 <p className="mt-3 text-sm leading-6 text-[#6d776f]">{message}</p>

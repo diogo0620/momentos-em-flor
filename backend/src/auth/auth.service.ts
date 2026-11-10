@@ -302,7 +302,9 @@ export class AuthService {
 
         await this.emailService.sendEmail({
             to: user.email,
-            templateId: 'password-reset',
+            templateId: this.configService.getOrThrow<string>(
+                'RESEND_TEMPLATE_PASSWORD_RESET',
+            ),
             variables: {
                 RESET_URL: resetUrl.toString(),
             },

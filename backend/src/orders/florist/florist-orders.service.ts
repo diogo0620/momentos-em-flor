@@ -10,6 +10,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { FloristOrderQueryDto } from './dtos/florist-order-query.dto';
 import { FloristOrdersMapper } from './mappers/florist-orders.mapper';
 import { FloristCompensationLifecycleService } from '@/florist-compensations/florist-compensation-lifecycle.service';
+import { OrderStatusEmailService } from '../order-status-email.service';
 
 @Injectable()
 export class FloristOrdersService {
@@ -17,6 +18,7 @@ export class FloristOrdersService {
         private readonly prisma: PrismaService,
         private readonly mapper: FloristOrdersMapper,
         private readonly compensationLifecycle: FloristCompensationLifecycleService,
+        private readonly orderStatusEmail: OrderStatusEmailService,
     ) { }
 
     async findAll(user: AuthenticatedUser, query: FloristOrderQueryDto) {
@@ -132,6 +134,8 @@ export class FloristOrdersService {
                 await this.compensationLifecycle.markDue(tx, id, new Date());
             }
         });
+
+        await this.orderStatusEmail.send(id, nextStatus);
     }
 
     private getFloristId(user: AuthenticatedUser): number {

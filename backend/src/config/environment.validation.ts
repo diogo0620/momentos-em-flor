@@ -6,10 +6,17 @@ const PRODUCTION_REQUIRED_VARIABLES = [
   'STRIPE_WEBHOOK_SECRET',
   'GOOGLE_MAPS_API_KEY',
   'RESEND_API_KEY',
-  'EMAIL_FROM',
+  'RESEND_FROM_EMAIL',
+  'RESEND_BRAND_LOGO_URL',
+  'RESEND_TEMPLATE_PASSWORD_RESET',
+  'RESEND_TEMPLATE_EMAIL_VERIFICATION',
+  'RESEND_TEMPLATE_ORDER_OFFER_CREATED',
+  'RESEND_TEMPLATE_INVOICE_ISSUED',
+  'RESEND_TEMPLATE_ORDER_OUT_FOR_DELIVERY',
+  'RESEND_TEMPLATE_ORDER_DELIVERY_CONFIRMATION',
   'SUPABASE_URL',
   'SUPABASE_SECRET_KEY',
-  'SUPABASE_PRODUCT_IMAGES_BUCKET',
+  'SUPABASE_BUCKET',
 ] as const;
 
 export function validateEnvironment(
@@ -31,7 +38,17 @@ export function validateEnvironment(
     throw new Error('JWT_SECRET deve ter pelo menos 32 caracteres.');
   }
 
+  if (!['dev', 'test', 'prod'].includes(String(config.SUPABASE_BUCKET))) {
+    throw new Error('SUPABASE_BUCKET deve ser dev, test ou prod.');
+  }
+
   for (const name of ['FRONTEND_URL'] as const) {
+    if (!String(config[name]).startsWith('https://')) {
+      throw new Error(`${name} deve utilizar HTTPS em produção.`);
+    }
+  }
+
+  for (const name of ['RESEND_BRAND_LOGO_URL'] as const) {
     if (!String(config[name]).startsWith('https://')) {
       throw new Error(`${name} deve utilizar HTTPS em produção.`);
     }

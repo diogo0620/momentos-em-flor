@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { getRedirectPath } from "@/lib/auth/auth";
 import { publicUsersApi } from "@/lib/api/users/public-users";
 import PhoneInput from "@/components/forms/PhoneInput";
+import AuthBrand from "@/components/auth/AuthBrand";
 import { isValidEmail, isValidPhone, validateStrongPassword } from "@/lib/validation/auth";
 
 export default function RegisterPage() {
@@ -143,25 +144,7 @@ export default function RegisterPage() {
 
             <div className="relative w-full max-w-md">
 
-                {/* Branding */}
-
-                <div className="mb-8 text-center">
-
-                    <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#55624A] shadow-sm">
-                        <span className="text-2xl text-white">
-                            ✿
-                        </span>
-                    </div>
-
-                    <h1 className="text-3xl font-bold tracking-tight text-[#2F3B2A]">
-                        Momentos em Flor
-                    </h1>
-
-                    <p className="mt-2 text-sm text-gray-500">
-                        Flores que tornam cada momento especial.
-                    </p>
-
-                </div>
+                <AuthBrand className="mb-8" />
 
                 {/* Card */}
 

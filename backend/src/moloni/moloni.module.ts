@@ -16,9 +16,10 @@ import { AdminMoloniFiscalDocumentsController } from './fiscal/admin-moloni-fisc
 import { EmailModule } from '@/email/email.module';
 import { MoloniFiscalAutomationService } from './fiscal/moloni-fiscal-automation.service';
 import { MoloniDocumentPdfService } from './fiscal/moloni-document-pdf.service';
+import { StorageModule } from '@/storage/storage.module';
 
 @Module({
-  imports: [EmailModule],
+  imports: [EmailModule, StorageModule],
   controllers: [
     AdminMoloniController,
     AdminMoloniFiscalDocumentsController,
