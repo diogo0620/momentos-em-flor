@@ -227,15 +227,15 @@ export default function PublicProductDetailPage() {
     }
 
     return (
-        <main className="min-h-screen bg-[#FCFCF9] pb-16 text-[#2F3B2A]">
-            <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
+        <main className="min-h-screen bg-[#f8f6f1] pb-16 text-[#2F3B2A]">
+            <div className="mx-auto max-w-[1440px] px-4 pt-6 sm:px-7 lg:px-12">
                 <Link href="/products" className="inline-flex items-center gap-2 text-sm font-medium text-[#7A8474] transition hover:text-[#2F3B2A]">
                     <ArrowLeft size={16} /> Voltar à loja
                 </Link>
 
                 <div className="mt-6 grid items-start gap-9 lg:grid-cols-[1.08fr_0.92fr] lg:gap-14">
                     <section className="min-w-0">
-                        <div className="relative overflow-hidden rounded-[2rem] bg-white shadow-sm">
+                        <div className="relative overflow-hidden bg-[#eeece4]">
                             <div className="relative aspect-[4/5] sm:aspect-[5/4] lg:aspect-[4/5]">
                                 <ProductImage
                                     src={activeImage}
@@ -284,8 +284,8 @@ export default function PublicProductDetailPage() {
                                 ))}
                             </div>
                         )}
-                        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-[#849078]">Momentos em Flor</p>
-                        <h1 className="mt-2 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">{product.name}</h1>
+                        <p className="editorial-kicker mt-5">Momentos em Flor</p>
+                        <h1 className="mt-2 text-4xl leading-tight tracking-tight sm:text-5xl">{product.name}</h1>
                         <div className="mt-5 flex flex-wrap items-end gap-x-3 gap-y-1">
                             <span className="text-3xl font-semibold tracking-tight text-[#3F4B35]">{formatPrice(totalUnitPrice)}</span>
                             {componentsExtra > 0 && <span className="pb-1 text-sm text-[#7A8474]">inclui personalização</span>}

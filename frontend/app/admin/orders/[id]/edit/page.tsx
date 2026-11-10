@@ -45,7 +45,6 @@ import type {
     AdminOrderOfferStatus,
     AdminOrderOfferDeclineReason,
     AdminOrderStatus,
-    AdminProductVariantType,
 } from "@/types/orders/admin/admin-order-status";
 
 const ORDER_LIST_URL = "/admin/orders";
@@ -176,10 +175,6 @@ const OFFER_DECLINE_REASON_DEFAULT_DETAILS: Partial<
 const ITEM_TYPE_LABELS: Record<AdminOrderItemType, string> = {
     PRODUCT: "Produto",
     DELIVERY_FEE: "Taxa de entrega",
-};
-
-const VARIANT_TYPE_LABELS: Record<AdminProductVariantType, string> = {
-    SIZE: "Tamanho",
 };
 
 function formatPrice(value: number | string | null | undefined) {
@@ -340,14 +335,6 @@ function OrderItemCard({ item }: { item: AdminOrderItem }) {
                         </p>
                     )}
 
-                    {item.variantName && (
-                        <p className="mt-1 text-sm text-gray-500">
-                            {item.variantType
-                                ? `${VARIANT_TYPE_LABELS[item.variantType]}: `
-                                : ""}
-                            {item.variantName}
-                        </p>
-                    )}
                 </div>
 
                 <div className="shrink-0 sm:text-right">
@@ -1322,11 +1309,7 @@ export default function EditOrderPage() {
                                 value={order.subtotal}
                             />
                             <FinancialRow
-                                label="IVA"
-                                value={order.taxAmount}
-                            />
-                            <FinancialRow
-                                label="Taxa de entrega"
+                                label="Envio"
                                 value={order.deliveryFee}
                             />
                             <FinancialRow
@@ -1336,7 +1319,7 @@ export default function EditOrderPage() {
 
                             <div className="border-t border-[#E8EBE4] pt-4">
                                 <FinancialRow
-                                    label="Total"
+                                    label="TOTAL"
                                     value={order.total}
                                     prominent
                                 />

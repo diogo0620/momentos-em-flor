@@ -14,47 +14,8 @@ import {
 import { publicCategoriesApi } from "@/lib/api/categories/public-categories";
 import { publicProductsApi } from "@/lib/api/products/public-products";
 
-const reels = [
-    {
-        id: "agradecer",
-        poster: "/hero.png",
-        label: "Um bouquet para dizer obrigado",
-        tag: "Inspiração",
-    },
-    {
-        id: "bastidores",
-        poster: "/rental-equipment.jpg",
-        label: "Por dentro da Momentos em Flor",
-        tag: "Bastidores",
-    },
-    {
-        id: "surpreender",
-        poster: "/hero.png",
-        label: "Ideias para surpreender",
-        tag: "Ideias para oferecer",
-    },
-    {
-        id: "gestos",
-        poster: "/rental-equipment.jpg",
-        label: "Flores que falam por si",
-        tag: "Pequenos gestos",
-    },
-];
-
-const reviews = [
-    {
-        quote: "As flores chegaram lindas e exatamente no dia que tinha escolhido. Foi uma surpresa perfeita.",
-        name: "Mariana S.",
-    },
-    {
-        quote: "O bouquet era ainda mais bonito ao vivo. A apresentação estava impecável.",
-        name: "Beatriz M.",
-    },
-    {
-        quote: "Foi muito simples encomendar e o resultado superou completamente as expectativas.",
-        name: "João R.",
-    },
-];
+const reviews: { quote: string; name: string }[] = [];
+const reels: { id: string; poster: string; label: string; tag: string }[] = [];
 
 export default function HomePage() {
     const [collections, setCollections] = useState<PublicCategoryList[]>([]);
@@ -119,25 +80,25 @@ export default function HomePage() {
         <div className="bg-[#F8F9F5] text-[#2F3B2A]">
 
             {/* HERO */}
-            <section className="relative min-h-[540px] overflow-hidden sm:min-h-[660px]">
+            <section className="relative min-h-[580px] overflow-hidden sm:min-h-[700px] lg:min-h-[760px]">
                 <img
                     src="/hero.png"
                     alt="Composição floral da Momentos em Flor"
                     className="absolute inset-0 h-full w-full object-cover object-center"
                 />
 
-                <div className="absolute inset-0 bg-black/20" />
-                <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/25 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/25 to-transparent" />
+                <div className="absolute inset-0 bg-[#1d261d]/20" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#1d261d]/70 via-[#1d261d]/30 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#1d261d]/35 to-transparent" />
 
-                <div className="relative mx-auto flex min-h-[540px] max-w-7xl items-end px-5 pb-12 pt-20 sm:min-h-[660px] sm:px-8 sm:pb-16 lg:px-10">
+                <div className="relative mx-auto flex min-h-[580px] max-w-[1440px] items-end px-6 pb-14 pt-24 sm:min-h-[700px] sm:px-12 sm:pb-20 lg:min-h-[760px] lg:px-20">
                     <div className="max-w-2xl text-white">
                         <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-[0.25em] text-white/75">
                             <span className="h-px w-8 bg-white/60" />
                             Momentos em Flor
                         </div>
 
-                        <h1 className="mt-6 max-w-2xl text-4xl font-medium leading-[1] tracking-[-0.045em] min-[420px]:text-5xl sm:text-6xl lg:text-[68px]">
+                        <h1 className="mt-6 max-w-2xl text-5xl font-medium leading-[.98] tracking-[-0.045em] min-[420px]:text-6xl sm:text-7xl lg:text-[82px]">
                             Há coisas que se dizem melhor com flores.
                         </h1>
 
@@ -148,7 +109,7 @@ export default function HomePage() {
 
                         <Link
                             href="/products"
-                            className="mt-9 inline-flex items-center gap-3 rounded-full bg-white px-7 py-3.5 text-sm font-semibold text-[#35412F] transition hover:bg-[#EEF1E9]"
+                            className="mt-9 inline-flex min-h-12 items-center gap-3 rounded-full bg-[#f8f6f1] px-7 py-3.5 text-sm font-semibold text-[#35412F] transition hover:bg-white hover:shadow-lg"
                         >
                             Explorar flores
                             <ArrowRight size={17} />
@@ -368,6 +329,7 @@ export default function HomePage() {
             </section>
 
             {/* REVIEWS */}
+            {reviews.length > 0 && (
             <section className="relative overflow-hidden bg-[#F0F3EB] px-5 py-20 sm:px-8 lg:px-10 lg:py-24">
                 <div className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-white/70 blur-3xl" />
                 <div className="pointer-events-none absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-[#D6DEC8]/45 blur-3xl" />
@@ -420,8 +382,10 @@ export default function HomePage() {
                     </div>
                 </div>
             </section>
+            )}
 
             {/* SOCIAL / REELS */}
+            {instagramUrl && (
             <section className="relative overflow-hidden bg-[#F0F3EB] px-5 py-20 sm:px-8 lg:px-10 lg:py-28">
                 <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/60 blur-3xl" />
                 <div className="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-[#D6DEC8]/50 blur-3xl" />
@@ -505,6 +469,7 @@ export default function HomePage() {
                     </p>
                 </div>
             </section>
+            )}
 
             {/* FINAL CTA */}
             <section className="bg-white px-5 py-20 sm:px-8 lg:px-10 lg:py-24">

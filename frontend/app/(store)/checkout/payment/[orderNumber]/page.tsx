@@ -372,17 +372,22 @@ export default function CheckoutPaymentPage() {
                                     </span>
                                 </div>
 
-                                {order.discount > 0 && (
-                                    <div className="flex justify-between gap-4 text-[#55624A]">
-                                        <span>Desconto</span>
-                                        <span className="font-medium">
-                                            -{formatCurrency(order.discount)}
-                                        </span>
-                                    </div>
-                                )}
+                                <div className="flex justify-between gap-4">
+                                    <span className="text-gray-500">Envio</span>
+                                    <span className="font-medium text-[#2F3B2A]">
+                                        {formatCurrency(order.deliveryFee)}
+                                    </span>
+                                </div>
+
+                                <div className="flex justify-between gap-4 text-[#55624A]">
+                                    <span>Desconto</span>
+                                    <span className="font-medium">
+                                        {order.discount > 0 ? `−${formatCurrency(order.discount)}` : formatCurrency(0)}
+                                    </span>
+                                </div>
 
                                 <div className="flex justify-between gap-4 border-t border-[#E5E9E1] pt-4">
-                                    <span className="font-semibold text-[#2F3B2A]">Total</span>
+                                    <span className="font-semibold text-[#2F3B2A]">TOTAL</span>
                                     <span className="text-lg font-bold text-[#2F3B2A]">
                                         {formatCurrency(order.total)}
                                     </span>

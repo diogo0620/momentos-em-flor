@@ -3,6 +3,7 @@ import { Order, Prisma } from '@prisma/client';
 import { BaseMapper } from '@/common/mappers/base.mapper';
 import { FloristOrderResponseDto } from '../dtos/florist-order-response.dto';
 import { FloristOrderListResponseDto } from '../dtos/florist-order-list.response.dto';
+import { formatOrderItemConfiguration } from '../../order-item-configuration';
 
 type FloristOrderWithRelations = Prisma.OrderGetPayload<{
     include: {
@@ -29,7 +30,7 @@ export class FloristOrdersMapper extends BaseMapper<Order, FloristOrderResponseD
             deliveryStreet: order.deliveryStreet, deliveryStreetNumber: order.deliveryStreetNumber, deliveryStreet2: order.deliveryStreet2,
             deliveryPostalCode: order.deliveryPostalCode, deliveryCity: order.deliveryCity, deliveryDistrict: order.deliveryDistrict,
             deliveryInstructions: order.deliveryInstructions, cardMessage: order.cardMessage,
-            items: order.items.map((item) => ({ id: item.id, type: item.type, name: item.name, description: item.description, variantType: item.variantType, variantName: item.variantName, quantity: item.quantity, components: item.components.map((component) => ({ id: component.id, componentName: component.componentName, quantity: component.quantity })) })),
+            items: order.items.map((item) => ({ id: item.id, type: item.type, name: item.name, description: formatOrderItemConfiguration(item), variantType: item.variantType, variantName: item.variantName, quantity: item.quantity, components: item.components.map((component) => ({ id: component.id, componentName: component.componentName, quantity: component.quantity })) })),
             paidAt: order.paidAt, assignedAt: order.assignedAt, inProductionAt: order.inProductionAt, readyForDeliveryAt: order.readyForDeliveryAt, deliveredAt: order.deliveredAt, cancelledAt: order.cancelledAt, createdAt: order.createdAt,
             price: Number(order.offers[0].price),
         };

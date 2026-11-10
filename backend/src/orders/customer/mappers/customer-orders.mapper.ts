@@ -7,6 +7,7 @@ import { CustomerOrderListResponseDto } from '../dtos/customer-order-list-respon
 import { CustomerOrderResponseDto } from '../dtos/customer-order-response.dto';
 import { SupabaseStorageService } from '@/storage/supabase-storage.service';
 import { toCustomerOrderStatus } from '../customer-order-status';
+import { formatOrderItemConfiguration } from '../../order-item-configuration';
 
 type OrderWithItems = Prisma.OrderGetPayload<{
     include: {
@@ -75,7 +76,7 @@ export class CustomerOrdersMapper extends BaseMapper<
                 productId: item.productId,
                 productName: item.name,
                 variantName: item.variantName,
-                description: item.description,
+                description: formatOrderItemConfiguration(item),
                 image: item.imagePath ? this.storageService.getPublicUrl(item.imagePath) : "",
 
                 quantity: item.quantity,

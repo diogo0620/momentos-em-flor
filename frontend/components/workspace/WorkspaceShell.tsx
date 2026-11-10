@@ -68,8 +68,8 @@ export default function WorkspaceShell({
     );
 
     return (
-        <div className="min-h-dvh bg-[#f5f6f2] lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
-            <aside className="hidden h-dvh border-r border-[#e1e5df] bg-white lg:sticky lg:top-0 lg:block">
+        <div className="min-h-dvh bg-[#f3f1eb] lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
+            <aside className="hidden h-dvh border-r border-[#e3dfd4] bg-[#fbfaf7] lg:sticky lg:top-0 lg:block">
                 {sidebar}
             </aside>
 
@@ -86,7 +86,7 @@ export default function WorkspaceShell({
             )}
 
             <div className="min-w-0">
-                <header className="sticky top-0 z-40 border-b border-[#e1e5df] bg-white/90 backdrop-blur-xl">
+                <header className="sticky top-0 z-40 border-b border-[#e3dfd4] bg-[#fbfaf7]/95 backdrop-blur-xl">
                     <div className="flex h-16 items-center gap-3 px-4 sm:h-[72px] sm:px-6 lg:px-8">
                         <button className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#e1e5df] lg:hidden" onClick={() => setMenuOpen(true)} aria-label="Abrir menu">
                             <Menu size={20} />
@@ -115,7 +115,7 @@ export default function WorkspaceShell({
                         </div>
                     </div>
                 </header>
-                <main className="mx-auto w-full max-w-[1480px] p-4 sm:p-6 lg:p-8">{children}</main>
+                <main className="mx-auto w-full max-w-[1480px] p-4 sm:p-7 lg:p-10">{children}</main>
             </div>
         </div>
     );

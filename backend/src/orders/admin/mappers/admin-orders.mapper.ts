@@ -4,6 +4,7 @@ import { Order, Prisma } from '@prisma/client';
 import { BaseMapper } from '@/common/mappers/base.mapper';
 import { AdminOrderListResponseDto } from '../dtos/admin-order-list-response.dto';
 import { AdminOrderResponseDto } from '../dtos/admin-order-response.dto';
+import { formatOrderItemConfiguration } from '../../order-item-configuration';
 
 type AdminOrderWithRelations = Prisma.OrderGetPayload<{
     include: {
@@ -148,7 +149,7 @@ export class AdminOrdersMapper extends BaseMapper<
                 productId: item.productId,
                 type: item.type,
                 name: item.name,
-                description: item.description,
+                description: formatOrderItemConfiguration(item),
                 variantId: item.variantId,
                 variantType: item.variantType,
                 variantName: item.variantName,

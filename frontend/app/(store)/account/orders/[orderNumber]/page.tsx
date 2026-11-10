@@ -447,12 +447,6 @@ export default function AccountOrderDetailPage() {
                   {item.productName}
                 </p>
 
-                {item.variantName && (
-                  <p className="mt-1 text-xs text-[#858A7F]">
-                    Variante: {item.variantName}
-                  </p>
-                )}
-
                 {item.description && (
                   <p className="mt-1 line-clamp-3 text-xs leading-5 text-[#858A7F]">
                     {item.description}
@@ -478,23 +472,16 @@ export default function AccountOrderDetailPage() {
             value={money(order.subtotal)}
           />
 
-          {order.discount > 0 && (
-            <PriceRow
-              label="Desconto"
-              value={`− ${money(order.discount)}`}
-            />
-          )}
+          <PriceRow label="Envio" value={money(order.deliveryFee)} />
 
-          {order.taxAmount > 0 && (
-            <PriceRow
-              label="IVA incluído"
-              value={money(order.taxAmount)}
-            />
-          )}
+          <PriceRow
+            label="Desconto"
+            value={order.discount > 0 ? `− ${money(order.discount)}` : money(0)}
+          />
 
           <div className="mt-3 flex items-center justify-between border-t border-[#EEF0EA] pt-4">
             <span className="font-semibold text-[#2F3B2A]">
-              Total
+              TOTAL
             </span>
 
             <span className="text-xl font-semibold text-[#2F3B2A]">

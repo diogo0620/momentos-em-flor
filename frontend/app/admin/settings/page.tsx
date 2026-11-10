@@ -79,8 +79,6 @@ export default function SettingsPage() {
         creditNoteDocumentSetId: "",
         receiptDocumentSetId: "",
         paymentMethodId: "",
-        defaultCustomerId: "",
-        defaultProductId: "",
         issueReceiptAfterPayment: false,
     });
 
@@ -142,8 +140,6 @@ export default function SettingsPage() {
                 creditNoteDocumentSetId: moloniResponse.creditNoteDocumentSetId ?? "",
                 receiptDocumentSetId: moloniResponse.receiptDocumentSetId ?? "",
                 paymentMethodId: moloniResponse.paymentMethodId ?? "",
-                defaultCustomerId: moloniResponse.defaultCustomerId ?? "",
-                defaultProductId: moloniResponse.defaultProductId ?? "",
                 issueReceiptAfterPayment: moloniResponse.issueReceiptAfterPayment,
             }));
         } catch (err) {
@@ -244,8 +240,6 @@ export default function SettingsPage() {
             creditNoteDocumentSetId: moloniForm.creditNoteDocumentSetId.trim(),
             receiptDocumentSetId: moloniForm.receiptDocumentSetId.trim(),
             paymentMethodId: moloniForm.paymentMethodId.trim(),
-            defaultCustomerId: moloniForm.defaultCustomerId.trim(),
-            defaultProductId: moloniForm.defaultProductId.trim(),
             issueReceiptAfterPayment: moloniForm.issueReceiptAfterPayment,
         };
 
@@ -634,7 +628,7 @@ export default function SettingsPage() {
                     <div className="border-t border-gray-100 pt-5">
                         <div className="mb-4">
                             <h3 className="font-semibold text-[#2F3B2A]">Emissão fiscal</h3>
-                            <p className="mt-1 text-xs leading-5 text-gray-400">IDs existentes na conta Moloni. A fatura é o documento padrão; o recibo permanece desligado salvo indicação contabilística.</p>
+                            <p className="mt-1 text-xs leading-5 text-gray-400">A fatura é o documento padrão. Os clientes e artigos são criados e associados automaticamente; o recibo permanece desligado salvo indicação contabilística.</p>
                         </div>
                         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                             <div>
@@ -644,14 +638,6 @@ export default function SettingsPage() {
                             <div>
                                 <label htmlFor="moloniCreditNoteSet" className="mb-2 block text-sm font-semibold text-gray-700">ID da série de notas de crédito</label>
                                 <input id="moloniCreditNoteSet" inputMode="numeric" value={moloniForm.creditNoteDocumentSetId} onChange={(event) => setMoloniForm((current) => ({ ...current, creditNoteDocumentSetId: event.target.value }))} className={inputClassName} placeholder="Ex.: 12346" />
-                            </div>
-                            <div>
-                                <label htmlFor="moloniDefaultCustomer" className="mb-2 block text-sm font-semibold text-gray-700">ID do cliente consumidor final</label>
-                                <input id="moloniDefaultCustomer" inputMode="numeric" value={moloniForm.defaultCustomerId} onChange={(event) => setMoloniForm((current) => ({ ...current, defaultCustomerId: event.target.value }))} className={inputClassName} placeholder="Cliente usado quando não há NIF" />
-                            </div>
-                            <div>
-                                <label htmlFor="moloniDefaultProduct" className="mb-2 block text-sm font-semibold text-gray-700">ID do artigo genérico</label>
-                                <input id="moloniDefaultProduct" inputMode="numeric" value={moloniForm.defaultProductId} onChange={(event) => setMoloniForm((current) => ({ ...current, defaultProductId: event.target.value }))} className={inputClassName} placeholder="Artigo base para linhas da fatura" />
                             </div>
                         </div>
 

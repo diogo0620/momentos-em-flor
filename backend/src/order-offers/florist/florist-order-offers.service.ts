@@ -25,7 +25,7 @@ export class FloristOrderOffersService {
         await this.expireOpenOffers(floristId);
         const where: Prisma.OrderOfferWhereInput = { floristId, ...(query.status !== undefined && { status: query.status }) };
         const [offers, total] = await Promise.all([
-            this.prisma.orderOffer.findMany({ where, orderBy: { [query.sort]: query.order }, ...getPagination(query.page, query.pageSize), include: { order: { include: { items: true } } } }),
+            this.prisma.orderOffer.findMany({ where, orderBy: { [query.sort]: query.order }, ...getPagination(query.page, query.pageSize), include: { order: { include: { items: { include: { components: true } } } } } }),
             this.prisma.orderOffer.count({ where }),
         ]);
         return ApiResponse.paginated(offers.map((offer) => this.mapper.toListResponse(offer)), getPaginationResponse(query.page, query.pageSize, total));
@@ -43,7 +43,7 @@ export class FloristOrderOffersService {
             include: {
                 order: {
                     include: {
-                        items: true,
+                        items: { include: { components: true } },
                     },
                 },
             },

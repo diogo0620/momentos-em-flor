@@ -9,7 +9,5 @@ export type AdminConfigureMoloni = {
     creditNoteDocumentSetId: string;
     receiptDocumentSetId: string;
     paymentMethodId: string;
-    defaultCustomerId: string;
-    defaultProductId: string;
     issueReceiptAfterPayment: boolean;
 }

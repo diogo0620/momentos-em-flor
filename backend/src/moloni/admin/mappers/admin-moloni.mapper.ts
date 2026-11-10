@@ -47,8 +47,6 @@ export class AdminMoloniMapper {
       fiscalConfigurationComplete: Boolean(
         settings.invoiceDocumentSetId &&
         settings.creditNoteDocumentSetId &&
-        settings.defaultCustomerId &&
-        settings.defaultProductId &&
         (!settings.issueReceiptAfterPayment ||
           (settings.receiptDocumentSetId && settings.paymentMethodId)),
       ),

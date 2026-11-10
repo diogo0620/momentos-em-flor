@@ -311,12 +311,12 @@ function ProductsPageContent() {
     const categoryName = categories.find((category) => String(category.id) === filters.categoryId)?.name;
 
     return (
-        <div className="min-h-screen bg-[#F8F9F5]">
+        <div className="min-h-screen bg-[#f8f6f1]">
             {/* Editorial catalogue header */}
-            <section className="relative overflow-hidden border-b border-[#E8EBE4] bg-white">
-                <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-32 h-80 w-80 rounded-full bg-[#F3F5EE]" />
-                <div aria-hidden="true" className="pointer-events-none absolute -bottom-36 left-[38%] h-64 w-64 rounded-full bg-[#FAF7F0]" />
-                <div className="relative mx-auto max-w-7xl px-4 py-9 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
+            <section className="relative overflow-hidden border-b border-[#e7e3d8] bg-[#eeece4]">
+                <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-32 h-80 w-80 rounded-full bg-[#e2e6d8]" />
+                <div aria-hidden="true" className="pointer-events-none absolute -bottom-36 left-[38%] h-64 w-64 rounded-full bg-[#f6f0e7]" />
+                <div className="relative mx-auto max-w-[1440px] px-4 py-10 sm:px-7 sm:py-14 lg:px-12 lg:py-16">
                     <nav aria-label="Navegação estrutural" className="mb-7 flex items-center gap-2 text-xs font-medium text-[#8B9484]">
                         <Link href="/" className="transition-colors hover:text-[#55624A]">Início</Link>
                         <ChevronRight size={13} aria-hidden="true" />
@@ -325,11 +325,11 @@ function ProductsPageContent() {
 
                     <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                         <div className="max-w-3xl">
-                            <span className="inline-flex items-center gap-2 rounded-full bg-[#F3F5EE] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#55624A]">
+                            <span className="editorial-kicker inline-flex items-center gap-2">
                                 <Flower2 size={14} /> A nossa coleção
                             </span>
-                            <h1 className="mt-4 text-3xl font-semibold leading-tight tracking-[-0.045em] text-[#2F3B2A] sm:text-4xl lg:text-[48px]">
-                                Flores para os momentos <span className="text-[#7C896E]">que ficam.</span>
+                            <h1 className="mt-4 max-w-3xl text-4xl leading-[1.04] tracking-[-0.045em] text-[#2F3B2A] sm:text-5xl lg:text-6xl">
+                                Flores para os momentos <span className="text-[#9d655f]">que ficam.</span>
                             </h1>
                             <p className="mt-4 max-w-2xl text-sm leading-6 text-[#747D6E] sm:text-base sm:leading-7">
                                 Descubra bouquets e arranjos pensados para surpreender. Encontre a escolha certa para cada pessoa, ocasião e orçamento.
@@ -347,7 +347,7 @@ function ProductsPageContent() {
                 </div>
             </section>
 
-            <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-9 lg:px-8">
+            <div className="mx-auto max-w-[1440px] px-4 py-7 sm:px-7 sm:py-9 lg:px-12">
                 {/* Search */}
                 <form onSubmit={handleSearch} className="mb-6 flex flex-col gap-3 sm:flex-row">
                     <label className="relative block min-w-0 flex-1">
@@ -427,7 +427,7 @@ function ProductsPageContent() {
                     <section id="catalog-results" className="min-w-0 scroll-mt-28">
                         <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div>
-                                <h2 className="text-xl font-semibold tracking-[-0.025em] text-[#2F3B2A]">A nossa seleção</h2>
+                                <h2 className="text-2xl tracking-[-0.025em] text-[#2F3B2A]">A nossa seleção</h2>
                                 <p className="mt-1 text-xs text-[#899382]">{isLoading ? "A atualizar catálogo…" : `${total} ${total === 1 ? "resultado encontrado" : "resultados encontrados"}`}</p>
                             </div>
                             <label className="flex items-center gap-2 self-start text-xs font-medium text-[#899382] sm:self-auto">
@@ -471,7 +471,7 @@ function ProductsPageContent() {
                             </div>
                         ) : (
                             <>
-                                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 xl:gap-6">
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-10 xl:grid-cols-3 xl:gap-x-8">
                                     {products.map((product) => <ProductCard key={product.id} product={product} />)}
                                 </div>
 

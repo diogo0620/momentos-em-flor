@@ -11,13 +11,13 @@ export default function Footer() {
     const hasContacts = email || phone || instagramUrl || facebookUrl;
 
     return (
-        <footer className="border-t border-[#E5E7E0] bg-white">
-            <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8 sm:py-12 lg:px-10">
-                <div className="grid gap-9 md:grid-cols-[1.1fr_0.9fr] md:items-end lg:grid-cols-[1.2fr_1fr_auto]">
+        <footer className="border-t border-[#e7e3d8] bg-[#f0eee7]">
+            <div className="mx-auto max-w-[1440px] px-5 py-12 sm:px-8 sm:py-16 lg:px-12">
+                <div className="grid gap-10 md:grid-cols-[1.1fr_0.9fr] md:items-start lg:grid-cols-[1.2fr_1fr_auto]">
                     <div>
                         <Image src="/logo.svg" alt="Momentos em Flor" width={170} height={60} className="h-12 w-auto" />
-                        <p className="mt-4 max-w-sm text-sm leading-6 text-[#788172]">
-                            Flores preparadas com cuidado para celebrar, agradecer e tornar cada momento memorável.
+                        <p className="mt-5 max-w-sm font-serif text-xl leading-7 text-[#52604c]">
+                            Um gesto escolhido com intenção. Flores para dizer o que as palavras nem sempre conseguem.
                         </p>
                     </div>
 
@@ -43,7 +43,7 @@ export default function Footer() {
                     )}
                 </div>
 
-                <div className="mt-9 flex flex-col gap-2 border-t border-[#E5E7E0] pt-5 text-[11px] text-[#9AA094] sm:flex-row sm:items-center sm:justify-between">
+                <div className="mt-10 flex flex-col gap-2 border-t border-[#dcd8cd] pt-5 text-[11px] text-[#858779] sm:flex-row sm:items-center sm:justify-between">
                     <span>© {new Date().getFullYear()} Momentos em Flor</span>
                     <span>As imagens dos produtos são meramente ilustrativas.</span>
                 </div>

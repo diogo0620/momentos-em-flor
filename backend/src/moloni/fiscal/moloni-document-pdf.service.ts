@@ -101,44 +101,57 @@ export class MoloniDocumentPdfService {
   }
 
   async download(documentId: string, filename: string): Promise<MoloniPdfDocument> {
-    const pdf = await this.moloniApi.getDocumentPdfLink<{ url?: string }>(documentId);
-    if (!pdf.url || !pdf.url.startsWith('https://')) {
-      throw new ServiceUnavailableException(
-        'A Moloni não devolveu o documento PDF esperado.',
-      );
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      const pdf = await this.moloniApi.getDocumentPdfLink<{ url?: string }>(documentId);
+      const url = this.parsePdfUrl(pdf.url);
+
+      try {
+        const response = await fetch(url, {
+          headers: {
+            Accept: 'application/pdf,application/octet-stream;q=0.9,*/*;q=0.1',
+            'User-Agent': 'MomentosEmFlor/1.0',
+          },
+          redirect: 'follow',
+          signal: AbortSignal.timeout(30_000),
+        });
+        const declaredLength = Number(response.headers.get('content-length') ?? 0);
+        if (response.ok && declaredLength <= MAX_PDF_BYTES) {
+          const received = Buffer.from(await response.arrayBuffer());
+          const headerIndex = received.subarray(0, 1024).indexOf('%PDF-');
+          if (headerIndex >= 0 && received.length <= MAX_PDF_BYTES) {
+            return { buffer: received.subarray(headerIndex), filename };
+          }
+        }
+      } catch {
+        // A geração do PDF assinado pode demorar alguns instantes. Voltamos a
+        // pedir uma ligação nova antes de considerar a operação falhada.
+      }
+
+      if (attempt < 3) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+      }
     }
 
-    let response: Response;
+    throw new ServiceUnavailableException(
+      'Não foi possível obter um documento PDF válido da Moloni.',
+    );
+  }
+
+  private parsePdfUrl(value?: string): string {
+    if (!value) {
+      throw new ServiceUnavailableException(
+        'A Moloni não devolveu a ligação do documento PDF.',
+      );
+    }
     try {
-      response = await fetch(pdf.url, {
-        headers: { Accept: 'application/pdf' },
-        signal: AbortSignal.timeout(30_000),
-      });
+      const url = new URL(value.trim());
+      if (url.protocol !== 'https:') throw new Error('Invalid protocol');
+      return url.toString();
     } catch {
       throw new ServiceUnavailableException(
-        'Não foi possível descarregar o documento PDF da Moloni.',
+        'A Moloni devolveu uma ligação de PDF inválida.',
       );
     }
-
-    const declaredLength = Number(response.headers.get('content-length') ?? 0);
-    if (!response.ok || declaredLength > MAX_PDF_BYTES) {
-      throw new ServiceUnavailableException(
-        'A Moloni não devolveu um documento PDF válido.',
-      );
-    }
-
-    const buffer = Buffer.from(await response.arrayBuffer());
-    if (
-      buffer.length === 0 ||
-      buffer.length > MAX_PDF_BYTES ||
-      buffer.subarray(0, 5).toString('ascii') !== '%PDF-'
-    ) {
-      throw new ServiceUnavailableException(
-        'A Moloni não devolveu um documento PDF válido.',
-      );
-    }
-
-    return { buffer, filename };
   }
 
   private buildFilename(orderNumber: string, kind: MoloniPdfDocumentKind): string {

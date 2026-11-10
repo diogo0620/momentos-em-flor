@@ -2,8 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { FloristOrderOfferListResponseDto } from '../dtos/florist-order-offer-list-response.dto';
 import { FloristOrderOfferResponseDto } from '../dtos/florist-order-offer-response.dto';
+import { formatOrderItemConfiguration } from '@/orders/order-item-configuration';
 
-type OfferWithOrder = Prisma.OrderOfferGetPayload<{ include: { order: { include: { items: true } } } }>;
+type OfferWithOrder = Prisma.OrderOfferGetPayload<{ include: { order: { include: { items: { include: { components: true } } } } } }>;
 
 @Injectable()
 export class FloristOrderOffersMapper {
@@ -39,7 +40,7 @@ export class FloristOrderOffersMapper {
                 items: offer.order.items.map((item) => ({
                     id: item.id,
                     name: item.name,
-                    description: item.description,
+                    description: formatOrderItemConfiguration(item),
                     variantName: item.variantName,
                     quantity: item.quantity,
                 })),

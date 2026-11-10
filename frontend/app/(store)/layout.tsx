@@ -15,8 +15,8 @@ export default function StoreLayout({
 }) {
     return (
         <CartProvider>
-            <div className="border-b border-white/10 bg-[#26392f] text-white">
-                <div className="mx-auto flex h-8 max-w-7xl items-center justify-center gap-7 px-4 text-[10px] font-semibold tracking-wide text-white/85 sm:text-[11px]">
+            <div className="border-b border-[#e7e3d8] bg-[#40513c] text-white">
+                <div className="mx-auto flex min-h-8 max-w-[1440px] items-center justify-center gap-5 px-3 py-1.5 text-[9px] font-medium tracking-wide text-white/90 sm:gap-8 sm:px-6 sm:text-[10px]">
                     <span className="flex items-center gap-1.5">
                         <Truck size={13} strokeWidth={1.8} />
                         Entrega cuidada
@@ -36,7 +36,7 @@ export default function StoreLayout({
 
             <Navbar />
 
-            <main className="min-h-screen bg-[#f7f7f3]">
+            <main className="min-h-screen bg-[#f8f6f1]">
                 {children}
             </main>
 

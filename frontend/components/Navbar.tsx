@@ -37,21 +37,21 @@ export default function Navbar() {
     }
 
     return (
-        <header className="sticky top-0 z-50 border-b border-[#e1e5df] bg-white/92 backdrop-blur-xl">
-            <div className="mx-auto flex h-[72px] max-w-7xl items-center gap-3 px-4 sm:px-6 lg:h-20 lg:px-8">
-                <button type="button" onClick={() => setMobileOpen(true)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#e1e5df] lg:hidden" aria-label="Abrir menu"><Menu size={20} /></button>
+        <header className="sticky top-0 z-50 border-b border-[#e7e3d8] bg-[#fbfaf7]/95 backdrop-blur-xl">
+            <div className="mx-auto flex h-[68px] max-w-[1440px] items-center gap-3 px-3 sm:px-7 lg:h-[82px] lg:px-12">
+                <button type="button" onClick={() => setMobileOpen(true)} className="flex h-10 w-10 items-center justify-center rounded-full text-[#40513c] transition hover:bg-[#eeece4] lg:hidden" aria-label="Abrir menu"><Menu size={20} /></button>
                 <Link href="/" className="shrink-0" aria-label="Momentos em Flor — início">
-                    <Image src="/logo.svg" alt="Momentos em Flor" width={184} height={58} className="h-11 w-auto sm:h-12" priority />
+                    <Image src="/logo.svg" alt="Momentos em Flor" width={184} height={58} className="h-10 w-auto sm:h-12" priority />
                 </Link>
 
-                <nav aria-label="Navegação da loja" className="ml-8 hidden items-center gap-1 lg:flex">
-                    {navigation.map((item) => <Link key={item.label} href={item.href} className="rounded-xl px-3 py-2 text-sm font-semibold text-[#566259] transition hover:bg-[#f1f4f0] hover:text-[#203128]">{item.label}</Link>)}
+                <nav aria-label="Navegação da loja" className="ml-10 hidden items-center gap-2 lg:flex">
+                    {navigation.map((item) => <Link key={item.label} href={item.href} className="px-3 py-2 text-[13px] font-medium text-[#566259] transition hover:text-[#9d655f]">{item.label}</Link>)}
                 </nav>
 
                 <div className="ml-auto flex items-center gap-1">
-                    <Link href="/products" className="flex h-10 w-10 items-center justify-center rounded-xl text-[#35443b] transition hover:bg-[#f1f4f0]" aria-label="Pesquisar produtos"><Search size={19} /></Link>
-                    <Link href="/favorites" className="relative hidden h-10 w-10 items-center justify-center rounded-xl text-[#35443b] transition hover:bg-[#f1f4f0] sm:flex" aria-label="Favoritos"><Heart size={19} /><Counter value={wishlistItems.length} /></Link>
-                    <Link href="/cart" className="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#35443b] transition hover:bg-[#f1f4f0]" aria-label="Carrinho"><ShoppingBag size={19} /><Counter value={cartItems.length} /></Link>
+                    <Link href="/products" className="flex h-10 w-10 items-center justify-center rounded-full text-[#35443b] transition hover:bg-[#eeece4]" aria-label="Pesquisar produtos"><Search size={19} strokeWidth={1.6} /></Link>
+                    <Link href="/favorites" className="relative hidden h-10 w-10 items-center justify-center rounded-full text-[#35443b] transition hover:bg-[#eeece4] sm:flex" aria-label="Favoritos"><Heart size={19} strokeWidth={1.6} /><Counter value={wishlistItems.length} /></Link>
+                    <Link href="/cart" className="relative flex h-10 w-10 items-center justify-center rounded-full text-[#35443b] transition hover:bg-[#eeece4]" aria-label="Carrinho"><ShoppingBag size={19} strokeWidth={1.6} /><Counter value={cartItems.length} /></Link>
                     {!isLoading && (isAuthenticated && user ? (
                         <div className="relative ml-1 hidden sm:block">
                             <button className="flex h-10 items-center gap-2 rounded-xl px-2 transition hover:bg-[#f1f4f0]" onClick={() => setAccountOpen((open) => !open)} aria-expanded={accountOpen}>
@@ -74,7 +74,7 @@ export default function Navbar() {
             {mobileOpen && (
                 <div className="fixed inset-0 z-[90] min-h-dvh lg:hidden">
                     <button className="absolute inset-0 bg-[#14221a]/45 backdrop-blur-sm" onClick={() => setMobileOpen(false)} aria-label="Fechar menu" />
-                    <div className="relative flex h-dvh w-[min(88vw,360px)] flex-col bg-white p-4 shadow-2xl">
+                    <div className="relative flex h-dvh w-[min(88vw,360px)] flex-col bg-[#fbfaf7] p-4 shadow-2xl">
                         <div className="flex items-center justify-between border-b border-[#e8ebe7] pb-4"><Image src="/logo.svg" alt="Momentos em Flor" width={158} height={48} className="h-10 w-auto" /><button className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f1f4f0]" onClick={() => setMobileOpen(false)} aria-label="Fechar menu"><X size={19} /></button></div>
                         <nav className="flex-1 space-y-1 py-5">{navigation.map((item) => <Link key={item.label} href={item.href} onClick={() => setMobileOpen(false)} className="block rounded-xl px-3 py-3 text-base font-semibold text-[#35443b] hover:bg-[#f1f4f0]">{item.label}</Link>)}</nav>
                         <div className="space-y-2 border-t border-[#e8ebe7] pt-4">

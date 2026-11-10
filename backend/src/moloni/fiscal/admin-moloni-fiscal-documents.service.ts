@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import {
   MoloniDocumentStatus,
+  OrderItemType,
   PaymentStatus,
   Prisma,
 } from '@prisma/client';
@@ -22,8 +23,9 @@ import {
   MoloniPdfDocumentKind,
 } from './moloni-document-pdf.service';
 import { SupabaseStorageService } from '@/storage/supabase-storage.service';
+import { MoloniSyncService } from '../sync/moloni-sync.service';
+import { formatOrderItemConfiguration } from '@/orders/order-item-configuration';
 
-type MoloniCustomer = { customer_id: number };
 type MoloniDocumentResult = { valid?: number; document_id?: number };
 type MoloniTax = {
   tax_id?: number;
@@ -69,6 +71,7 @@ const fiscalDocumentInclude = {
   order: {
     select: {
       id: true,
+      customerId: true,
       orderNumber: true,
       customerFirstName: true,
       customerLastName: true,
@@ -89,14 +92,19 @@ const fiscalDocumentInclude = {
       payment: { select: { status: true, currency: true } },
       items: {
         select: {
+          id: true,
+          productId: true,
+          type: true,
           name: true,
-          description: true,
+          variantType: true,
+          variantName: true,
           quantity: true,
           imagePath: true,
           netAmount: true,
           grossAmount: true,
           taxCodeId: true,
           taxRate: true,
+          components: { select: { componentName: true, quantity: true } },
         },
       },
     },
@@ -116,6 +124,7 @@ export class AdminMoloniFiscalDocumentsService {
     private readonly pdfService: MoloniDocumentPdfService,
     private readonly configService: ConfigService,
     private readonly storageService: SupabaseStorageService,
+    private readonly moloniSync: MoloniSyncService,
   ) {}
 
   async issueForOrder(orderId: number) {
@@ -203,17 +212,14 @@ export class AdminMoloniFiscalDocumentsService {
       }
 
       try {
-        const customerId = await this.resolveCustomerId(record, settings.defaultCustomerId!);
+        const customerId = await this.resolveCustomerId(record, settings.paymentMethodId);
         const existing = await this.moloniApi.getInvoiceByReference<MoloniDocumentResult>(
           String(record.order.id),
         );
         let result = existing;
 
         if (!result?.document_id) {
-          const products = await this.buildInvoiceProducts(
-            record,
-            settings.defaultProductId!,
-          );
+          const products = await this.buildInvoiceProducts(record);
           result = await this.moloniApi.insertInvoice<MoloniDocumentResult>({
               date: this.toDate(record.order.paidAt!),
               expiration_date: this.toDate(record.order.paidAt!),
@@ -566,29 +572,35 @@ export class AdminMoloniFiscalDocumentsService {
 
   private async resolveCustomerId(
     record: FiscalDocumentRecord,
-    defaultCustomerId: string,
+    paymentMethodId: string | null,
   ): Promise<string> {
-    const vat = record.order.customerTaxNumber?.trim();
-    if (!vat) return defaultCustomerId;
-
-    const customers = await this.moloniApi.getCustomersByVat<MoloniCustomer[]>(vat);
-    const customer = customers[0];
-    if (!customer?.customer_id) {
-      throw new BadRequestException(
-        `O cliente com NIF ${vat} não existe na Moloni. Cria-o antes de emitir a fatura.`,
-      );
-    }
-    return String(customer.customer_id);
+    const address = [
+      record.order.deliveryStreet,
+      record.order.deliveryStreetNumber,
+      record.order.deliveryStreet2,
+    ].filter(Boolean).join(', ');
+    const customerId = await this.moloniSync.resolveCustomer({
+      userId: record.order.customerId,
+      orderId: record.order.id,
+      firstName: record.order.customerFirstName,
+      lastName: record.order.customerLastName,
+      email: record.order.customerEmail,
+      phone: record.order.customerPhone,
+      taxNumber: record.order.customerTaxNumber,
+      address,
+      postalCode: record.order.deliveryPostalCode,
+      city: record.order.deliveryCity,
+      countryCode: record.order.deliveryCountryCode,
+      configuredPaymentMethodId: paymentMethodId,
+    });
+    return String(customerId);
   }
 
   getPdf(id: number, kind: MoloniPdfDocumentKind) {
     return this.pdfService.getByFiscalDocumentId(id, kind);
   }
 
-  private async buildInvoiceProducts(
-    record: FiscalDocumentRecord,
-    defaultProductId: string,
-  ) {
+  private async buildInvoiceProducts(record: FiscalDocumentRecord) {
     const taxIds = new Map<number, number>();
 
     for (const item of record.order.items) {
@@ -604,16 +616,32 @@ export class AdminMoloniFiscalDocumentsService {
       }
     }
 
-    return record.order.items.map((item, index) => {
+    const products: Array<Record<string, unknown>> = [];
+    for (const [index, item] of record.order.items.entries()) {
       const rate = Number(item.taxRate);
       const unitNetPrice = Number(item.grossAmount) /
         item.quantity /
         (1 + rate / 100);
+      const reference = item.type === OrderItemType.DELIVERY_FEE
+        ? 'MEF-DELIVERY-FEE'
+        : item.productId
+          ? `MEF-PRODUCT-${item.productId}`
+          : 'MEF-CUSTOM-ARRANGEMENT';
+      const productId = await this.moloniSync.resolveProduct({
+        productId: item.productId,
+        reference,
+        name: item.type === OrderItemType.DELIVERY_FEE ? 'Taxa de entrega' : item.name,
+        summary: null,
+        unitNetPrice,
+        moloniTaxId: taxIds.get(item.taxCodeId!)!,
+        taxRate: rate,
+        type: item.type === OrderItemType.DELIVERY_FEE ? 2 : 1,
+      });
 
-      return {
-        product_id: Number(defaultProductId),
+      products.push({
+        product_id: productId,
         name: item.name,
-        summary: item.description || undefined,
+        summary: formatOrderItemConfiguration(item) || undefined,
         qty: item.quantity,
         price: Number(unitNetPrice.toFixed(8)),
         order: index + 1,
@@ -623,8 +651,9 @@ export class AdminMoloniFiscalDocumentsService {
           order: 1,
           cumulative: 0,
         }],
-      };
-    });
+      });
+    }
+    return products;
   }
 
   private async resolveMoloniTaxId(rate: number): Promise<number> {
@@ -681,7 +710,7 @@ export class AdminMoloniFiscalDocumentsService {
               ${image ? `<td width="88" valign="top">${image}</td>` : ''}
               <td valign="top">
                 <p style="margin:0;font-size:14px;line-height:1.5;"><strong>${this.escapeHtml(item.name)}</strong><span> — ${item.quantity} un.</span></p>
-                ${item.description ? `<p style="margin:4px 0 0;color:#66705F;font-size:13px;line-height:1.5;">${this.escapeHtml(item.description)}</p>` : ''}
+                ${this.configurationHtml(item)}
               </td>
             </tr>
           </table>
@@ -720,6 +749,13 @@ export class AdminMoloniFiscalDocumentsService {
     }
   }
 
+  private configurationHtml(item: Parameters<typeof formatOrderItemConfiguration>[0]): string {
+    const configuration = formatOrderItemConfiguration(item);
+    return configuration
+      ? `<p style="margin:4px 0 0;color:#66705F;font-size:13px;line-height:1.5;">${this.escapeHtml(configuration)}</p>`
+      : '';
+  }
+
   private escapeHtml(value: string): string {
     return value
       .replace(/&/g, '&amp;')
@@ -734,15 +770,9 @@ export class AdminMoloniFiscalDocumentsService {
     creditNoteDocumentSetId: string | null;
     receiptDocumentSetId: string | null;
     paymentMethodId: string | null;
-    defaultCustomerId: string | null;
-    defaultProductId: string | null;
     issueReceiptAfterPayment: boolean;
   }): void {
-    if (
-      !settings.invoiceDocumentSetId ||
-      !settings.defaultCustomerId ||
-      !settings.defaultProductId
-    ) {
+    if (!settings.invoiceDocumentSetId) {
       throw new BadRequestException('A configuração fiscal da Moloni está incompleta.');
     }
     if (

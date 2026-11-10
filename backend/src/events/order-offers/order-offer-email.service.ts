@@ -5,6 +5,7 @@ import { DeliveryTimeSlot, UserRole } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { EmailService } from '@/email/email.service';
 import { SupabaseStorageService } from '@/storage/supabase-storage.service';
+import { formatOrderItemConfiguration } from '@/orders/order-item-configuration';
 
 @Injectable()
 export class OrderOfferEmailService {
@@ -68,9 +69,11 @@ export class OrderOfferEmailService {
             items: {
               select: {
                 name: true,
-                description: true,
+                variantType: true,
+                variantName: true,
                 quantity: true,
                 imagePath: true,
+                components: { select: { componentName: true, quantity: true } },
               },
             },
           },
@@ -120,8 +123,9 @@ export class OrderOfferEmailService {
         const image = item.imagePath
           ? `<img src="${this.escapeHtml(this.storageService.getPublicUrl(item.imagePath))}" alt="" width="72" height="72" style="display:block;width:72px;height:72px;object-fit:cover;border-radius:12px;" />`
           : '';
-        const description = item.description
-          ? `<p style="margin:4px 0 0;color:#66705F;font-size:13px;line-height:1.5;">${this.escapeHtml(item.description)}</p>`
+        const configuration = formatOrderItemConfiguration(item);
+        const configurationHtml = configuration
+          ? `<p style="margin:4px 0 0;color:#66705F;font-size:13px;line-height:1.5;">${this.escapeHtml(configuration)}</p>`
           : '';
 
         return `
@@ -130,7 +134,7 @@ export class OrderOfferEmailService {
               ${image ? `<td width="88" valign="top">${image}</td>` : ''}
               <td valign="top">
                 <p style="margin:0;font-size:14px;line-height:1.5;"><strong>${this.escapeHtml(item.name)}</strong><span> — ${item.quantity} un.</span></p>
-                ${description}
+                ${configurationHtml}
               </td>
             </tr>
           </table>

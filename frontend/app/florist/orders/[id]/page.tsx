@@ -72,12 +72,6 @@ const ITEM_TYPE_LABELS: Record<string, string> = {
     CUSTOM: "Personalizado",
 };
 
-const VARIANT_TYPE_LABELS: Record<string, string> = {
-    SIZE: "Tamanho",
-    COLOR: "Cor",
-    STYLE: "Estilo",
-};
-
 const DATE_FORMATTER = new Intl.DateTimeFormat("pt-PT", {
     day: "2-digit",
     month: "long",
@@ -464,11 +458,6 @@ function OrderItemCard({ item }: { item: FloristOrderItem }) {
                             </div>
                             <p className="mt-1 text-sm text-[#7A8474]">Quantidade: {item.quantity}</p>
                         </div>
-                        {(item.variantName || item.variantType) && (
-                            <div className="rounded-xl bg-[#FAFBF8] px-3 py-2 text-sm text-[#55624A]">
-                                {item.variantType ? `${VARIANT_TYPE_LABELS[item.variantType] ?? item.variantType}: ` : ""}{item.variantName ?? "—"}
-                            </div>
-                        )}
                     </div>
 
                     {item.description && <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-[#64705D]">{item.description}</p>}

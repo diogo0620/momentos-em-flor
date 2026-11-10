@@ -33,10 +33,10 @@ export default function CartPage() {
         }).format(value);
 
     return (
-        <div className="min-h-screen bg-[#F8F9F5]">
+        <div className="min-h-screen bg-[#f8f6f1]">
             {/* HEADER — alinhado visualmente com a página de favoritos */}
-            <section className="border-b border-[#E8EBE4] bg-white">
-                <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-11 lg:px-8">
+            <section className="border-b border-[#e7e3d8] bg-[#fbfaf7]">
+                <div className="mx-auto max-w-[1440px] px-4 py-8 sm:px-7 sm:py-12 lg:px-12">
                     <nav
                         aria-label="Navegação estrutural"
                         className="mb-7 flex items-center gap-2 text-xs font-medium text-[#8B9484]"
@@ -50,11 +50,11 @@ export default function CartPage() {
 
                     <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                         <div className="max-w-2xl">
-                            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#F3F5EE] px-3 py-1.5 text-xs font-semibold tracking-wide text-[#55624A]">
+                            <div className="editorial-kicker mb-3 inline-flex items-center gap-2">
                                 <ShoppingBag size={14} strokeWidth={1.8} />
                                 A sua seleção
                             </div>
-                            <h1 className="text-3xl font-semibold tracking-[-0.04em] text-[#2F3B2A] sm:text-4xl lg:text-[42px]">
+                            <h1 className="text-4xl leading-tight tracking-[-0.035em] text-[#2F3B2A] sm:text-5xl">
                                 O seu carrinho
                             </h1>
                             <p className="mt-3 max-w-xl text-sm leading-6 text-[#747D6E] sm:text-base sm:leading-7">
@@ -90,7 +90,7 @@ export default function CartPage() {
                 </div>
             </section>
 
-            <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-11 lg:px-8">
+            <section className="mx-auto max-w-[1440px] px-4 py-8 sm:px-7 sm:py-11 lg:px-12">
                 {/* EMPTY CART */}
                 {items.length === 0 ? (
                     <div className="overflow-hidden rounded-[32px] border border-[#E5E9E1] bg-white shadow-[0_8px_30px_rgba(47,59,42,0.05)]">
@@ -161,11 +161,6 @@ export default function CartPage() {
                                                             {item.name}
                                                         </h2>
 
-                                                        {item.variantName && (
-                                                            <p className="mt-1 text-sm text-[#7A8373]">
-                                                                {item.variantName}
-                                                            </p>
-                                                        )}
                                                     </div>
 
                                                     <button
@@ -255,17 +250,18 @@ export default function CartPage() {
                                 <div className="p-6">
                                     <div className="space-y-3.5 text-sm">
                                         <div className="flex items-center justify-between text-[#7A8373]">
-                                            <span>Produtos</span>
-                                            <span className="font-medium text-[#3F4A38]">
-                                                {totalQuantity}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex items-center justify-between text-[#7A8373]">
                                             <span>Subtotal</span>
                                             <span className="font-medium text-[#3F4A38]">
                                                 {formatPrice(total)}
                                             </span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[#7A8373]">
+                                            <span>Envio</span>
+                                            <span className="text-right font-medium text-[#3F4A38]">Calculado no checkout</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[#7A8373]">
+                                            <span>Desconto</span>
+                                            <span className="font-medium text-[#3F4A38]">{formatPrice(0)}</span>
                                         </div>
                                     </div>
 
@@ -273,7 +269,7 @@ export default function CartPage() {
 
                                     <div className="flex items-end justify-between gap-4">
                                         <div>
-                                            <p className="text-xs text-[#8A9384]">Total</p>
+                                            <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#8A9384]">TOTAL</p>
                                             <p className="mt-0.5 text-xl font-bold text-[#2F3B2A]">
                                                 {formatPrice(total)}
                                             </p>

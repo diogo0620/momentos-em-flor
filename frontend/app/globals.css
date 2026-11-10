@@ -1,15 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f7f3;
-  --foreground: #203128;
+  --background: #f8f6f1;
+  --foreground: #26392f;
   --surface: #ffffff;
-  --surface-muted: #f1f4f0;
-  --border: #e1e5df;
-  --primary: #26392f;
-  --primary-hover: #1d2d25;
-  --accent: #dfe8df;
-  --muted: #6d776f;
+  --surface-muted: #f0eee7;
+  --border: #e7e3d8;
+  --primary: #40513c;
+  --primary-hover: #303e2e;
+  --accent: #e7eadf;
+  --muted: #73786d;
+  --rose: #9d655f;
+  --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
 }
 
 @theme inline {
@@ -36,7 +38,25 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   font-feature-settings: "kern" 1, "liga" 1;
+  font-family: Arial, Helvetica, sans-serif;
 }
+
+h1, h2, h3, blockquote { text-wrap: pretty; }
+h1, h2 { font-family: var(--serif); font-weight: 500; }
+p { text-wrap: pretty; }
+
+::selection { background: #dce3d1; color: #26392f; }
+
+.editorial-kicker {
+  color: #75806a;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .19em;
+  text-transform: uppercase;
+}
+
+.premium-link { transition: color 180ms ease, gap 180ms ease; }
+.premium-link:hover { gap: .75rem; color: #9d655f; }
 
 img {
   display: block;

@@ -37,6 +37,14 @@ export class MoloniApiService {
     });
   }
 
+  async getProductsByReference<T>(reference: string): Promise<T> {
+    return this.post<T>('products/getByReference/', {
+      reference,
+      exact: 1,
+      qty: 1,
+    });
+  }
+
   async updateProduct<T>(
     productId: string,
     params: MoloniRequestParams,
@@ -103,6 +111,40 @@ export class MoloniApiService {
     return this.post<T>('customers/getByVat/', { vat, qty: 1 });
   }
 
+  async getLanguages<T>(): Promise<T> {
+    return this.post<T>('languages/getAll/', {}, false);
+  }
+
+  async getCountries<T>(): Promise<T> {
+    return this.post<T>('countries/getAll/', {}, false);
+  }
+
+  async getMaturityDates<T>(): Promise<T> {
+    return this.post<T>('maturityDates/getAll/');
+  }
+
+  async getPaymentMethods<T>(): Promise<T> {
+    return this.post<T>('paymentMethods/getAll/');
+  }
+
+  async getDocumentTypes<T>(languageId: number): Promise<T> {
+    return this.post<T>('documents/getAllDocumentTypes/', {
+      language_id: languageId,
+    }, false);
+  }
+
+  async getMeasurementUnits<T>(): Promise<T> {
+    return this.post<T>('measurementUnits/getAll/');
+  }
+
+  async getProductCategories<T>(): Promise<T> {
+    return this.post<T>('productCategories/getAll/', { parent_id: 0 });
+  }
+
+  async insertProductCategory<T>(params: MoloniRequestParams): Promise<T> {
+    return this.post<T>('productCategories/insert/', params);
+  }
+
   // ============================================================
   // FISCAL DOCUMENTS
   // ============================================================
@@ -157,11 +199,12 @@ export class MoloniApiService {
   private async post<T>(
     endpoint: string,
     params: MoloniRequestParams = {},
+    includeCompanyId = true,
   ): Promise<T> {
     const accessToken =
       await this.authService.getValidAccessToken();
 
-    const companyId = await this.getCompanyId();
+    const companyId = includeCompanyId ? await this.getCompanyId() : undefined;
 
     const url = new URL(endpoint, this.apiBaseUrl);
     url.searchParams.set('access_token', accessToken);
@@ -170,7 +213,7 @@ export class MoloniApiService {
 
     const body = {
       ...params,
-      company_id: companyId,
+      ...(companyId && { company_id: companyId }),
     };
 
     let response: Response;

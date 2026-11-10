@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { DeliveryTimeSlot, OrderStatus } from '@prisma/client';
+import { DeliveryTimeSlot, OrderStatus, ProductVariantType } from '@prisma/client';
 
 import { EmailService } from '@/email/email.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import { SupabaseStorageService } from '@/storage/supabase-storage.service';
+import { formatOrderItemConfiguration } from './order-item-configuration';
 
 @Injectable()
 export class OrderStatusEmailService {
@@ -35,9 +36,11 @@ export class OrderStatusEmailService {
           items: {
             select: {
               name: true,
-              description: true,
+              variantType: true,
+              variantName: true,
               quantity: true,
               imagePath: true,
+              components: { select: { componentName: true, quantity: true } },
             },
           },
         },
@@ -86,9 +89,11 @@ export class OrderStatusEmailService {
 
   private buildItemsHtml(items: Array<{
     name: string;
-    description: string | null;
+    variantType: ProductVariantType | null;
+    variantName: string | null;
     quantity: number;
     imagePath: string | null;
+    components: Array<{ componentName: string; quantity: number }>;
   }>): string {
     return items.map((item) => {
       const image = item.imagePath
@@ -101,12 +106,19 @@ export class OrderStatusEmailService {
             ${image ? `<td width="88" valign="top">${image}</td>` : ''}
             <td valign="top">
               <p style="margin:0;font-size:14px;line-height:1.5;"><strong>${this.escapeHtml(item.name)}</strong><span> — ${item.quantity} un.</span></p>
-              ${item.description ? `<p style="margin:4px 0 0;color:#66705F;font-size:13px;line-height:1.5;">${this.escapeHtml(item.description)}</p>` : ''}
+              ${this.configurationHtml(item)}
             </td>
           </tr>
         </table>
       `;
     }).join('');
+  }
+
+  private configurationHtml(item: Parameters<typeof formatOrderItemConfiguration>[0]): string {
+    const configuration = formatOrderItemConfiguration(item);
+    return configuration
+      ? `<p style="margin:4px 0 0;color:#66705F;font-size:13px;line-height:1.5;">${this.escapeHtml(configuration)}</p>`
+      : '';
   }
 
   private escapeHtml(value: string): string {

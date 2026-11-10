@@ -21,6 +21,7 @@ import { DeliveryAreaService } from '@/store-settings/delivery-area.service';
 import { CustomerCreateOrderReviewDto } from './dtos/customer-create-order-review.dto';
 import { toInternalOrderStatusFilter } from './customer-order-status';
 import { CouponsService } from '@/coupons/coupons.service';
+import { formatOrderItemConfiguration } from '../order-item-configuration';
 
 
 @Injectable()
@@ -503,7 +504,11 @@ export class CustomerOrdersService {
                 },
 
                 name: product.name,
-                description: product.description,
+                description: formatOrderItemConfiguration({
+                    variantType: selectedVariant?.type,
+                    variantName: selectedVariant?.name,
+                    components: componentSnapshots,
+                }),
                 imagePath,
 
                 ...(selectedVariant && {

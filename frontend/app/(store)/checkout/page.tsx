@@ -624,13 +624,13 @@ export default function CheckoutPage() {
         "mb-2 block text-xs font-semibold uppercase tracking-wide text-[#596151]";
 
     const sectionClass =
-        "rounded-[1.75rem] border border-[#E9ECE5] bg-white p-6 shadow-[0_8px_30px_rgba(47,59,42,0.04)] sm:p-7";
+        "rounded-[1.35rem] border border-[#e7e3d8] bg-[#fffefa] p-5 shadow-[0_8px_30px_rgba(47,59,42,0.035)] sm:p-7";
 
     return (
 
-        <div className="min-h-screen bg-[#F7F8F4]">
+        <div className="min-h-screen bg-[#f8f6f1]">
 
-            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+            <div className="mx-auto max-w-[1320px] px-4 py-8 sm:px-7 sm:py-12 lg:px-12">
 
                 <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
 
@@ -644,7 +644,7 @@ export default function CheckoutPage() {
 
                         </div>
 
-                        <h1 className="text-3xl font-bold tracking-tight text-[#2F3B2A] sm:text-4xl">
+                        <h1 className="text-4xl leading-tight tracking-tight text-[#2F3B2A] sm:text-5xl">
                             Finalizar encomenda
                         </h1>
 
@@ -1485,6 +1485,16 @@ export default function CheckoutPage() {
 
                                 <div className="my-6 border-t border-dashed border-[#DDE2D8]" />
 
+                                <div className="mb-5 rounded-2xl border border-[#E2E7DD] bg-white p-3">
+                                    <label htmlFor="coupon-code" className="text-xs font-semibold text-[#566449]">Cupão de desconto</label>
+                                    <div className="mt-2 flex gap-2">
+                                        <input id="coupon-code" value={couponInput} onChange={(event) => { setCouponInput(event.target.value.toUpperCase()); setAppliedCoupon(null); }} placeholder="Introduza o código" className="min-w-0 flex-1 rounded-xl border border-[#E2E7DD] px-3 py-2.5 text-sm uppercase outline-none focus:border-[#71805F]" />
+                                        <button type="button" onClick={() => void applyCoupon()} disabled={isApplyingCoupon || !couponInput.trim() || deliveryFee === null} className="rounded-xl bg-[#55624A] px-4 text-sm font-semibold text-white disabled:opacity-50">{isApplyingCoupon ? "A validar..." : "Aplicar"}</button>
+                                    </div>
+                                    {couponError && <p className="mt-2 text-xs text-red-700">{couponError}</p>}
+                                    {appliedCoupon && <p className="mt-2 text-xs font-semibold text-green-700">Cupão {appliedCoupon.code} aplicado.</p>}
+                                </div>
+
                                 <div className="space-y-3 text-sm">
 
                                     <div className="flex justify-between text-gray-500">
@@ -1499,22 +1509,21 @@ export default function CheckoutPage() {
 
                                     </div>
 
-                                    <div className="rounded-2xl border border-[#E2E7DD] bg-white p-3">
-                                        <label htmlFor="coupon-code" className="text-xs font-semibold text-[#566449]">Cupão de desconto</label>
-                                        <div className="mt-2 flex gap-2">
-                                            <input id="coupon-code" value={couponInput} onChange={(event) => { setCouponInput(event.target.value.toUpperCase()); setAppliedCoupon(null); }} placeholder="Introduza o código" className="min-w-0 flex-1 rounded-xl border border-[#E2E7DD] px-3 py-2.5 text-sm uppercase outline-none focus:border-[#71805F]" />
-                                            <button type="button" onClick={() => void applyCoupon()} disabled={isApplyingCoupon || !couponInput.trim() || deliveryFee === null} className="rounded-xl bg-[#55624A] px-4 text-sm font-semibold text-white disabled:opacity-50">{isApplyingCoupon ? "A validar..." : "Aplicar"}</button>
-                                        </div>
-                                        {couponError && <p className="mt-2 text-xs text-red-700">{couponError}</p>}
-                                        {appliedCoupon && <p className="mt-2 text-xs font-semibold text-green-700">Cupão {appliedCoupon.code} aplicado.</p>}
+                                    <div className="flex justify-between text-gray-500">
+                                        <span>Envio</span>
+                                        <span>
+                                            {!hasCompleteDeliveryAddress || isLoadingDeliveryFee
+                                                ? "A calcular..."
+                                                : deliveryFee !== null
+                                                    ? formatPrice(deliveryFee)
+                                                    : "Indisponível"}
+                                        </span>
                                     </div>
 
-                                    {appliedCoupon && (
-                                        <div className="flex justify-between font-medium text-green-700">
-                                            <span>Desconto</span>
-                                            <span>− {formatPrice(appliedCoupon.discount)}</span>
-                                        </div>
-                                    )}
+                                    <div className={`flex justify-between font-medium ${appliedCoupon ? "text-green-700" : "text-gray-500"}`}>
+                                        <span>Desconto</span>
+                                        <span>{appliedCoupon ? `− ${formatPrice(appliedCoupon.discount)}` : formatPrice(0)}</span>
+                                    </div>
 
                                 </div>
 
@@ -1525,7 +1534,7 @@ export default function CheckoutPage() {
                                     <div>
 
                                         <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                            Total
+                                            TOTAL
                                         </p>
 
                                         <p className="mt-1 text-3xl font-bold tracking-tight text-[#2F3B2A]">
