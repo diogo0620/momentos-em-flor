@@ -52,66 +52,46 @@ export default function HomePage() {
 
   return (
     <div className="bg-[#f8f6f1] text-[#293e32]">
-      <section
-        className={
-          container +
-          " grid gap-8 pb-10 pt-8 sm:pt-12 lg:grid-cols-[1fr_1.05fr] lg:items-center lg:gap-12 lg:pb-16"
-        }
-      >
-        <div className="py-2 lg:py-12">
-          <p className="flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[.23em] text-[#606c59] sm:text-xs">
-            <span className="h-px w-8 bg-[#89937e]" /> Para os teus momentos
-          </p>
-          <h1 className="mt-7 max-w-xl text-[clamp(3.25rem,6.7vw,6.8rem)] leading-[.98] tracking-[-.055em]">
-            Há gestos
-            <br />
-            que <em className="font-normal text-[#8a5751]">florescem.</em>
-          </h1>
-          <p className="mt-7 max-w-sm text-base leading-7 text-[#62685c] sm:text-lg sm:leading-8">
-            Para dizer o que sentes. Para celebrar quem importa. Ou só porque
-            sim.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-4">
-            <Link
-              href="/products"
-              className="inline-flex min-h-12 items-center gap-7 rounded-full bg-[#293e32] px-6 py-4 text-sm font-semibold text-white transition-colors hover:bg-[#435943]"
-            >
-              Encontrar as minhas flores{" "}
-              <ArrowUpRight size={18} aria-hidden="true" />
-            </Link>
-            <a
-              href="#selecao"
-              className="inline-flex min-h-11 items-center gap-2 text-sm underline decoration-[#a8ae9f] underline-offset-4"
-            >
-              Deixa-te inspirar <ArrowDown size={14} aria-hidden="true" />
-            </a>
-          </div>
-        </div>
-        <div className="relative">
-          <div className="relative aspect-[5/4] overflow-hidden rounded-t-[42%] rounded-b-2xl bg-[#e5e3d9] sm:aspect-[6/5] lg:aspect-[.95]">
-            <Image
-              src="/hero.png"
-              alt="Ramo de rosas em tons suaves, envolvido em papel kraft"
-              fill
-              preload
-              sizes="(max-width: 1023px) 100vw, 50vw"
-              className="object-cover object-[72%_center]"
-            />
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-6 pb-6 pt-16 text-white">
-              <p className="text-[10px] uppercase tracking-[.2em]">
-                Momentos em Flor
-              </p>
-              <p className="mt-1 font-[family-name:var(--serif)] text-xl italic sm:text-2xl">
-                Um bocadinho de natureza. Muito sentimento.
-              </p>
+      <section className="relative isolate overflow-hidden bg-[#253c31] text-white">
+        <Image
+          src="/hero.png"
+          alt="Ramo de rosas em tons suaves, envolvido em papel kraft"
+          fill
+          preload
+          sizes="100vw"
+          className="-z-20 object-cover object-[65%_center] lg:object-center"
+        />
+        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-[#17251b]/85 via-[#17251b]/55 to-[#17251b]/15 lg:via-[#17251b]/35 lg:to-transparent" />
+        <div className={container + " flex min-h-[540px] items-center py-16 sm:min-h-[620px] sm:py-20 lg:min-h-[680px]"}>
+          <div className="max-w-2xl">
+            <p className="text-[10px] font-semibold uppercase tracking-[.23em] text-white/85">
+              Flores, presentes e momentos especiais
+            </p>
+            <h1 className="mt-6 text-[clamp(2.8rem,5.3vw,5.5rem)] leading-[1.02] tracking-[-.05em]">
+              As flores certas.
+              <br />
+              <em className="font-normal text-[#eee4d1]">Para quem importa.</em>
+            </h1>
+            <p className="mt-6 max-w-md text-base leading-7 text-white/90">
+              Um aniversário, um obrigado ou uma surpresa sem motivo. Encontra
+              uma forma bonita de dizer o que sentes.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+              <Link
+                href="/products"
+                className="inline-flex min-h-12 items-center gap-6 rounded-full bg-[#f8f6f1] px-6 py-4 text-sm font-semibold text-[#293e32] transition-colors hover:bg-white"
+              >
+                Descobrir a coleção{" "}
+                <ArrowUpRight size={18} aria-hidden="true" />
+              </Link>
+              <a
+                href="#selecao"
+                className="inline-flex min-h-11 items-center gap-2 text-sm text-white underline decoration-white/60 underline-offset-4 hover:decoration-white"
+              >
+                Ver a nossa seleção <ArrowDown size={14} aria-hidden="true" />
+              </a>
             </div>
           </div>
-          <span className="absolute -left-4 top-8 hidden h-24 w-24 flex-col items-center justify-center rounded-full border border-[#e0ddd0] bg-[#f8f6f1] text-[#6a755f] lg:flex">
-            <Flower2 size={28} strokeWidth={1} aria-hidden="true" />
-            <span className="mt-2 text-[9px] uppercase tracking-[.15em]">
-              Flores & afetos
-            </span>
-          </span>
         </div>
       </section>
 
