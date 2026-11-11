@@ -14,7 +14,6 @@ import {
 
 import { adminUsersApi } from "@/lib/api/users/admin-users";
 import UserForm from "@/components/admin/users/UserForm";
-import MoloniReference from "@/components/admin/common/MoloniReference";
 
 import type { AdminUserDetail } from "@/types/users/admin/admin-user-detail";
 
@@ -157,8 +156,7 @@ export default function EditUserPage() {
                         A carregar utilizador...
                     </div>
                 ) : user ? (
-                    <><MoloniReference id={user.moloniId} />
-                    <UserForm user={user} /></>
+                    <UserForm user={user} />
                 ) : (
                     !error && (
                         <div className="rounded-3xl border border-[#E8EBE4] bg-white p-8 text-sm text-[#7A8474] shadow-sm">

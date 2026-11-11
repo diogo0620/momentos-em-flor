@@ -1,69 +1,83 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Flower2 } from "lucide-react";
-
+import { ArrowUpRight, Flower2 } from "lucide-react";
 import WishlistButton from "@/components/wishlist/WishlistButton";
 import { PublicProductList } from "@/types/products/public/public-product-list";
 
-type Props = {
-    product: PublicProductList;
-};
+export default function ProductCard({
+  product,
+}: {
+  product: PublicProductList;
+}) {
+  const href = `/products/${product.slug}`;
+  const price = product.price.toLocaleString("pt-PT", {
+    style: "currency",
+    currency: "EUR",
+  });
 
-export default function ProductCard({ product }: Props) {
-    const href = `/products/${product.slug}`;
-    const price = product.price.toLocaleString("pt-PT", {
-        style: "currency",
-        currency: "EUR",
-    });
-
-    return (
-        <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#e5e8df] bg-white p-3 shadow-sm transition-shadow hover:shadow-lg">
-            <div className="relative aspect-[4/5] overflow-hidden bg-[#E9ECE4]">
-                <Link href={href} className="block h-full" aria-label={`Ver ${product.name}`}>
-                    {product.image ? (
-                        <Image
-                            src={product.image}
-                            alt={product.name}
-                            fill
-                            className="object-cover transition duration-700 ease-out motion-safe:group-hover:scale-[1.04]"
-                            sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 25vw"
-                        />
-                    ) : (
-                        <div className="flex h-full items-center justify-center text-[#9AA690]">
-                            <Flower2 size={52} strokeWidth={1} />
-                        </div>
-                    )}
-                    <span className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#182017]/35 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                    <span className="absolute bottom-4 left-4 translate-y-2 text-xs font-semibold uppercase tracking-[0.16em] text-white opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-                        Descobrir composição
-                    </span>
-                </Link>
-
-                <div className="absolute right-3 top-3 z-10 rounded-full bg-white/90 shadow-sm backdrop-blur-sm">
-                    <WishlistButton product={product} />
-                </div>
-                {product.featured && (
-                    <span className="absolute left-3 top-3 bg-[#F7F5EF]/95 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[#4F5D47]">
-                        Seleção da casa
-                    </span>
-                )}
+  return (
+    <article className="group flex h-full min-w-0 flex-col rounded-2xl border border-[#ecebe3] bg-white p-2 shadow-[0_4px_20px_rgba(39,56,43,.025)] transition-shadow duration-300 hover:shadow-[0_12px_35px_rgba(39,56,43,.09)] sm:p-3">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-[#f2f1eb]">
+        <Link
+          href={href}
+          className="block h-full"
+          aria-label={`Ver ${product.name}`}
+        >
+          {product.image ? (
+            <Image
+              src={product.image}
+              alt={product.name}
+              fill
+              sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw"
+              className="object-cover transition-transform duration-700 ease-out motion-safe:group-hover:scale-[1.045]"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-[#8c987e]">
+              <Flower2 size={52} strokeWidth={1} />
             </div>
-
-            <div className="flex flex-1 flex-col border-b border-[#DDE1D8] py-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.17em] text-[#899382]">
-                    {product.type === "RENTAL" ? "Aluguer" : "Composição floral"}
-                </p>
-                <Link href={href} className="mt-2 flex items-start justify-between gap-4">
-                    <h2 className="line-clamp-2 text-lg font-medium leading-6 tracking-[-0.025em] text-[#293425] transition-colors group-hover:text-[#68795F] sm:text-xl">
-                        {product.name}
-                    </h2>
-                    <ArrowRight className="mt-1 shrink-0 text-[#778570] transition-transform duration-300 group-hover:translate-x-1" size={18} />
-                </Link>
-                <p className="mt-3 text-base font-semibold tracking-[-0.02em] text-[#4D5D45]">
-                    {product.type === "RENTAL" && <span className="mr-1 text-xs font-normal text-[#879080]">Desde</span>}
-                    {price}
-                </p>
-            </div>
-        </article>
-    );
+          )}
+        </Link>
+        <div className="absolute right-2 top-2">
+          <WishlistButton product={product} />
+        </div>
+        {product.featured && (
+          <span className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-white/95 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[.1em] text-[#40513c]">
+            Seleção da casa
+          </span>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col px-1 pb-1 pt-4 sm:px-2 sm:pb-2 sm:pt-5">
+        <p className="text-[9px] uppercase tracking-[.15em] text-[#68715f] sm:text-[10px]">
+          {product.type === "RENTAL"
+            ? "Aluguer · Decoração"
+            : "Momentos em Flor"}
+        </p>
+        <Link href={href} className="mt-2">
+          <h3 className="line-clamp-2 font-[family-name:var(--serif)] text-xl leading-tight tracking-[-.02em] text-[#293e32] sm:text-2xl">
+            {product.name}
+          </h3>
+        </Link>
+        <div className="mt-auto pt-5">
+          <p className="text-base font-semibold text-[#293e32] sm:text-lg">
+            {product.type === "RENTAL" && (
+              <span className="mr-1 text-xs font-normal text-[#68715f]">
+                Desde
+              </span>
+            )}
+            {price}
+          </p>
+          <Link
+            href={href}
+            aria-label={`Ver opções de ${product.name}`}
+            className="mt-4 flex min-h-11 items-center justify-between gap-2 border-t border-[#ecebe3] pt-3 text-[11px] font-semibold text-[#40513c] sm:text-xs"
+          >
+            Ver opções{" "}
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f1f3ec] transition-colors group-hover:bg-[#293e32] group-hover:text-white">
+              <ArrowUpRight size={16} aria-hidden="true" />
+            </span>
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
 }

@@ -11,6 +11,7 @@ import {
     IsString,
     MinLength,
     ValidateIf,
+    Min,
 } from 'class-validator';
 
 export class AdminCreateUserDto {
@@ -62,4 +63,10 @@ export class AdminCreateUserDto {
     @ValidateIf((user: AdminCreateUserDto) => user.role === UserRole.FLORIST)
     @IsInt()
     floristId?: number | null;
+
+    @ApiPropertyOptional({ example: 12345, nullable: true, description: 'ID do cliente correspondente na Moloni.' })
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    moloniId?: number | null;
 }

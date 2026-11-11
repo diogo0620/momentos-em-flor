@@ -4,6 +4,7 @@ export type AdminTaxCodeDetail = {
     description: string;
     rate: number;
     active: boolean;
+    moloniId: string | null;
     createdAt: string;
     updatedAt: string;
 }

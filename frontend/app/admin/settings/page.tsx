@@ -40,6 +40,7 @@ type TaxCodeFormValues = {
     name: string;
     description: string;
     rate: string;
+    moloniId: string;
     active: boolean;
 };
 
@@ -53,6 +54,7 @@ const emptyForm: TaxCodeFormValues = {
     name: "",
     description: "",
     rate: "",
+    moloniId: "",
     active: true,
 };
 
@@ -299,6 +301,7 @@ export default function SettingsPage() {
             name: taxCode.name,
             description: taxCode.description,
             rate: String(taxCode.rate),
+            moloniId: taxCode.moloniId ?? "",
             active: taxCode.active,
         });
 
@@ -324,6 +327,7 @@ export default function SettingsPage() {
         const name = form.name.trim();
         const description = form.description.trim();
         const rate = Number(form.rate);
+        const moloniId = Number(form.moloniId);
 
         if (!name) {
             setModalError("O nome é obrigatório.");
@@ -347,6 +351,15 @@ export default function SettingsPage() {
             return;
         }
 
+        if (
+            form.moloniId.trim() === "" ||
+            !Number.isSafeInteger(moloniId) ||
+            moloniId <= 0
+        ) {
+            setModalError("O ID Moloni é obrigatório e deve ser um número inteiro positivo.");
+            return;
+        }
+
         try {
             setIsSavingTaxCode(true);
 
@@ -356,6 +369,7 @@ export default function SettingsPage() {
                     description,
                     rate,
                     active: form.active,
+                    moloniId,
                 };
 
                 await adminTaxCodesApi.update(
@@ -368,6 +382,7 @@ export default function SettingsPage() {
                     description,
                     rate,
                     active: form.active,
+                    moloniId,
                 };
 
                 await adminTaxCodesApi.create(payload);
@@ -1005,6 +1020,38 @@ export default function SettingsPage() {
                                             %
                                         </span>
                                     </div>
+                                </div>
+
+                                <div>
+                                    <label
+                                        htmlFor="taxCodeMoloniId"
+                                        className="mb-2 block text-sm font-semibold text-gray-700"
+                                    >
+                                        ID Moloni
+                                    </label>
+
+                                    <input
+                                        id="taxCodeMoloniId"
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        inputMode="numeric"
+                                        value={form.moloniId}
+                                        onChange={(event) =>
+                                            setForm((current) => ({
+                                                ...current,
+                                                moloniId: event.target.value,
+                                            }))
+                                        }
+                                        className={inputClassName}
+                                        placeholder="ID da taxa na Moloni"
+                                        disabled={isSavingTaxCode}
+                                        required
+                                    />
+
+                                    <p className="mt-2 text-xs leading-5 text-gray-500">
+                                        As taxas de IVA não são criadas automaticamente. Associa manualmente a taxa existente na Moloni.
+                                    </p>
                                 </div>
 
                                 <label className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-gray-100 bg-[#F8FAF6] p-4">

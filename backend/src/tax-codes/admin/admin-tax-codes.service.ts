@@ -41,6 +41,7 @@ export class AdminTaxCodesService {
         const [taxCodes, total] = await Promise.all([
             this.prisma.taxCode.findMany({
                 where,
+                include: { moloniSync: true },
                 orderBy: { [sort]: order },
                 ...getPagination(page, pageSize),
             }),
@@ -57,6 +58,7 @@ export class AdminTaxCodesService {
     async findOne(id: number): Promise<AdminTaxCodeResponseDto> {
         const taxCode = await this.prisma.taxCode.findUnique({
             where: { id },
+            include: { moloniSync: true },
         });
 
         if (!taxCode) {
@@ -78,7 +80,9 @@ export class AdminTaxCodesService {
                     rate: dto.rate,
                     description: dto.description,
                     active: dto.active ?? true,
+                    moloniSync: { create: { moloniId: String(dto.moloniId), status: 'SYNCED', syncedAt: new Date() } },
                 },
+                include: { moloniSync: true },
             });
 
             return ApiResponse.success(
@@ -102,9 +106,8 @@ export class AdminTaxCodesService {
         dto: AdminUpdateTaxCodeDto,
     ): Promise<void> {
         try {
-            await this.prisma.taxCode.update({
-                where: { id },
-                data: {
+            await this.prisma.$transaction(async (tx) => {
+                await tx.taxCode.update({ where: { id }, data: {
                     ...(dto.name !== undefined && {
                         name: dto.name,
                     }),
@@ -117,7 +120,12 @@ export class AdminTaxCodesService {
                     ...(dto.active !== undefined && {
                         active: dto.active,
                     })
-                },
+                } });
+                if (dto.moloniId !== undefined) await tx.moloniSync.upsert({
+                    where: { taxCodeId: id },
+                    create: { taxCodeId: id, moloniId: String(dto.moloniId), status: 'SYNCED', syncedAt: new Date() },
+                    update: { moloniId: String(dto.moloniId), status: 'SYNCED', syncedAt: new Date(), message: null },
+                });
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError) {

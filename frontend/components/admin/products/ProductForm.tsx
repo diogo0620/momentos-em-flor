@@ -168,6 +168,7 @@ export default function ProductForm({ product }: ProductFormProps) {
     const [floristPrice, setFloristPrice] = useState(
         String(product?.floristPrice ?? ""),
     );
+    const [moloniId, setMoloniId] = useState(product?.moloniId ?? "");
     const [rentalDeposit, setRentalDeposit] = useState(
         product?.rentalDeposit != null ? String(product.rentalDeposit) : "",
     );
@@ -515,6 +516,7 @@ export default function ProductForm({ product }: ProductFormProps) {
                     floristPrice: variant.floristPrice,
                 })),
                 addonProductIds,
+                moloniId: moloniId === "" ? null : Number(moloniId),
                 active,
                 ...(type === "RENTAL"
                     ? { rentalDeposit: toNumber(rentalDeposit) }
@@ -1376,6 +1378,14 @@ export default function ProductForm({ product }: ProductFormProps) {
                             </span>
                         </span>
                     </label>
+                </div>
+            </section>
+
+            <section className={sectionClassName}>
+                <SectionHeading title="Integração Moloni" description="Se estiver vazio, o produto é procurado pela referência ou criado automaticamente quando for necessário faturar. Usa este campo para corrigir uma associação." />
+                <div className="max-w-sm">
+                    <label htmlFor="moloniId" className={labelClassName}>Moloni ID do produto</label>
+                    <input id="moloniId" type="number" min="1" step="1" value={moloniId} onChange={(event) => setMoloniId(event.target.value)} className={inputClassName} placeholder="Criado automaticamente" disabled={saving} />
                 </div>
             </section>
 

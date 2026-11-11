@@ -41,6 +41,7 @@ export default function TaxCodeForm({
     const [rate, setRate] = useState(
         taxCode?.rate?.toString() ?? "",
     );
+    const [moloniId, setMoloniId] = useState(taxCode?.moloniId ?? "");
 
     const [active, setActive] = useState(
         taxCode?.active ?? true,
@@ -63,6 +64,10 @@ export default function TaxCodeForm({
 
         if (rate.trim() === "") {
             return "A taxa de IVA é obrigatória.";
+        }
+
+        if (!Number.isSafeInteger(Number(moloniId)) || Number(moloniId) <= 0) {
+            return "Indica o Moloni ID do código de IVA.";
         }
 
         const numericRate = Number(rate);
@@ -99,6 +104,7 @@ export default function TaxCodeForm({
                 name: name.trim(),
                 description: description.trim(),
                 rate: Number(rate),
+                moloniId: Number(moloniId),
             };
 
             if (isEditing) {
@@ -354,6 +360,12 @@ export default function TaxCodeForm({
                         </div>
 
                         {/* ACTIVE */}
+
+                        <div className="rounded-2xl border border-[#DDE5D7] bg-[#F8FAF6] p-5">
+                            <label htmlFor="moloniId" className="mb-2 block text-sm font-medium text-gray-700">Moloni ID *</label>
+                            <input id="moloniId" type="number" min="1" step="1" value={moloniId} onChange={(event) => setMoloniId(event.target.value)} placeholder="ID do imposto na Moloni" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#55624A] focus:ring-2 focus:ring-[#55624A]/10" required />
+                            <p className="mt-2 text-xs leading-5 text-gray-500">Obrigatório. Os códigos de IVA não são criados nem escolhidos automaticamente na Moloni.</p>
+                        </div>
 
                         {isEditing && (
                             <div className="

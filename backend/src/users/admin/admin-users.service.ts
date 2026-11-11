@@ -17,6 +17,7 @@ import { AdminUserQueryDto } from './dtos/admin-user-query.dto';
 import { AdminCreateUserDto } from './dtos/admin-create-user.dto';
 import { EntityIdResponseDto } from '@/common/responses/dto/entity-id-response.dto';
 import { normalizePhoneNumber } from '@/common/phone/phone-number';
+import { AdminUpdateUserDto } from './dtos/admin-update-user.dto';
 
 @Injectable()
 export class AdminUsersService {
@@ -94,6 +95,7 @@ export class AdminUsersService {
                     role: dto.role,
                     floristId: dto.floristId,
                     active: dto.active ?? true,
+                    ...(dto.moloniId && { moloniSync: { create: { moloniId: String(dto.moloniId), status: 'SYNCED', syncedAt: new Date() } } }),
                 },
             });
 
@@ -112,6 +114,26 @@ export class AdminUsersService {
 
             throw error;
         }
+    }
+
+    async update(id: number, dto: AdminUpdateUserDto): Promise<void> {
+        await this.prisma.$transaction(async (tx) => {
+            await tx.user.update({
+                where: { id },
+                data: {
+                    ...(dto.firstName !== undefined && { firstName: dto.firstName }),
+                    ...(dto.lastName !== undefined && { lastName: dto.lastName }),
+                    ...(dto.phone !== undefined && { phone: normalizePhoneNumber(dto.phone) }),
+                    ...(dto.active !== undefined && { active: dto.active }),
+                },
+            });
+            if (dto.moloniId === null) await tx.moloniSync.deleteMany({ where: { userId: id } });
+            else if (dto.moloniId !== undefined) await tx.moloniSync.upsert({
+                where: { userId: id },
+                create: { userId: id, moloniId: String(dto.moloniId), status: 'SYNCED', syncedAt: new Date() },
+                update: { moloniId: String(dto.moloniId), status: 'SYNCED', syncedAt: new Date(), message: null },
+            });
+        });
     }
 
     async delete(id: number): Promise<void> {

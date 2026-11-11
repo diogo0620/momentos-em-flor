@@ -17,6 +17,9 @@ export class AdminTaxCodeResponseDto {
     @ApiProperty({example: true})
     active!: boolean;
 
+    @ApiPropertyOptional({ example: '12345', nullable: true })
+    moloniId!: string | null;
+
     @ApiProperty({example:'2026-09-01T17:00:00.000Z'})
     createdAt!: Date;
 

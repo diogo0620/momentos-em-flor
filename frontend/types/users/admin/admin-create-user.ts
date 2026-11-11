@@ -7,6 +7,7 @@ export type AdminCreateUser = {
     role: UserRole;
     active: boolean;
     floristId?: number;
+    moloniId?: number | null;
 }
 
 export type UserRole = "ADMIN" | "FLORIST" | "CUSTOMER"

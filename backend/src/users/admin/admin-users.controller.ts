@@ -10,6 +10,7 @@ import {
     UseGuards,
     Body,
     Post,
+    Patch,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
@@ -20,6 +21,7 @@ import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
 import { UserRole } from '@prisma/client';
 import { AdminCreateUserDto } from './dtos/admin-create-user.dto';
+import { AdminUpdateUserDto } from './dtos/admin-update-user.dto';
 
 @ApiTags('Users (Admin)')
 @ApiBearerAuth('JWT')
@@ -49,6 +51,12 @@ export class AdminUsersController {
     @HttpCode(HttpStatus.CREATED)
     async create(@Body() dto: AdminCreateUserDto) {
         return await this.service.create(dto);
+    }
+
+    @Patch(':id')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async update(@Param('id', ParseIntPipe) id: number, @Body() dto: AdminUpdateUserDto) {
+        await this.service.update(id, dto);
     }
 
     @Delete(':id')

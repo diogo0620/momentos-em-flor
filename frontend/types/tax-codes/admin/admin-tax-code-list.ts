@@ -4,4 +4,5 @@ export type AdminTaxCodeList = {
     description: string;
     rate: number;
     active: boolean;
+    moloniId?: string | null;
 }

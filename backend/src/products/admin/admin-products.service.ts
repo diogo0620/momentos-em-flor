@@ -134,6 +134,7 @@ export class AdminProductsService {
                     addons: {
                         create: (dto.addonProductIds ?? []).map((addonProductId, sortOrder) => ({ addonProductId, sortOrder })),
                     },
+                    ...(dto.moloniId && { moloniSync: { create: { moloniId: String(dto.moloniId), status: 'SYNCED', syncedAt: new Date() } } }),
                     active: dto.active ?? true,
 
                 },
@@ -317,6 +318,12 @@ export class AdminProductsService {
                         data: dto.addonProductIds.map((addonProductId, sortOrder) => ({ productId: id, addonProductId, sortOrder })),
                     });
                 }
+                if (dto.moloniId === null) await tx.moloniSync.deleteMany({ where: { productId: id } });
+                else if (dto.moloniId !== undefined) await tx.moloniSync.upsert({
+                    where: { productId: id },
+                    create: { productId: id, moloniId: String(dto.moloniId), status: 'SYNCED', syncedAt: new Date() },
+                    update: { moloniId: String(dto.moloniId), status: 'SYNCED', syncedAt: new Date(), message: null },
+                });
             });
 
 

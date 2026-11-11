@@ -5,6 +5,7 @@ import {
     IsNumber,
     IsOptional,
     IsString,
+    IsInt,
     Max,
     Min,
 } from 'class-validator';
@@ -39,4 +40,9 @@ export class AdminCreateTaxCodeDto {
     @IsOptional()
     @IsBoolean()
     active?: boolean;
+
+    @ApiProperty({ example: 12345, description: 'ID do código de IVA correspondente na Moloni. O sistema não cria impostos automaticamente.' })
+    @IsInt()
+    @Min(1)
+    moloniId!: number;
 }

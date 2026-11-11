@@ -84,6 +84,7 @@ export default function UserForm({ user }: UserFormProps) {
     const [floristId, setFloristId] = useState(
         user?.florist?.id ? String(user.florist.id) : "",
     );
+    const [moloniId, setMoloniId] = useState(user?.moloniId ?? "");
 
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -181,6 +182,7 @@ export default function UserForm({ user }: UserFormProps) {
                     lastName: lastName.trim(),
                     phone: phone.trim(),
                     active,
+                    moloniId: moloniId === "" ? null : Number(moloniId),
                 };
 
                 await adminUsersApi.update(user.id, data);
@@ -193,6 +195,7 @@ export default function UserForm({ user }: UserFormProps) {
                     password,
                     role,
                     active,
+                    ...(moloniId !== "" ? { moloniId: Number(moloniId) } : {}),
                     ...(role === "FLORIST"
                         ? { floristId: Number(floristId) }
                         : {}),
@@ -410,6 +413,15 @@ export default function UserForm({ user }: UserFormProps) {
                             </span>
                         </span>
                     </label>
+                </div>
+            </section>
+
+            <section className="rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-sm sm:p-8">
+                <h2 className="text-lg font-semibold text-[#2F3B2A]">Integração Moloni</h2>
+                <p className="mt-1 text-sm leading-6 text-[#7A8474]">Se estiver vazio, o cliente é procurado ou criado automaticamente na primeira faturação. Preenche apenas para corrigir ou associar manualmente um cliente já existente.</p>
+                <div className="mt-5 max-w-sm">
+                    <label htmlFor="moloniId" className={labelClassName}>Moloni ID do cliente</label>
+                    <input id="moloniId" type="number" min="1" step="1" value={moloniId} onChange={(event) => setMoloniId(event.target.value)} className={inputClassName} placeholder="Criado automaticamente" disabled={saving} />
                 </div>
             </section>
 

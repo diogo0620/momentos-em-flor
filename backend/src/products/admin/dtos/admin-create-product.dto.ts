@@ -142,6 +142,12 @@ export class AdminCreateProductDto {
     @IsInt({ each: true })
     addonProductIds?: number[];
 
+    @ApiPropertyOptional({ example: 12345, nullable: true, description: 'ID do produto correspondente na Moloni.' })
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    moloniId?: number | null;
+
     /*
     @ApiPropertyOptional({
         type: [CreateProductImageDto],

@@ -3,4 +3,5 @@ export type AdminUpdateUser = {
     lastName: string;
     phone: string;
     active: boolean;
+    moloniId?: number | null;
 }

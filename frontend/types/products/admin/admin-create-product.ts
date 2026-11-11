@@ -11,6 +11,7 @@ export type AdminCreateProduct = {
     components: ProductComponent[];
     variants: ProductVariant[];
     addonProductIds?: number[];
+    moloniId?: number | null;
     active: boolean;
     rentalDeposit?: number;
 }

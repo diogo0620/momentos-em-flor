@@ -10,6 +10,7 @@ export type AdminUpdateProduct = {
     components: ProductComponent[];
     variants: ProductVariant[];
     addonProductIds?: number[];
+    moloniId?: number | null;
     active: boolean;
     rentalDeposit?: number;
 }

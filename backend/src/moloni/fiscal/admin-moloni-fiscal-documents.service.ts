@@ -696,32 +696,9 @@ export class AdminMoloniFiscalDocumentsService {
       select: { moloniId: true },
     });
     if (mapped?.moloniId) return Number(mapped.moloniId);
-
-    const taxes = await this.moloniApi.getTaxes<MoloniTax[]>({
-      value: rate,
-      type: 1,
-      fiscal_zone: 'PT',
-      active_by_default: 1,
-    });
-    const matches = taxes.filter(
-      (tax) => tax.tax_id &&
-        Number(tax.value) === rate &&
-        tax.type === 1 &&
-        tax.saft_type === 1,
+    throw new BadRequestException(
+      `O código de IVA de ${rate}% não tem Moloni ID configurado. Abre o código de IVA no admin, associa o ID da Moloni e repete a emissão.`,
     );
-
-    if (matches.length !== 1) {
-      throw new BadRequestException(
-        `Não foi possível identificar de forma inequívoca o IVA de ${rate}% na Moloni.`,
-      );
-    }
-    const moloniId = matches[0].tax_id!;
-    await this.prisma.moloniSync.upsert({
-      where: { taxCodeId },
-      create: { taxCodeId, moloniId: String(moloniId), status: 'SYNCED', syncedAt: new Date() },
-      update: { moloniId: String(moloniId), status: 'SYNCED', syncedAt: new Date(), message: null },
-    });
-    return moloniId;
   }
 
   private toMoloniDiscountPercentage(discount: number, grossBeforeDiscount: number): number {

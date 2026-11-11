@@ -16,4 +16,7 @@ export class AdminTaxCodeListResponseDto {
 
     @ApiProperty({example: true})
     active!: boolean;
+
+    @ApiProperty({ example: '12345', nullable: true })
+    moloniId!: string | null;
 }

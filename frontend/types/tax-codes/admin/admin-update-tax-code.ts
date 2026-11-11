@@ -3,4 +3,5 @@ export type AdminUpdateTaxCode = {
     description: string;
     rate: number;
     active: boolean;
+    moloniId: number;
 }
