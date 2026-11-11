@@ -3,47 +3,47 @@ import { apiFetch, apiFetchBlob } from "../common/client";
 import type { MoloniFiscalDocument } from "@/types/moloni/admin/moloni-fiscal-document";
 
 class AdminMoloniFiscalDocumentsApi extends BaseApi<
-    MoloniFiscalDocument,
-    MoloniFiscalDocument,
-    never,
-    never
+  MoloniFiscalDocument,
+  MoloniFiscalDocument,
+  never,
+  never
 > {
-    constructor() {
-        super("/admin/moloni/fiscal-documents");
-    }
+  constructor() {
+    super("/admin/moloni/fiscal-documents");
+  }
 
-    async issue(id: number): Promise<void> {
-        await apiFetch(`${this.endpoint}/${id}/issue`, { method: "POST" });
-    }
+  async issue(id: number): Promise<void> {
+    await apiFetch(`${this.endpoint}/${id}/issue`, { method: "POST" });
+  }
 
-    async getDetail(id: number): Promise<MoloniFiscalDocument> {
-        return apiFetch<MoloniFiscalDocument>(`${this.endpoint}/${id}`);
-    }
+  async getDetail(id: number): Promise<MoloniFiscalDocument> {
+    return apiFetch<MoloniFiscalDocument>(`${this.endpoint}/${id}`);
+  }
 
-    async getRepairContext<T>(id: number): Promise<T> {
-        const response = await apiFetch<{ data: T }>(`${this.endpoint}/${id}/repair-context`);
-        return response.data;
-    }
+  async getRepairContext<T>(id: number): Promise<T> {
+    return apiFetch<T>(`${this.endpoint}/${id}/repair-context`);
+  }
 
-    async recordCreditNote(id: number, creditNoteId: string): Promise<void> {
-        await apiFetch(`${this.endpoint}/${id}/record-credit-note`, {
-            method: "POST",
-            body: JSON.stringify({ creditNoteId }),
-        });
-    }
+  async recordCreditNote(id: number, creditNoteId: string): Promise<void> {
+    await apiFetch(`${this.endpoint}/${id}/record-credit-note`, {
+      method: "POST",
+      body: JSON.stringify({ creditNoteId }),
+    });
+  }
 
-    async issueCreditNote(id: number): Promise<void> {
-        await apiFetch(`${this.endpoint}/${id}/issue-credit-note`, {
-            method: "POST",
-        });
-    }
+  async issueCreditNote(id: number): Promise<void> {
+    await apiFetch(`${this.endpoint}/${id}/issue-credit-note`, {
+      method: "POST",
+    });
+  }
 
-    async getPdf(
-        id: number,
-        kind: "invoice" | "receipt" | "credit-note",
-    ): Promise<Blob> {
-        return apiFetchBlob(`${this.endpoint}/${id}/${kind}-pdf`);
-    }
+  async getPdf(
+    id: number,
+    kind: "invoice" | "receipt" | "credit-note",
+  ): Promise<Blob> {
+    return apiFetchBlob(`${this.endpoint}/${id}/${kind}-pdf`);
+  }
 }
 
-export const adminMoloniFiscalDocumentsApi = new AdminMoloniFiscalDocumentsApi();
+export const adminMoloniFiscalDocumentsApi =
+  new AdminMoloniFiscalDocumentsApi();

@@ -50,7 +50,7 @@ function Reel({
   return (
     <div
       className={
-        "relative aspect-[9/14] overflow-hidden rounded-2xl border bg-[#324c3d] transition-colors " +
+        "relative aspect-[9/16] overflow-hidden rounded-2xl border bg-[#324c3d] transition-colors " +
         (active ? "border-[#ddd4bd]" : "border-white/15")
       }
     >
@@ -72,7 +72,7 @@ function Reel({
           controls={active}
           preload="metadata"
           onError={() => setFailed(true)}
-          className="h-full w-full object-contain"
+          className="h-full w-full object-cover object-center"
           aria-label={`Momento em Flor — vídeo ${index + 1}`}
         />
       ) : active ? (
