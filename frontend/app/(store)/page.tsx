@@ -182,10 +182,10 @@ export default function HomePage() {
       {collections.length > 0 && (
         <section
           aria-labelledby="collections-title"
-          className="bg-[#eeeee6] py-14 sm:py-20"
+          className="overflow-hidden bg-[#eeeee6] py-14 sm:py-20 lg:py-24"
         >
           <div className={container}>
-            <div className="mb-9 grid gap-4 md:grid-cols-2 md:items-end">
+            <div className="mb-10 grid gap-5 md:grid-cols-2 md:items-end lg:mb-12">
               <div>
                 <p className="editorial-kicker">Descobre a coleção</p>
                 <h2
@@ -202,19 +202,30 @@ export default function HomePage() {
                 com a tua.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-7 md:gap-6 lg:grid-cols-4">
+            <div className="-mx-5 flex snap-x snap-mandatory items-start gap-4 overflow-x-auto px-5 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-10 sm:gap-6 sm:px-10 lg:mx-0 lg:grid lg:grid-cols-12 lg:gap-x-7 lg:overflow-visible lg:px-0 lg:pb-0">
               {collections.map((collection, index) => (
                 <Link
                   key={collection.id}
                   href={"/products?categoryId=" + collection.id}
-                  className="group min-w-0"
+                  className={
+                    "group w-[72vw] max-w-[310px] shrink-0 snap-start lg:w-auto lg:max-w-none " +
+                    [
+                      "lg:col-span-4",
+                      "mt-16 lg:col-span-3 lg:mt-24",
+                      "mt-5 lg:col-span-2 lg:mt-10",
+                      "mt-24 lg:col-span-3 lg:mt-32",
+                    ][index % 4]
+                  }
                 >
                   <div
                     className={
-                      "relative aspect-[4/5] overflow-hidden bg-[#e1e3d8] " +
-                      (index % 2 === 0
-                        ? "rounded-t-[45%] rounded-b-lg"
-                        : "rounded-t-lg rounded-b-[35%]")
+                      "relative overflow-hidden bg-[#e1e3d8] " +
+                      [
+                        "aspect-[4/5]",
+                        "aspect-[3/4]",
+                        "aspect-[2/3]",
+                        "aspect-[4/5]",
+                      ][index % 4]
                     }
                   >
                     <Image
@@ -224,20 +235,31 @@ export default function HomePage() {
                       sizes="(max-width: 1023px) 50vw, 25vw"
                       className="object-cover transition-transform duration-700 motion-safe:group-hover:scale-105"
                     />
+                    <span className="absolute left-4 top-4 text-[10px] font-semibold tracking-[.18em] text-white drop-shadow-sm">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
                   </div>
-                  <div className="mt-4 flex items-center justify-between gap-2 border-b border-[#cdd1c2] pb-3">
-                    <h3 className="font-[family-name:var(--serif)] text-lg sm:text-2xl">
+                  <div className="mt-4 flex items-start justify-between gap-3 border-t border-[#bfc5b6] pt-3">
+                    <div className="min-w-0">
+                      <h3 className="font-[family-name:var(--serif)] text-2xl leading-tight sm:text-[1.7rem]">
                       {collection.name}
-                    </h3>
-                    <ArrowUpRight
-                      size={18}
-                      className="shrink-0"
-                      aria-hidden="true"
-                    />
+                      </h3>
+                      {collection.description && (
+                        <p className="mt-2 line-clamp-2 text-xs leading-5 text-[#66705f]">
+                          {collection.description}
+                        </p>
+                      )}
+                    </div>
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center border border-[#aeb7a5] transition-colors group-hover:bg-[#293e32] group-hover:text-white">
+                      <ArrowUpRight size={16} aria-hidden="true" />
+                    </span>
                   </div>
                 </Link>
               ))}
             </div>
+            <p className="mt-5 text-xs text-[#707967] lg:hidden">
+              Desliza para descobrir mais coleções.
+            </p>
           </div>
         </section>
       )}

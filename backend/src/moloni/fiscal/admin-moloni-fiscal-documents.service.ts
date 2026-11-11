@@ -166,6 +166,10 @@ export class AdminMoloniFiscalDocumentsService {
     );
   }
 
+  async findOne(id: number) {
+    return ApiResponse.success(this.toResponse(await this.getRecord(id)));
+  }
+
   async getRepairContext(id: number) {
     const document = await this.prisma.moloniFiscalDocument.findUnique({
       where: { id },

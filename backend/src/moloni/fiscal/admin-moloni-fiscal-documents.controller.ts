@@ -45,6 +45,11 @@ export class AdminMoloniFiscalDocumentsController {
     return this.service.getRepairContext(id);
   }
 
+  @Get(':id')
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.service.findOne(id);
+  }
+
   @Get(':id/invoice-pdf')
   @Header('Cache-Control', 'private, no-store')
   async getInvoicePdf(@Param('id', ParseIntPipe) id: number) {

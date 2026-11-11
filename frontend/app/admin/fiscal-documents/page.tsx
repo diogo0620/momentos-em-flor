@@ -5,10 +5,10 @@ import Link from "next/link";
 import {
     ChevronLeft,
     ChevronRight,
+    ArrowRight,
     ExternalLink,
     FileText,
     Loader2,
-    ReceiptText,
     Search,
 } from "lucide-react";
 import PageHeader from "@/components/admin/common/PageHeader";
@@ -49,10 +49,7 @@ export default function FiscalDocumentsPage() {
     const [search, setSearch] = useState("");
     const [status, setStatus] = useState("");
     const [loading, setLoading] = useState(true);
-    const [issuingId, setIssuingId] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [issuingCreditNoteId, setIssuingCreditNoteId] = useState<number | null>(null);
-    const [openingPdf, setOpeningPdf] = useState<string | null>(null);
 
     const load = useCallback(async (requestedPage = 1) => {
         try {
@@ -78,75 +75,9 @@ export default function FiscalDocumentsPage() {
 
     useEffect(() => { void load(1); }, [load]);
 
-    async function issue(item: MoloniFiscalDocument) {
-        const confirmed = window.confirm(
-            item.invoiceStatus === "ISSUED"
-                ? `Confirmas o reprocessamento do recibo da encomenda ${item.orderNumber}?`
-                : `Confirmas a emissão da fatura fechada da encomenda ${item.orderNumber} na Moloni? Esta ação cria um documento fiscal real.`,
-        );
-        if (!confirmed) return;
-
-        try {
-            setIssuingId(item.id);
-            setError(null);
-            await adminMoloniFiscalDocumentsApi.issue(item.id);
-            await load(page);
-        } catch (err) {
-            const message = err instanceof Error ? err.message : "Não foi possível emitir o documento.";
-            await load(page);
-            setError(message);
-        } finally {
-            setIssuingId(null);
-        }
-    }
-
     function submitSearch(event: FormEvent) {
         event.preventDefault();
         setSearch(searchInput.trim());
-    }
-
-    async function issueCreditNote(item: MoloniFiscalDocument) {
-        const confirmed = window.confirm(
-            `Confirmas a emissão da nota de crédito fechada para anular integralmente a fatura da encomenda ${item.orderNumber}? Esta ação cria um documento fiscal real.`,
-        );
-        if (!confirmed) return;
-        try {
-            setIssuingCreditNoteId(item.id);
-            setError(null);
-            await adminMoloniFiscalDocumentsApi.issueCreditNote(item.id);
-            await load(page);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Não foi possível emitir a nota de crédito.");
-        } finally {
-            setIssuingCreditNoteId(null);
-        }
-    }
-
-    async function openPdf(
-        item: MoloniFiscalDocument,
-        kind: "invoice" | "receipt" | "credit-note",
-    ) {
-        const key = `${kind}-${item.id}`;
-        const popup = window.open("about:blank", "_blank");
-        if (!popup) {
-            setError("O navegador bloqueou a nova janela. Permite pop-ups para consultar o PDF.");
-            return;
-        }
-        popup.opener = null;
-
-        try {
-            setOpeningPdf(key);
-            setError(null);
-            const blob = await adminMoloniFiscalDocumentsApi.getPdf(item.id, kind);
-            const objectUrl = URL.createObjectURL(blob);
-            popup.location.replace(objectUrl);
-            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
-        } catch (err) {
-            popup?.close();
-            setError(err instanceof Error ? err.message : "Não foi possível abrir o PDF.");
-        } finally {
-            setOpeningPdf(null);
-        }
     }
 
     return (
@@ -193,34 +124,10 @@ export default function FiscalDocumentsPage() {
                                     <td className="px-6 py-5"><span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${STATUS_STYLES[item.receiptStatus]}`}>{STATUS_LABELS[item.receiptStatus]}</span>{item.receiptId && <p className="mt-2 text-xs text-gray-400">ID {item.receiptId}</p>}</td>
                                     <td className="max-w-xs px-6 py-5 text-xs text-gray-500">{item.creditNoteRequiredAt && !item.creditNoteId ? <span className="font-semibold text-amber-700">Nota de crédito pendente após reembolso</span> : item.creditNoteId ? `Nota de crédito Moloni ID ${item.creditNoteId}` : item.lastError ? <span className="font-semibold text-red-700">{item.lastError}</span> : item.invoiceEmailSentAt ? "Fatura emitida e enviada por email" : item.invoiceEmailLastError || (item.invoiceStatus === "ISSUED" ? "Fatura emitida; envio de email pendente" : "Aguarda emissão")}</td>
                                     <td className="px-6 py-5">
-                                        <div className="flex min-w-40 flex-wrap justify-end gap-2">
-                                            {(item.invoiceStatus === "FAILED" || item.receiptStatus === "FAILED") && <Link href={`/admin/fiscal-documents/${item.id}/repair`} className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">Corrigir integração</Link>}
-                                            {(item.invoiceStatus !== "ISSUED" || item.receiptStatus === "FAILED") && (
-                                                <button onClick={() => void issue(item)} disabled={issuingId === item.id || item.invoiceStatus === "PROCESSING"} className="inline-flex items-center gap-2 rounded-xl bg-[#55624A] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">
-                                                    {issuingId === item.id ? <Loader2 size={15} className="animate-spin" /> : <ReceiptText size={15} />}
-                                                    {item.invoiceStatus === "FAILED" || item.receiptStatus === "FAILED" ? "Tentar novamente" : "Emitir fatura"}
-                                                </button>
-                                            )}
-                                            {item.invoiceId && (
-                                                <button onClick={() => void openPdf(item, "invoice")} disabled={openingPdf === `invoice-${item.id}`} className="inline-flex items-center gap-2 rounded-xl border border-[#CBD3C3] px-3 py-2 text-xs font-semibold text-[#55624A] hover:bg-[#F3F5EE] disabled:opacity-50">
-                                                    {openingPdf === `invoice-${item.id}` ? <Loader2 size={15} className="animate-spin" /> : <ExternalLink size={15} />}Ver fatura
-                                                </button>
-                                            )}
-                                            {item.receiptId && (
-                                                <button onClick={() => void openPdf(item, "receipt")} disabled={openingPdf === `receipt-${item.id}`} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50">
-                                                    {openingPdf === `receipt-${item.id}` ? <Loader2 size={15} className="animate-spin" /> : <ExternalLink size={15} />}Ver recibo
-                                                </button>
-                                            )}
-                                            {item.creditNoteRequiredAt && !item.creditNoteId && (
-                                                <button onClick={() => void issueCreditNote(item)} disabled={issuingCreditNoteId === item.id} className="inline-flex items-center gap-2 rounded-xl bg-amber-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">
-                                                    {issuingCreditNoteId === item.id ? <Loader2 size={15} className="animate-spin" /> : <ReceiptText size={15} />}{item.creditNoteStatus === "FAILED" || item.creditNoteStatus === "PROCESSING" ? "Tentar NC" : "Emitir NC"}
-                                                </button>
-                                            )}
-                                            {item.creditNoteId && (
-                                                <button onClick={() => void openPdf(item, "credit-note")} disabled={openingPdf === `credit-note-${item.id}`} className="inline-flex items-center gap-2 rounded-xl border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 disabled:opacity-50">
-                                                    {openingPdf === `credit-note-${item.id}` ? <Loader2 size={15} className="animate-spin" /> : <ExternalLink size={15} />}Ver NC
-                                                </button>
-                                            )}
+                                        <div className="flex justify-end">
+                                            <Link href={`/admin/fiscal-documents/${item.id}`} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#CBD3C3] px-4 py-2 text-xs font-semibold text-[#40513C] transition hover:bg-[#F3F5EE]">
+                                                Ver detalhe <ArrowRight size={15} />
+                                            </Link>
                                         </div>
                                     </td>
                                 </tr>)}
