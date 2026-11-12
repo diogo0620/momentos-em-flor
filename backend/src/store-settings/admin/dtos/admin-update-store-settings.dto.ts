@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsInt, IsNumber, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class AdminUpdateStoreSettingsDto {
     @ApiProperty({
@@ -14,6 +14,12 @@ export class AdminUpdateStoreSettingsDto {
     @IsInt()
     @Min(1)
     deliveryTaxCodeId!: number;
+
+    @ApiProperty({ example: 123456789, nullable: true, required: false })
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    deliveryMoloniProductId?: number | null;
 
     @IsBoolean()
     deliveryAreaEnabled!: boolean;

@@ -12,6 +12,7 @@ export class AdminStoreSettingsMapper{
       id: storeSettings.id,
       deliveryFee: storeSettings.deliveryFee.toNumber(),
       deliveryTaxCodeId: storeSettings.deliveryTaxCodeId,
+      deliveryMoloniProductId: storeSettings.deliveryMoloniProductId,
       deliveryTaxCodeName: storeSettings.deliveryTaxCode?.name ?? null,
       deliveryTaxRate: storeSettings.deliveryTaxCode?.rate.toNumber() ?? null,
       deliveryAreaEnabled: storeSettings.deliveryAreaEnabled,

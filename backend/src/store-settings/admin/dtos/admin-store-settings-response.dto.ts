@@ -2,6 +2,7 @@ export class AdminStoreSettingsResponseDto {
     id!: number;
     deliveryFee!: number;
     deliveryTaxCodeId!: number | null;
+    deliveryMoloniProductId!: string | null;
     deliveryTaxCodeName!: string | null;
     deliveryTaxRate!: number | null;
     deliveryAreaEnabled!: boolean;

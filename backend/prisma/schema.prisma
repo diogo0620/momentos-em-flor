@@ -942,6 +942,7 @@ model StoreSettings {
   id                      Int      @id @default(1)
   deliveryFee             Decimal  @db.Decimal(10, 2)
   deliveryTaxCodeId       Int?
+  deliveryMoloniProductId String?
   deliveryTaxCode         TaxCode? @relation(fields: [deliveryTaxCodeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   deliveryAreaEnabled     Boolean  @default(true)
   deliveryAreaName        String   @default("Santa Maria da Feira e arredores")

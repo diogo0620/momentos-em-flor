@@ -64,6 +64,7 @@ const inputClassName =
 export default function SettingsPage() {
     const [deliveryFee, setDeliveryFee] = useState("");
     const [deliveryTaxCodeId, setDeliveryTaxCodeId] = useState("");
+    const [deliveryMoloniProductId, setDeliveryMoloniProductId] = useState("");
     const [deliveryAreaEnabled, setDeliveryAreaEnabled] = useState(true);
     const [deliveryAreaName, setDeliveryAreaName] = useState("Santa Maria da Feira e arredores");
     const [deliveryCenterLatitude, setDeliveryCenterLatitude] = useState("40.924574");
@@ -123,6 +124,11 @@ export default function SettingsPage() {
             setDeliveryTaxCodeId(
                 settingsResponse.deliveryTaxCodeId
                     ? String(settingsResponse.deliveryTaxCodeId)
+                    : "",
+            );
+            setDeliveryMoloniProductId(
+                settingsResponse.deliveryMoloniProductId
+                    ? String(settingsResponse.deliveryMoloniProductId)
                     : "",
             );
             setDeliveryAreaEnabled(settingsResponse.deliveryAreaEnabled);
@@ -188,6 +194,17 @@ export default function SettingsPage() {
             return;
         }
 
+        const parsedDeliveryMoloniProductId = deliveryMoloniProductId.trim()
+            ? Number(deliveryMoloniProductId)
+            : null;
+        if (
+            parsedDeliveryMoloniProductId !== null &&
+            (!Number.isInteger(parsedDeliveryMoloniProductId) || parsedDeliveryMoloniProductId < 1)
+        ) {
+            setError("O ID Moloni do artigo de portes deve ser um número inteiro positivo.");
+            return;
+        }
+
         if (!deliveryAreaName.trim()) {
             setError("Indica um nome para a zona de entrega.");
             return;
@@ -207,6 +224,7 @@ export default function SettingsPage() {
             await storeSettingsApi.updateCurrent({
                 deliveryFee: parsedDeliveryFee,
                 deliveryTaxCodeId: Number(deliveryTaxCodeId),
+                deliveryMoloniProductId: parsedDeliveryMoloniProductId,
                 deliveryAreaEnabled,
                 deliveryAreaName: deliveryAreaName.trim(),
                 deliveryCenterLatitude: parsedLatitude,
@@ -491,7 +509,7 @@ export default function SettingsPage() {
                     onSubmit={handleDeliverySubmit}
                     className="mt-8"
                 >
-                    <div className="grid max-w-2xl gap-5 md:grid-cols-2">
+                    <div className="grid max-w-4xl gap-5 md:grid-cols-3">
                         <div>
                         <label
                             htmlFor="deliveryFee"
@@ -535,6 +553,22 @@ export default function SettingsPage() {
                                     <option key={taxCode.id} value={taxCode.id}>{taxCode.name} ({taxCode.rate}%)</option>
                                 ))}
                             </select>
+                        </div>
+
+                        <div>
+                            <label htmlFor="deliveryMoloniProductId" className="block text-sm font-semibold text-[#2F3B2A]">Artigo de portes na Moloni</label>
+                            <p className="mt-1 text-sm text-gray-400">ID do artigo usado na última linha da fatura.</p>
+                            <input
+                                id="deliveryMoloniProductId"
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={deliveryMoloniProductId}
+                                onChange={(event) => setDeliveryMoloniProductId(event.target.value)}
+                                disabled={isLoading || isSavingDelivery}
+                                className={`${inputClassName} mt-3`}
+                                placeholder="Criado automaticamente"
+                            />
                         </div>
                     </div>
 

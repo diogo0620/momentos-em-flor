@@ -23,6 +23,8 @@ import { toInternalOrderStatusFilter } from './customer-order-status';
 import { CouponsService } from '@/coupons/coupons.service';
 import { formatOrderItemConfiguration } from '../order-item-configuration';
 
+const FLORIST_COUPON_DISCOUNT_SHARE = 0.5;
+
 
 @Injectable()
 export class CustomerOrdersService {
@@ -612,13 +614,13 @@ export class CustomerOrdersService {
             amountBeforeDiscount - discount,
         );
 
-        // O cupão reduz proporcionalmente a componente de produto que financia
-        // a compensação da florista. A entrega não aumenta esta compensação.
-        const discountedProductRatio = subtotal > 0
-            ? Math.max(0, subtotal - Math.min(discount, subtotal)) / subtotal
-            : 0;
+        // A plataforma e a florista suportam partes iguais do cupão.
+        // A compensação nunca pode ficar negativa, mesmo em descontos elevados.
+        const floristDiscountShare = roundMoney(
+            discount * FLORIST_COUPON_DISCOUNT_SHARE,
+        );
         expectedFloristTotal = roundMoney(
-            expectedFloristTotal * discountedProductRatio,
+            Math.max(0, expectedFloristTotal - floristDiscountShare),
         );
 
         /*

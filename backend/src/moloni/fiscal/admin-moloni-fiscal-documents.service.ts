@@ -33,6 +33,7 @@ type MoloniTax = {
   type?: number;
   saft_type?: number;
 };
+type MoloniProduct = { product_id?: number };
 type MoloniDocumentTax = {
   tax_id: number;
   value: number;
@@ -688,9 +689,17 @@ export class AdminMoloniFiscalDocumentsService {
   }
 
   private async buildInvoiceProducts(record: FiscalDocumentRecord) {
+    const orderedItems = [
+      ...record.order.items.filter(
+        (item) => item.type !== OrderItemType.DELIVERY_FEE,
+      ),
+      ...record.order.items.filter(
+        (item) => item.type === OrderItemType.DELIVERY_FEE,
+      ),
+    ];
     const taxIds = new Map<number, number>();
 
-    for (const item of record.order.items) {
+    for (const item of orderedItems) {
       if (!item.taxCodeId || item.taxRate === null) {
         throw new BadRequestException(
           `A linha "${item.name}" não tem um código de IVA associado.`,
@@ -707,7 +716,7 @@ export class AdminMoloniFiscalDocumentsService {
     }
 
     const products: Array<Record<string, unknown>> = [];
-    for (const [index, item] of record.order.items.entries()) {
+    for (const [index, item] of orderedItems.entries()) {
       const rate = Number(item.taxRate);
       const unitNetPrice =
         Number(item.grossAmount) / item.quantity / (1 + rate / 100);
@@ -717,19 +726,23 @@ export class AdminMoloniFiscalDocumentsService {
           : item.productId
             ? `MEF-PRODUCT-${item.productId}`
             : 'MEF-CUSTOM-ARRANGEMENT';
-      const productId = await this.moloniSync.resolveProduct({
-        productId: item.productId,
-        reference,
-        name:
-          item.type === OrderItemType.DELIVERY_FEE
-            ? 'Taxa de entrega'
-            : item.name,
-        summary: null,
-        unitNetPrice,
-        moloniTaxId: taxIds.get(item.taxCodeId!)!,
-        taxRate: rate,
-        type: item.type === OrderItemType.DELIVERY_FEE ? 2 : 1,
-      });
+      const productId =
+        item.type === OrderItemType.DELIVERY_FEE
+          ? await this.resolveDeliveryMoloniProductId({
+              unitNetPrice,
+              moloniTaxId: taxIds.get(item.taxCodeId!)!,
+              taxRate: rate,
+            })
+          : await this.moloniSync.resolveProduct({
+              productId: item.productId,
+              reference,
+              name: item.name,
+              summary: null,
+              unitNetPrice,
+              moloniTaxId: taxIds.get(item.taxCodeId!)!,
+              taxRate: rate,
+              type: 1,
+            });
 
       products.push({
         product_id: productId,
@@ -749,6 +762,47 @@ export class AdminMoloniFiscalDocumentsService {
       });
     }
     return products;
+  }
+
+  private async resolveDeliveryMoloniProductId(input: {
+    unitNetPrice: number;
+    moloniTaxId: number;
+    taxRate: number;
+  }): Promise<number> {
+    const settings = await this.prisma.storeSettings.findUnique({
+      where: { id: 1 },
+      select: { deliveryMoloniProductId: true },
+    });
+    const configuredId = Number(settings?.deliveryMoloniProductId);
+
+    if (Number.isInteger(configuredId) && configuredId > 0) {
+      const product = await this.moloniApi.getProduct<MoloniProduct>(
+        String(configuredId),
+      );
+      if (Number(product.product_id) !== configuredId) {
+        throw new BadRequestException(
+          'O artigo de portes configurado não existe na Moloni. Corrige o ID nas definições e repete a emissão.',
+        );
+      }
+      return configuredId;
+    }
+
+    const productId = await this.moloniSync.resolveProduct({
+      productId: null,
+      reference: 'MEF-DELIVERY-FEE',
+      name: 'Taxa de entrega',
+      summary: null,
+      unitNetPrice: input.unitNetPrice,
+      moloniTaxId: input.moloniTaxId,
+      taxRate: input.taxRate,
+      type: 2,
+    });
+
+    await this.prisma.storeSettings.update({
+      where: { id: 1 },
+      data: { deliveryMoloniProductId: String(productId) },
+    });
+    return productId;
   }
 
   private async resolveMoloniTaxId(

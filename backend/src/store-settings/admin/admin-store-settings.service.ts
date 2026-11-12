@@ -62,6 +62,9 @@ export class AdminStoreSettingsService {
                 id: 1,
                 deliveryFee: dto.deliveryFee,
                 deliveryTaxCodeId: dto.deliveryTaxCodeId,
+                deliveryMoloniProductId: dto.deliveryMoloniProductId
+                    ? String(dto.deliveryMoloniProductId)
+                    : null,
                 deliveryAreaEnabled: dto.deliveryAreaEnabled,
                 deliveryAreaName: dto.deliveryAreaName.trim(),
                 deliveryCenterLatitude: dto.deliveryCenterLatitude,
@@ -71,6 +74,9 @@ export class AdminStoreSettingsService {
             update: {
                 deliveryFee: dto.deliveryFee,
                 deliveryTaxCodeId: dto.deliveryTaxCodeId,
+                deliveryMoloniProductId: dto.deliveryMoloniProductId
+                    ? String(dto.deliveryMoloniProductId)
+                    : null,
                 deliveryAreaEnabled: dto.deliveryAreaEnabled,
                 deliveryAreaName: dto.deliveryAreaName.trim(),
                 deliveryCenterLatitude: dto.deliveryCenterLatitude,

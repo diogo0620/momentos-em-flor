@@ -1,6 +1,7 @@
 export type StoreSettings = {
     deliveryFee: number;
     deliveryTaxCodeId: number | null;
+    deliveryMoloniProductId?: string | number | null;
     deliveryTaxCodeName?: string | null;
     deliveryTaxRate?: number | null;
     deliveryAreaEnabled: boolean;
