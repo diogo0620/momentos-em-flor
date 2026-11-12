@@ -108,6 +108,8 @@ export class MoloniSyncService {
         return existingByNumber[0].customer_id;
       }
 
+
+
       const result = await this.moloniApi.insertCustomer<MoloniInsertResult>({
         vat: vat || '999999990',
         number: customerNumber,
@@ -119,12 +121,13 @@ export class MoloniSyncService {
         country_id: defaults.countryId,
         email: input.email,
         phone: input.phone,
+        salesman_id: 0,
+        payment_day: 0,
+        discount: 0,
+        credit_limit: 0,
+        delivery_method_id: 0,
         maturity_date_id: defaults.maturityDateId,
         payment_method_id: defaults.paymentMethodId,
-        copies: [{
-          document_type_id: defaults.documentTypeId,
-          copies: 1,
-        }],
       });
 
       if (!result.customer_id) {
