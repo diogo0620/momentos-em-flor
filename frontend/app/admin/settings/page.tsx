@@ -83,6 +83,7 @@ export default function SettingsPage() {
         receiptDocumentSetId: "",
         paymentMethodId: "",
         issueReceiptAfterPayment: false,
+        signedPdf: true,
     });
 
     const [isLoading, setIsLoading] = useState(true);
@@ -149,6 +150,7 @@ export default function SettingsPage() {
                 receiptDocumentSetId: moloniResponse.receiptDocumentSetId ?? "",
                 paymentMethodId: moloniResponse.paymentMethodId ?? "",
                 issueReceiptAfterPayment: moloniResponse.issueReceiptAfterPayment,
+                signedPdf: moloniResponse.signedPdf ?? true,
             }));
         } catch (err) {
             setError(
@@ -261,6 +263,7 @@ export default function SettingsPage() {
             receiptDocumentSetId: moloniForm.receiptDocumentSetId.trim(),
             paymentMethodId: moloniForm.paymentMethodId.trim(),
             issueReceiptAfterPayment: moloniForm.issueReceiptAfterPayment,
+            signedPdf: moloniForm.signedPdf,
         };
 
         if (!payload.companyId || !payload.clientId || !payload.username ||
@@ -693,6 +696,11 @@ export default function SettingsPage() {
                         <label className="mt-5 flex items-start gap-3 rounded-2xl border border-gray-200 p-4">
                             <input type="checkbox" checked={moloniForm.issueReceiptAfterPayment} onChange={(event) => setMoloniForm((current) => ({ ...current, issueReceiptAfterPayment: event.target.checked }))} className="mt-1 h-4 w-4 rounded border-gray-300 text-[#55624A]" />
                             <span><span className="block text-sm font-semibold text-gray-700">Emitir recibo separado após a fatura</span><span className="mt-1 block text-xs text-gray-400">Ativa apenas quando confirmado como necessário pela contabilidade.</span></span>
+                        </label>
+
+                        <label className="mt-3 flex items-start gap-3 rounded-2xl border border-gray-200 p-4">
+                            <input type="checkbox" checked={moloniForm.signedPdf} onChange={(event) => setMoloniForm((current) => ({ ...current, signedPdf: event.target.checked }))} className="mt-1 h-4 w-4 rounded border-gray-300 text-[#55624A]" />
+                            <span><span className="block text-sm font-semibold text-gray-700">Pedir PDF assinado</span><span className="mt-1 block text-xs text-gray-400">Controla o parâmetro signed enviado à Moloni quando é pedida a ligação do PDF.</span></span>
                         </label>
 
                         {moloniForm.issueReceiptAfterPayment && (

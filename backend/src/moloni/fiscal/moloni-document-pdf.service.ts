@@ -112,8 +112,17 @@ export class MoloniDocumentPdfService {
     filename: string,
     onLink?: PdfLinkObserver,
   ): Promise<MoloniPdfDocument> {
+    const settings = await this.prisma.moloniSettings.findUnique({
+      where: { id: 1 },
+      select: { signedPdf: true },
+    });
+    const signed = settings?.signedPdf ?? true;
+
     for (let attempt = 1; attempt <= 3; attempt += 1) {
-      const pdf = await this.moloniApi.getDocumentPdfLink<{ url?: string }>(documentId);
+      const pdf = await this.moloniApi.getDocumentPdfLink<{ url?: string }>(
+        documentId,
+        signed,
+      );
       const url = this.parsePdfUrl(pdf.url);
       if (onLink) await onLink(url);
 

@@ -10,4 +10,5 @@ export type AdminConfigureMoloni = {
     receiptDocumentSetId: string;
     paymentMethodId: string;
     issueReceiptAfterPayment: boolean;
+    signedPdf: boolean;
 }

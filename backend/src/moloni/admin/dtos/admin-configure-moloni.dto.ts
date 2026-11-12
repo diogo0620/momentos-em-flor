@@ -85,4 +85,8 @@ export class AdminConfigureMoloniDto {
 
   @IsBoolean()
   issueReceiptAfterPayment!: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  signedPdf?: boolean;
 }

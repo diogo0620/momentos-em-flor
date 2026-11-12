@@ -44,6 +44,7 @@ export class AdminMoloniService {
         clientSecret: true,
         username: true,
         password: true,
+        signedPdf: true,
       },
     });
 
@@ -84,6 +85,7 @@ export class AdminMoloniService {
         defaultCustomerId: dto.defaultCustomerId || null,
         defaultProductId: dto.defaultProductId || null,
         issueReceiptAfterPayment: dto.issueReceiptAfterPayment,
+        signedPdf: dto.signedPdf ?? true,
       },
       update: {
         companyId: dto.companyId,
@@ -110,6 +112,7 @@ export class AdminMoloniService {
         defaultCustomerId: dto.defaultCustomerId || null,
         defaultProductId: dto.defaultProductId || null,
         issueReceiptAfterPayment: dto.issueReceiptAfterPayment,
+        signedPdf: dto.signedPdf ?? current?.signedPdf ?? true,
       },
     });
 

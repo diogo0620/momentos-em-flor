@@ -1,0 +1,2 @@
+ALTER TABLE "MoloniSettings"
+ADD COLUMN "signedPdf" BOOLEAN NOT NULL DEFAULT true;

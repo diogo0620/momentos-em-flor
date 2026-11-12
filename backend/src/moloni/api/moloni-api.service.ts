@@ -169,10 +169,10 @@ export class MoloniApiService {
     });
   }
 
-  async getDocumentPdfLink<T>(documentId: string): Promise<T> {
+  async getDocumentPdfLink<T>(documentId: string, signed: boolean): Promise<T> {
     return this.post<T>('documents/getPDFLink/', {
       document_id: documentId,
-      signed: 1,
+      signed: signed ? 1 : 0,
     });
   }
 

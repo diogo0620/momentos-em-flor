@@ -17,5 +17,6 @@ export type AdminMoloniSettings = {
     defaultCustomerId?: string | null;
     defaultProductId?: string | null;
     issueReceiptAfterPayment: boolean;
+    signedPdf: boolean;
     fiscalConfigurationComplete: boolean;
 }

@@ -17,6 +17,7 @@ export class AdminMoloniMapper {
         lastConnectionCheckAt: null,
         lastConnectionError: null,
       issueReceiptAfterPayment: false,
+      signedPdf: true,
       fiscalConfigurationComplete: false,
       };
     }
@@ -44,6 +45,7 @@ export class AdminMoloniMapper {
       defaultCustomerId: settings.defaultCustomerId,
       defaultProductId: settings.defaultProductId,
       issueReceiptAfterPayment: settings.issueReceiptAfterPayment,
+      signedPdf: settings.signedPdf,
       fiscalConfigurationComplete: Boolean(
         settings.invoiceDocumentSetId &&
         settings.creditNoteDocumentSetId &&
