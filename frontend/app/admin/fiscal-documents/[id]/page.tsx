@@ -287,12 +287,27 @@ export default function FiscalDocumentDetailPage() {
       popup.location.replace(objectUrl);
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
     } catch (pdfError) {
-      popup.close();
-      setError(
-        pdfError instanceof Error
-          ? pdfError.message
-          : "Não foi possível abrir o PDF.",
-      );
+      const refreshedDocument =
+        kind === "invoice"
+          ? await adminMoloniFiscalDocumentsApi.getDetail(id).catch(() => null)
+          : null;
+      if (refreshedDocument) setDocument(refreshedDocument);
+      const fallbackUrl =
+        refreshedDocument?.invoicePdfUrl ?? document?.invoicePdfUrl;
+
+      if (kind === "invoice" && fallbackUrl) {
+        popup.location.replace(fallbackUrl);
+        setSuccess(
+          "O download pelo servidor falhou; foi aberta a ligação guardada da Moloni.",
+        );
+      } else {
+        popup.close();
+        setError(
+          pdfError instanceof Error
+            ? pdfError.message
+            : "Não foi possível abrir o PDF.",
+        );
+      }
     } finally {
       setAction(null);
     }
@@ -448,6 +463,28 @@ export default function FiscalDocumentDetailPage() {
                 {document.invoiceEmailId ?? "—"}
               </dd>
             </div>
+            <div className="sm:col-span-2">
+              <dt className="text-[#778077]">Ligação da fatura</dt>
+              <dd className="mt-1">
+                {document.invoicePdfUrl ? (
+                  <a
+                    href={document.invoicePdfUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 break-all font-medium text-[#40513C] underline underline-offset-4"
+                  >
+                    Abrir ligação guardada <ExternalLink size={14} />
+                  </a>
+                ) : (
+                  <span className="font-medium">Ainda não obtida</span>
+                )}
+                {document.invoicePdfUrlUpdatedAt && (
+                  <span className="mt-1 block text-xs text-[#778077]">
+                    Atualizada em {formatDate(document.invoicePdfUrlUpdatedAt)}
+                  </span>
+                )}
+              </dd>
+            </div>
           </dl>
           {document.invoiceEmailLastError && (
             <p className="mt-5 border-l-2 border-amber-500 pl-4 text-sm leading-6 text-amber-800">
@@ -475,16 +512,12 @@ export default function FiscalDocumentDetailPage() {
         </article>
       </section>
 
-      {(document.invoiceId ||
-        document.receiptId ||
-        document.creditNoteId ||
-        (document.creditNoteRequiredAt && !document.creditNoteId)) && (
-        <section className="border border-[#E2E7DF] bg-white p-5 sm:p-6">
+      <section className="border border-[#E2E7DF] bg-white p-5 sm:p-6">
           <h2 className="text-lg font-semibold text-[#26392F]">
             Documentos e ações
           </h2>
           <div className="mt-4 flex flex-wrap gap-3">
-            {document.invoiceId && (
+            {document.invoiceId ? (
               <button
                 onClick={() => void openPdf("invoice")}
                 disabled={action !== null}
@@ -492,6 +525,25 @@ export default function FiscalDocumentDetailPage() {
               >
                 <FileText size={16} /> Abrir fatura PDF
               </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void issue()}
+                disabled={action !== null}
+                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#40513C] px-4 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                <FileText size={16} /> Emitir e obter fatura
+              </button>
+            )}
+            {document.invoicePdfUrl && (
+              <a
+                href={document.invoicePdfUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#CBD3C3] px-4 text-sm font-semibold text-[#40513C]"
+              >
+                <ExternalLink size={16} /> Abrir ligação guardada
+              </a>
             )}
             {document.receiptId && (
               <button
@@ -526,8 +578,7 @@ export default function FiscalDocumentDetailPage() {
               </button>
             )}
           </div>
-        </section>
-      )}
+      </section>
 
       <section className="border border-[#E2E7DF] bg-white p-5 sm:p-6">
         <div>

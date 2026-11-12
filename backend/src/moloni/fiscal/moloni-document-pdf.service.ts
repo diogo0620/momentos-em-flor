@@ -13,6 +13,8 @@ export type MoloniPdfDocument = {
   filename: string;
 };
 
+type PdfLinkObserver = (url: string) => Promise<void>;
+
 const MAX_PDF_BYTES = 15 * 1024 * 1024;
 
 @Injectable()
@@ -29,6 +31,7 @@ export class MoloniDocumentPdfService {
     const record = await this.prisma.moloniFiscalDocument.findUnique({
       where: { id },
       select: {
+        id: true,
         invoiceId: true,
         receiptId: true,
         creditNoteId: true,
@@ -53,6 +56,7 @@ export class MoloniDocumentPdfService {
     return this.download(
       documentId,
       this.buildFilename(record.order.orderNumber, kind),
+      kind === 'invoice' ? this.invoiceLinkObserver(record.id) : undefined,
     );
   }
 
@@ -60,6 +64,7 @@ export class MoloniDocumentPdfService {
     const record = await this.prisma.moloniFiscalDocument.findUnique({
       where: { orderId },
       select: {
+        id: true,
         invoiceId: true,
         order: { select: { orderNumber: true } },
       },
@@ -72,6 +77,7 @@ export class MoloniDocumentPdfService {
     return this.download(
       record.invoiceId,
       this.buildFilename(record.order.orderNumber, 'invoice'),
+      this.invoiceLinkObserver(record.id),
     );
   }
 
@@ -83,7 +89,7 @@ export class MoloniDocumentPdfService {
       where: { orderNumber, customerId },
       select: {
         orderNumber: true,
-        moloniFiscalDocument: { select: { invoiceId: true } },
+        moloniFiscalDocument: { select: { id: true, invoiceId: true } },
       },
     });
 
@@ -97,13 +103,19 @@ export class MoloniDocumentPdfService {
     return this.download(
       order.moloniFiscalDocument.invoiceId,
       this.buildFilename(order.orderNumber, 'invoice'),
+      this.invoiceLinkObserver(order.moloniFiscalDocument.id),
     );
   }
 
-  async download(documentId: string, filename: string): Promise<MoloniPdfDocument> {
+  async download(
+    documentId: string,
+    filename: string,
+    onLink?: PdfLinkObserver,
+  ): Promise<MoloniPdfDocument> {
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       const pdf = await this.moloniApi.getDocumentPdfLink<{ url?: string }>(documentId);
       const url = this.parsePdfUrl(pdf.url);
+      if (onLink) await onLink(url);
 
       try {
         const response = await fetch(url, {
@@ -135,6 +147,30 @@ export class MoloniDocumentPdfService {
     throw new ServiceUnavailableException(
       'Não foi possível obter um documento PDF válido da Moloni.',
     );
+  }
+
+  async downloadInvoice(
+    fiscalDocumentId: number,
+    documentId: string,
+    filename: string,
+  ): Promise<MoloniPdfDocument> {
+    return this.download(
+      documentId,
+      filename,
+      this.invoiceLinkObserver(fiscalDocumentId),
+    );
+  }
+
+  private invoiceLinkObserver(fiscalDocumentId: number): PdfLinkObserver {
+    return async (url) => {
+      await this.prisma.moloniFiscalDocument.update({
+        where: { id: fiscalDocumentId },
+        data: {
+          invoicePdfUrl: url,
+          invoicePdfUrlUpdatedAt: new Date(),
+        },
+      });
+    };
   }
 
   private parsePdfUrl(value?: string): string {

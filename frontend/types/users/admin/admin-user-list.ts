@@ -8,4 +8,4 @@ export type AdminUserList = {
   active: boolean;
 }
 
-export type UserRole = "ADMIN" | "FLORIST" | "CUSTOMER"
+export type UserRole = "SYSTEM_ADMIN" | "FLORIST" | "CUSTOMER"

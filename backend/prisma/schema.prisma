@@ -996,6 +996,8 @@ model MoloniFiscalDocument {
   invoiceStatus         MoloniDocumentStatus @default(QUEUED)
   invoiceId             String?              @unique
   invoiceIssuedAt       DateTime?
+  invoicePdfUrl         String?
+  invoicePdfUrlUpdatedAt DateTime?
   invoiceEmailId        String?
   invoiceEmailSentAt    DateTime?
   invoiceEmailLastError String?

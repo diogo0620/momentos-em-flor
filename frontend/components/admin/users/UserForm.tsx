@@ -316,7 +316,7 @@ export default function UserForm({ user }: UserFormProps) {
           <div>
             <label className={labelClassName}>Perfil</label>
             <div className={`${inputClassName} flex items-center`}>
-              {user?.role === "ADMIN"
+              {user?.role === "SYSTEM_ADMIN"
                 ? "Administrador"
                 : user?.role === "FLORIST"
                   ? "Florista"

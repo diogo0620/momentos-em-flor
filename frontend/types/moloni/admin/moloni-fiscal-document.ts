@@ -18,6 +18,8 @@ export type MoloniFiscalDocument = {
     invoiceStatus: MoloniDocumentStatus;
     invoiceId: string | null;
     invoiceIssuedAt: string | null;
+    invoicePdfUrl: string | null;
+    invoicePdfUrlUpdatedAt: string | null;
     invoiceEmailId: string | null;
     invoiceEmailSentAt: string | null;
     invoiceEmailLastError: string | null;

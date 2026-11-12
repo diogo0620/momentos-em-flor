@@ -57,7 +57,7 @@ const USER_ROLES: { value: UserRole; label: string }[] = [
 
 function getRoleLabel(role: UserRole) {
     switch (role) {
-        case "ADMIN":
+        case "SYSTEM_ADMIN":
             return "Administrador";
         case "FLORIST":
             return "Administrador de florista";
@@ -70,7 +70,7 @@ function getRoleLabel(role: UserRole) {
 
 function getRoleIcon(role: UserRole) {
     switch (role) {
-        case "ADMIN":
+        case "SYSTEM_ADMIN":
             return ShieldCheck;
         case "FLORIST":
             return Store;

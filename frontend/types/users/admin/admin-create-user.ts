@@ -10,4 +10,4 @@ export type AdminCreateUser = {
     moloniId?: number | null;
 }
 
-export type UserRole = "ADMIN" | "FLORIST" | "CUSTOMER"
+export type UserRole = "SYSTEM_ADMIN" | "FLORIST" | "CUSTOMER"

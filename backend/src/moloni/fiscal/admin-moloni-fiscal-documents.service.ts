@@ -217,7 +217,8 @@ export class AdminMoloniFiscalDocumentsService {
       fiscalDocumentId: document.id,
       orderNumber: document.order.orderNumber,
       lastError: document.lastError,
-      customer: document.order.customerId
+      customer:
+        document.order.customerId && document.order.customerTaxNumber?.trim()
         ? {
             localId: document.order.customerId,
             name: `${document.order.customerFirstName} ${document.order.customerLastName}`.trim(),
@@ -667,6 +668,12 @@ export class AdminMoloniFiscalDocumentsService {
     ]
       .filter(Boolean)
       .join(', ');
+    if (!record.order.customerTaxNumber?.trim()) {
+      return String(
+        await this.moloniSync.resolveFinalConsumer(paymentMethodId),
+      );
+    }
+
     const customerId = await this.moloniSync.resolveCustomer({
       userId: record.order.customerId,
       orderId: record.order.id,
@@ -833,7 +840,8 @@ export class AdminMoloniFiscalDocumentsService {
     if (!record.invoiceId || record.invoiceEmailSentAt) return;
 
     try {
-      const pdf = await this.pdfService.download(
+      const pdf = await this.pdfService.downloadInvoice(
+        record.id,
         record.invoiceId,
         `fatura-${record.order.orderNumber.replace(/[^a-zA-Z0-9_-]/g, '-')}.pdf`,
       );
@@ -984,6 +992,8 @@ export class AdminMoloniFiscalDocumentsService {
       invoiceStatus: record.invoiceStatus,
       invoiceId: record.invoiceId,
       invoiceIssuedAt: record.invoiceIssuedAt,
+      invoicePdfUrl: record.invoicePdfUrl,
+      invoicePdfUrlUpdatedAt: record.invoicePdfUrlUpdatedAt,
       invoiceEmailId: record.invoiceEmailId,
       invoiceEmailSentAt: record.invoiceEmailSentAt,
       invoiceEmailLastError: record.invoiceEmailLastError,

@@ -5,7 +5,11 @@ import { MoloniSyncStatus } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { MoloniApiService } from '../api/moloni-api.service';
 
-type MoloniCustomer = { customer_id?: number };
+type MoloniCustomer = {
+  customer_id?: number;
+  name?: string;
+  number?: string;
+};
 type MoloniProduct = { product_id?: number; reference?: string };
 type MoloniInsertResult = {
   valid?: number;
@@ -70,6 +74,62 @@ export class MoloniSyncService {
     });
     this.pendingCustomers.set(key, operation);
     return operation;
+  }
+
+  async resolveFinalConsumer(
+    configuredPaymentMethodId?: string | null,
+  ): Promise<number> {
+    const vat = '999999990';
+    const customerNumber = 'CONSUMIDOR-FINAL';
+    const existingByNumber =
+      await this.moloniApi.getCustomersByNumber<MoloniCustomer[]>(
+        customerNumber,
+      );
+    if (existingByNumber[0]?.customer_id) {
+      return existingByNumber[0].customer_id;
+    }
+
+    const matches =
+      await this.moloniApi.getCustomersByVat<MoloniCustomer[]>(vat);
+    const existingFinalConsumer = matches.find((customer) => {
+      const name = customer.name?.trim().toLocaleLowerCase('pt-PT');
+      return (
+        customer.number === customerNumber || name === 'consumidor final'
+      );
+    });
+    if (existingFinalConsumer?.customer_id) {
+      return existingFinalConsumer.customer_id;
+    }
+
+    const defaults = await this.resolveCustomerDefaults(
+      'PT',
+      configuredPaymentMethodId,
+    );
+    const result = await this.moloniApi.insertCustomer<MoloniInsertResult>({
+      vat,
+      number: customerNumber,
+      name: 'Consumidor final',
+      language_id: defaults.languageId,
+      address: 'Portugal',
+      zip_code: '0000-000',
+      city: 'Portugal',
+      country_id: defaults.countryId,
+      maturity_date_id: defaults.maturityDateId,
+      payment_method_id: defaults.paymentMethodId,
+      copies: [
+        {
+          document_type_id: defaults.documentTypeId,
+          copies: 1,
+        },
+      ],
+    });
+
+    if (!result.customer_id) {
+      throw new BadRequestException(
+        'A Moloni não devolveu o ID do consumidor final.',
+      );
+    }
+    return result.customer_id;
   }
 
   private async resolveCustomerInternal(input: MoloniCustomerSyncInput): Promise<number> {

@@ -19,4 +19,4 @@ export type UserFlorist = {
     name: string;
 }
 
-export type UserRole = "ADMIN" | "FLORIST" | "CUSTOMER"
+export type UserRole = "SYSTEM_ADMIN" | "FLORIST" | "CUSTOMER"
