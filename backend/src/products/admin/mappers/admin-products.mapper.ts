@@ -81,6 +81,7 @@ export class AdminProductsMapper extends BaseMapper<
             active: product.active,
             type: product.type,
             featured: product.featured,
+            addonOnly: product.addonOnly,
             rentalDeposit: product.rentalDeposit ? Number(product.rentalDeposit) : undefined,
             createdAt: product.createdAt,
             updatedAt: product.updatedAt,

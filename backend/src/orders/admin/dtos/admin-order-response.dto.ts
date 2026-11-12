@@ -112,6 +112,12 @@ export class AdminOrderItemResponseDto {
     @ApiProperty({ type: Number })
     grossAmount!: number;
 
+    @ApiProperty({ type: Number })
+    discountAmount!: number;
+
+    @ApiProperty({ type: Number })
+    discountedGrossAmount!: number;
+
     @ApiPropertyOptional({ type: Number, nullable: true })
     taxCodeId!: number | null;
 

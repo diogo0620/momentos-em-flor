@@ -62,6 +62,12 @@ const inputClassName =
     "w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-[#2F3B2A] outline-none transition placeholder:text-gray-300 focus:border-[#9EAB91] focus:ring-4 focus:ring-[#D6DEC8]/40 disabled:cursor-not-allowed disabled:bg-gray-50";
 
 export default function SettingsPage() {
+    const [companyName, setCompanyName] = useState("Momentos em Flor");
+    const [contactEmail, setContactEmail] = useState("");
+    const [contactPhone, setContactPhone] = useState("");
+    const [whatsappNumber, setWhatsappNumber] = useState("");
+    const [companyAddress, setCompanyAddress] = useState("");
+    const [partnerEmail, setPartnerEmail] = useState("");
     const [deliveryFee, setDeliveryFee] = useState("");
     const [deliveryTaxCodeId, setDeliveryTaxCodeId] = useState("");
     const [deliveryMoloniProductId, setDeliveryMoloniProductId] = useState("");
@@ -122,6 +128,12 @@ export default function SettingsPage() {
             setDeliveryFee(
                 String(settingsResponse.deliveryFee),
             );
+            setCompanyName(settingsResponse.companyName ?? "Momentos em Flor");
+            setContactEmail(settingsResponse.contactEmail ?? "");
+            setContactPhone(settingsResponse.contactPhone ?? "");
+            setWhatsappNumber(settingsResponse.whatsappNumber ?? "");
+            setCompanyAddress(settingsResponse.companyAddress ?? "");
+            setPartnerEmail(settingsResponse.partnerEmail ?? "");
             setDeliveryTaxCodeId(
                 settingsResponse.deliveryTaxCodeId
                     ? String(settingsResponse.deliveryTaxCodeId)
@@ -224,6 +236,12 @@ export default function SettingsPage() {
             setIsSavingDelivery(true);
 
             await storeSettingsApi.updateCurrent({
+                companyName: companyName.trim() || "Momentos em Flor",
+                contactEmail: contactEmail.trim() || null,
+                contactPhone: contactPhone.trim() || null,
+                whatsappNumber: whatsappNumber.trim() || null,
+                companyAddress: companyAddress.trim() || null,
+                partnerEmail: partnerEmail.trim() || null,
                 deliveryFee: parsedDeliveryFee,
                 deliveryTaxCodeId: Number(deliveryTaxCodeId),
                 deliveryMoloniProductId: parsedDeliveryMoloniProductId,
@@ -235,7 +253,7 @@ export default function SettingsPage() {
             });
 
             setDeliveryFee(String(parsedDeliveryFee));
-            setSuccess("Taxa de entrega guardada com sucesso.");
+            setSuccess("Informações da empresa e entrega guardadas com sucesso.");
         } catch (err) {
             setError(
                 err instanceof Error
@@ -499,11 +517,11 @@ export default function SettingsPage() {
 
                     <div>
                         <h2 className="text-xl font-bold text-[#2F3B2A]">
-                            Entrega
+                            Empresa e entrega
                         </h2>
 
                         <p className="mt-1 text-sm text-gray-400">
-                            Configura os custos e a zona geográfica onde a loja aceita entregas.
+                            Gere os contactos públicos, os custos e a zona geográfica de entrega.
                         </p>
                     </div>
                 </div>
@@ -512,6 +530,18 @@ export default function SettingsPage() {
                     onSubmit={handleDeliverySubmit}
                     className="mt-8"
                 >
+                    <div className="mb-8 border-b border-gray-100 pb-8">
+                        <h3 className="text-base font-semibold text-[#2F3B2A]">Informações públicas da empresa</h3>
+                        <p className="mt-1 text-sm text-gray-400">Usadas nas páginas de contacto, parceria e apoio ao cliente.</p>
+                        <div className="mt-5 grid gap-5 md:grid-cols-2">
+                            <label className="text-sm font-semibold text-[#2F3B2A]">Nome da empresa<input value={companyName} onChange={(event) => setCompanyName(event.target.value)} maxLength={120} className={`${inputClassName} mt-2`} required /></label>
+                            <label className="text-sm font-semibold text-[#2F3B2A]">Email de atendimento<input type="email" value={contactEmail} onChange={(event) => setContactEmail(event.target.value)} maxLength={254} className={`${inputClassName} mt-2`} placeholder="apoio@momentosemflor.pt" /></label>
+                            <label className="text-sm font-semibold text-[#2F3B2A]">Telefone<input value={contactPhone} onChange={(event) => setContactPhone(event.target.value)} maxLength={40} className={`${inputClassName} mt-2`} placeholder="+351 ..." /></label>
+                            <label className="text-sm font-semibold text-[#2F3B2A]">WhatsApp<input value={whatsappNumber} onChange={(event) => setWhatsappNumber(event.target.value)} maxLength={40} className={`${inputClassName} mt-2`} placeholder="+351 ..." /></label>
+                            <label className="text-sm font-semibold text-[#2F3B2A] md:col-span-2">Morada da empresa<input value={companyAddress} onChange={(event) => setCompanyAddress(event.target.value)} maxLength={300} className={`${inputClassName} mt-2`} /></label>
+                            <label className="text-sm font-semibold text-[#2F3B2A]">Email para novas parcerias<input type="email" value={partnerEmail} onChange={(event) => setPartnerEmail(event.target.value)} maxLength={254} className={`${inputClassName} mt-2`} placeholder="parcerias@momentosemflor.pt" /></label>
+                        </div>
+                    </div>
                     <div className="grid max-w-4xl gap-5 md:grid-cols-3">
                         <div>
                         <label
@@ -737,7 +767,8 @@ export default function SettingsPage() {
             </section>
 
             {/* TAXAS DE IVA */}
-
+            {Boolean(0) && (
+            <>
             <section className="overflow-hidden rounded-3xl bg-white shadow-sm">
                 <div className="flex flex-col justify-between gap-4 border-b border-gray-100 p-6 sm:flex-row sm:items-center sm:p-8">
                     <div className="flex items-center gap-3">
@@ -1167,6 +1198,8 @@ export default function SettingsPage() {
                         )}
                     </div>
                 </div>
+            )}
+            </>
             )}
         </div>
     );

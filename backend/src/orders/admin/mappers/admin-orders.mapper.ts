@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { Order, Prisma } from '@prisma/client';
+import { CouponDiscountApplication, Order, Prisma } from '@prisma/client';
 
 import { BaseMapper } from '@/common/mappers/base.mapper';
 import { AdminOrderListResponseDto } from '../dtos/admin-order-list-response.dto';
 import { AdminOrderResponseDto } from '../dtos/admin-order-response.dto';
 import { formatOrderItemConfiguration } from '../../order-item-configuration';
+import { allocateOrderDiscount } from '../../order-discount-allocation';
 
 type AdminOrderWithRelations = Prisma.OrderGetPayload<{
     include: {
@@ -61,6 +62,11 @@ export class AdminOrdersMapper extends BaseMapper<
     AdminOrderListResponseDto
 > {
     toDetailResponse(order: AdminOrderWithRelations): AdminOrderResponseDto {
+        const lineDiscounts = allocateOrderDiscount(
+            order.items,
+            Number(order.discount),
+            order.couponDiscountApplication ?? CouponDiscountApplication.PRODUCT_LINES,
+        );
         return {
             id: order.id,
             orderNumber: order.orderNumber,
@@ -161,6 +167,8 @@ export class AdminOrdersMapper extends BaseMapper<
                 netAmount: Number(item.netAmount),
                 taxAmount: Number(item.taxAmount),
                 grossAmount: Number(item.grossAmount),
+                discountAmount: lineDiscounts.get(item.id) ?? 0,
+                discountedGrossAmount: Math.max(0, Number(item.grossAmount) - (lineDiscounts.get(item.id) ?? 0)),
                 taxCodeId: item.taxCodeId,
                 taxRate:
                     item.taxRate === null ? null : Number(item.taxRate),

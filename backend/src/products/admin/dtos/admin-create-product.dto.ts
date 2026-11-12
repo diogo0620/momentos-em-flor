@@ -60,6 +60,11 @@ export class AdminCreateProductDto {
     @IsBoolean()
     featured?: boolean;
 
+    @ApiPropertyOptional({ example: false, description: 'Oculta o produto do catálogo e permite vendê-lo apenas como complemento.' })
+    @IsOptional()
+    @IsBoolean()
+    addonOnly?: boolean;
+
     @ApiPropertyOptional({
         example: 50.00,
         description: 'Refundable deposit for rental products.',

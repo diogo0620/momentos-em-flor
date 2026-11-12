@@ -904,6 +904,7 @@ export class AdminMoloniFiscalDocumentsService {
       );
       const orderNumber = this.escapeHtml(record.order.orderNumber);
       const itemsHtml = record.order.items
+        .filter((item) => item.type !== OrderItemType.DELIVERY_FEE)
         .map((item) => {
           const image = item.imagePath
             ? `<img src="${this.escapeHtml(this.storageService.getPublicUrl(item.imagePath))}" alt="" width="72" height="72" style="display:block;width:72px;height:72px;object-fit:cover;border-radius:12px;" />`

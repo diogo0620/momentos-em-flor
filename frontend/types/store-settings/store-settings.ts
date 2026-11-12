@@ -1,4 +1,10 @@
 export type StoreSettings = {
+    companyName: string;
+    contactEmail: string | null;
+    contactPhone: string | null;
+    whatsappNumber: string | null;
+    companyAddress: string | null;
+    partnerEmail: string | null;
     deliveryFee: number;
     deliveryTaxCodeId: number | null;
     deliveryMoloniProductId?: string | number | null;

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { DeliveryTimeSlot, OrderStatus, ProductVariantType } from '@prisma/client';
+import { DeliveryTimeSlot, OrderItemType, OrderStatus, ProductVariantType } from '@prisma/client';
 
 import { EmailService } from '@/email/email.service';
 import { PrismaService } from '@/prisma/prisma.service';
@@ -35,6 +35,7 @@ export class OrderStatusEmailService {
           deliveryTimeSlot: true,
           items: {
             select: {
+              type: true,
               name: true,
               variantType: true,
               variantName: true,
@@ -88,6 +89,7 @@ export class OrderStatusEmailService {
   }
 
   private buildItemsHtml(items: Array<{
+    type: OrderItemType;
     name: string;
     variantType: ProductVariantType | null;
     variantName: string | null;
@@ -95,7 +97,7 @@ export class OrderStatusEmailService {
     imagePath: string | null;
     components: Array<{ componentName: string; quantity: number }>;
   }>): string {
-    return items.map((item) => {
+    return items.filter((item) => item.type !== OrderItemType.DELIVERY_FEE).map((item) => {
       const image = item.imagePath
         ? `<img src="${this.escapeHtml(this.storageService.getPublicUrl(item.imagePath))}" alt="" width="72" height="72" style="display:block;width:72px;height:72px;object-fit:cover;border-radius:12px;" />`
         : '';

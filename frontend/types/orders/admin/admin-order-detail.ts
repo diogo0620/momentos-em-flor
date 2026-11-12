@@ -43,6 +43,8 @@ export type AdminOrderItem = {
     netAmount: number;
     taxAmount: number;
     grossAmount: number;
+    discountAmount: number;
+    discountedGrossAmount: number;
     taxCodeId: number | null;
     taxRate: number | null;
     taxCode: AdminOrderTaxCode | null;

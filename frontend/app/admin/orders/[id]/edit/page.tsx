@@ -347,9 +347,19 @@ function OrderItemCard({ item }: { item: AdminOrderItem }) {
                 </div>
 
                 <div className="shrink-0 sm:text-right">
+                    {item.discountAmount > 0 && (
+                        <p className="text-xs text-gray-400 line-through">
+                            {formatPrice(item.grossAmount)}
+                        </p>
+                    )}
                     <p className="text-lg font-semibold text-[#2F3B2A]">
-                        {formatPrice(item.grossAmount)}
+                        {formatPrice(item.discountedGrossAmount)}
                     </p>
+                    {item.discountAmount > 0 && (
+                        <p className="mt-1 text-xs font-medium text-emerald-700">
+                            Desconto: −{formatPrice(item.discountAmount)}
+                        </p>
+                    )}
                     <p className="mt-1 text-xs text-gray-400">
                         {item.quantity} {item.quantity === 1 ? "unidade" : "unidades"}
                     </p>

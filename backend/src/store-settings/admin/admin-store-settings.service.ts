@@ -23,6 +23,7 @@ export class AdminStoreSettingsService {
             },
             create: {
                 id: 1,
+                companyName: 'Momentos em Flor',
                 deliveryFee: 0,
                 deliveryAreaEnabled: true,
                 deliveryAreaName: 'Santa Maria da Feira e arredores',
@@ -60,6 +61,12 @@ export class AdminStoreSettingsService {
             },
             create: {
                 id: 1,
+                companyName: dto.companyName.trim(),
+                contactEmail: dto.contactEmail?.trim() || null,
+                contactPhone: dto.contactPhone?.trim() || null,
+                whatsappNumber: dto.whatsappNumber?.trim() || null,
+                companyAddress: dto.companyAddress?.trim() || null,
+                partnerEmail: dto.partnerEmail?.trim() || null,
                 deliveryFee: dto.deliveryFee,
                 deliveryTaxCodeId: dto.deliveryTaxCodeId,
                 deliveryMoloniProductId: dto.deliveryMoloniProductId
@@ -72,6 +79,12 @@ export class AdminStoreSettingsService {
                 deliveryRadiusKm: dto.deliveryRadiusKm,
             },
             update: {
+                companyName: dto.companyName.trim(),
+                contactEmail: dto.contactEmail?.trim() || null,
+                contactPhone: dto.contactPhone?.trim() || null,
+                whatsappNumber: dto.whatsappNumber?.trim() || null,
+                companyAddress: dto.companyAddress?.trim() || null,
+                partnerEmail: dto.partnerEmail?.trim() || null,
                 deliveryFee: dto.deliveryFee,
                 deliveryTaxCodeId: dto.deliveryTaxCodeId,
                 deliveryMoloniProductId: dto.deliveryMoloniProductId

@@ -24,6 +24,13 @@ class AdminFloristCompensationsApi extends BaseApi<
             body: JSON.stringify(data),
         });
     }
+
+    async markManyPaid(ids: number[], data: MarkFloristCompensationPaid): Promise<void> {
+        return apiFetch<void>(`${this.endpoint}/mark-paid`, {
+            method: "POST",
+            body: JSON.stringify({ ids, ...data }),
+        });
+    }
 }
 
 export const adminFloristCompensationsApi =

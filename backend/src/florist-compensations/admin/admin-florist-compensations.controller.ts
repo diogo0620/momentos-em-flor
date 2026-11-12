@@ -17,6 +17,7 @@ import { RolesGuard } from '@/auth/guards/roles.guard';
 import { Roles } from '@/auth/decorators/roles.decorator';
 import { FloristCompensationQueryDto } from '../dtos/florist-compensation-query.dto';
 import { MarkFloristCompensationPaidDto } from '../dtos/mark-florist-compensation-paid.dto';
+import { MarkFloristCompensationsPaidDto } from '../dtos/mark-florist-compensations-paid.dto';
 import { AdminFloristCompensationsService } from './admin-florist-compensations.service';
 
 @ApiTags('Florist Compensations (Admin)')
@@ -46,5 +47,11 @@ export class AdminFloristCompensationsController {
     @Body() dto: MarkFloristCompensationPaidDto,
   ): Promise<void> {
     await this.service.markPaid(id, dto);
+  }
+
+  @Post('mark-paid')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async markManyPaid(@Body() dto: MarkFloristCompensationsPaidDto): Promise<void> {
+    await this.service.markManyPaid(dto);
   }
 }

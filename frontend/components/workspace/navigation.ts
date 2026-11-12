@@ -82,7 +82,7 @@ export const adminNavigationGroups: NavigationGroup[] = [
         label: "Faturação",
         icon: ReceiptText,
       },
-      { href: "/admin/compensations", label: "Compensações", icon: Banknote },
+      { href: "/admin/compensations", label: "Pagamentos", icon: Banknote },
       {
         href: "/admin/subscription-plans",
         label: "Subscrições",

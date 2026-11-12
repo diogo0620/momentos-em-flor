@@ -5,6 +5,12 @@ import { DeliveryAreaService } from './delivery-area.service';
 import { DeliveryAvailabilityDto, DeliveryAvailabilityResponseDto } from './dtos/delivery-availability.dto';
 
 class PublicStoreSettingsResponseDto {
+  @ApiProperty() companyName!: string;
+  @ApiProperty({ nullable: true }) contactEmail!: string | null;
+  @ApiProperty({ nullable: true }) contactPhone!: string | null;
+  @ApiProperty({ nullable: true }) whatsappNumber!: string | null;
+  @ApiProperty({ nullable: true }) companyAddress!: string | null;
+  @ApiProperty({ nullable: true }) partnerEmail!: string | null;
   @ApiProperty({ example: 5 })
   deliveryFee!: number;
 
@@ -34,6 +40,12 @@ export class PublicStoreSettingsController {
     const settings = await this.storeSettingsService.get();
 
     return {
+      companyName: settings.companyName,
+      contactEmail: settings.contactEmail,
+      contactPhone: settings.contactPhone,
+      whatsappNumber: settings.whatsappNumber,
+      companyAddress: settings.companyAddress,
+      partnerEmail: settings.partnerEmail,
       deliveryFee: settings.deliveryFee,
       deliveryTaxCodeId: settings.deliveryTaxCodeId,
       deliveryTaxRate: settings.deliveryTaxRate,

@@ -8,6 +8,7 @@ import { getPagination } from '@/common/database/pagination';
 import { getPaginationResponse } from '@/common/database/pagination-response';
 import { FloristCompensationQueryDto } from '../dtos/florist-compensation-query.dto';
 import { MarkFloristCompensationPaidDto } from '../dtos/mark-florist-compensation-paid.dto';
+import { MarkFloristCompensationsPaidDto } from '../dtos/mark-florist-compensations-paid.dto';
 import {
   floristCompensationInclude,
   getCompensationSort,
@@ -21,6 +22,7 @@ export class AdminFloristCompensationsService {
   async findAll(query: FloristCompensationQueryDto) {
     const where: Prisma.FloristCompensationWhereInput = {
       ...(query.status && { status: query.status }),
+      ...(query.floristId && { floristId: query.floristId }),
       ...(query.search && {
         OR: [
           {
@@ -107,5 +109,41 @@ export class AdminFloristCompensationsService {
     }
 
     Exceptions.badRequest(ERROR_MESSAGES.FLORIST_COMPENSATION_NOT_DUE);
+  }
+
+  async markManyPaid(dto: MarkFloristCompensationsPaidDto): Promise<void> {
+    const ids = [...new Set(dto.ids)];
+    const compensations = await this.prisma.floristCompensation.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, floristId: true, status: true },
+    });
+    if (compensations.length !== ids.length) {
+      Exceptions.notFound(ERROR_MESSAGES.FLORIST_COMPENSATION_NOT_FOUND);
+    }
+    if (new Set(compensations.map((item) => item.floristId)).size !== 1) {
+      Exceptions.badRequest({
+        code: 'FLORIST_PAYMENTS_MUST_HAVE_SAME_FLORIST',
+        message: 'Seleciona apenas pagamentos pertencentes à mesma florista.',
+      });
+    }
+    if (compensations.some((item) => item.status !== FloristCompensationStatus.DUE)) {
+      Exceptions.badRequest(ERROR_MESSAGES.FLORIST_COMPENSATION_NOT_DUE);
+    }
+
+    const paidAt = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.floristCompensation.updateMany({
+        where: { id: { in: ids }, status: FloristCompensationStatus.DUE },
+        data: {
+          status: FloristCompensationStatus.PAID,
+          paidAt,
+          paymentReference: dto.paymentReference.trim(),
+          paymentNotes: dto.paymentNotes?.trim() || null,
+        },
+      });
+      if (updated.count !== ids.length) {
+        Exceptions.badRequest(ERROR_MESSAGES.FLORIST_COMPENSATION_NOT_DUE);
+      }
+    });
   }
 }

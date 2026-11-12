@@ -5,6 +5,7 @@ export type AdminUpdateProduct = {
     customerPrice: number;
     floristPrice: number;
     featured: boolean;
+    addonOnly: boolean;
     categoryIds: number[];
     //images: string[];
     components: ProductComponent[];

@@ -86,6 +86,7 @@ function ProductDetail({ slug }: { slug: string }) {
   const [componentQuantities, setComponentQuantities] =
     useState<ComponentQuantities>({});
   const [quantity, setQuantity] = useState(1);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<number[]>([]);
   const [addedToCart, setAddedToCart] = useState(false);
   const [retryAttempt, setRetryAttempt] = useState(0);
 
@@ -104,6 +105,7 @@ function ProductDetail({ slug }: { slug: string }) {
         setError(null);
         setQuantity(1);
         setAddedToCart(false);
+        setSelectedAddonIds([]);
         setSelectedVariantId(response.variants?.[0]?.id ?? null);
         setComponentQuantities(
           Object.fromEntries(
@@ -157,7 +159,10 @@ function ProductDetail({ slug }: { slug: string }) {
 
   const unitPrice = selectedVariant?.price ?? product?.price ?? 0;
   const totalUnitPrice = unitPrice + componentsExtra;
-  const totalPrice = totalUnitPrice * quantity;
+  const addonsTotal = (product?.addons ?? [])
+    .filter((addon) => selectedAddonIds.includes(addon.id))
+    .reduce((sum, addon) => sum + addon.price, 0);
+  const totalPrice = totalUnitPrice * quantity + addonsTotal;
   const favorite = product ? isInWishlist(product.id) : false;
 
   const updateComponentQuantity = (
@@ -218,6 +223,18 @@ function ProductDetail({ slug }: { slug: string }) {
       // Componentes e respetivas quantidades
       components: selectedComponents,
     });
+
+    for (const addon of product.addons.filter((item) => selectedAddonIds.includes(item.id))) {
+      addItem({
+        cartItemId: `addon-${product.id}-${addon.id}`,
+        id: addon.id,
+        name: addon.name,
+        description: "",
+        image: addon.image ?? "",
+        price: addon.price,
+        quantity: 1,
+      });
+    }
 
     setAddedToCart(true);
   };
@@ -506,6 +523,26 @@ function ProductDetail({ slug }: { slug: string }) {
               </div>
             )}
 
+            {!!product.addons.length && (
+              <section className="mt-8 border-t border-[#dedfd3] pt-7" aria-labelledby="product-addons-title">
+                <p className="editorial-kicker">Completa o gesto</p>
+                <h2 id="product-addons-title" className="mt-2 text-2xl tracking-tight">Acrescenta um detalhe especial</h2>
+                <p className="mt-2 text-sm leading-6 text-[#687363]">Estes complementos estão disponíveis apenas com este produto.</p>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {product.addons.map((addon) => {
+                    const selected = selectedAddonIds.includes(addon.id);
+                    return (
+                      <button key={addon.id} type="button" aria-pressed={selected} onClick={() => { setSelectedAddonIds((current) => selected ? current.filter((id) => id !== addon.id) : [...current, addon.id]); setAddedToCart(false); }} className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${selected ? "border-[#55624A] bg-[#F3F5EE]" : "border-[#E3E7DD] bg-white hover:border-[#AAB5A0]"}`}>
+                        <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl"><ProductImage src={addon.image} alt="" sizes="64px" /></span>
+                        <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-[#374132]">{addon.name}</span><span className="mt-1 block text-sm text-[#657456]">+ {formatPrice(addon.price)}</span></span>
+                        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${selected ? "border-[#55624A] bg-[#55624A] text-white" : "border-[#C9D0C3]"}`}>{selected && <Check size={14} />}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
             <div
               id="product-purchase"
               className="mt-8 scroll-mt-28 rounded-2xl border border-[#e2e5d9] bg-white p-5 sm:p-6"
@@ -636,7 +673,6 @@ function ProductDetail({ slug }: { slug: string }) {
         <ProductRecommendations
           productId={product.id}
           categoryId={product.categories[0]?.id}
-          configuredAddons={product.addons}
         />
       </div>
     </main>

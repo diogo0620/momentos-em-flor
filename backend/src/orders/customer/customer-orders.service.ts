@@ -329,6 +329,10 @@ export class CustomerOrdersService {
                 components: {
                     where: { active: true },
                 },
+                addons: {
+                    where: { active: true },
+                    select: { addonProductId: true },
+                },
             },
         });
 
@@ -338,6 +342,18 @@ export class CustomerOrdersService {
 
         if (productsById.size !== new Set(dto.items.map((item) => item.productId)).size) {
             Exceptions.badRequest(ERROR_MESSAGES.PRODUCT_NOT_AVAILABLE);
+        }
+
+        const allowedAddonIds = new Set(
+            products
+                .filter((product) => !product.addonOnly)
+                .flatMap((product) => product.addons.map((addon) => addon.addonProductId)),
+        );
+        if (products.some((product) => product.addonOnly && !allowedAddonIds.has(product.id))) {
+            Exceptions.badRequest({
+                code: 'ADDON_REQUIRES_BASE_PRODUCT',
+                message: 'Um complemento só pode ser comprado juntamente com um produto ao qual esteja associado.',
+            });
         }
 
         /*

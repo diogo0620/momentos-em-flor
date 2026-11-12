@@ -150,10 +150,10 @@ export class AdminOrderOffersService {
         if (order.status !== OrderStatus.WAITING_FOR_FLORISTS)
             Exceptions.badRequest(ERROR_MESSAGES.ORDER_NOT_WAITING_FOR_FLORIST);
 
-        const orderTotal = Number(order.expectedFloristTotal);
+        const orderTotal = Number(order.total);
 
         if (dto.price > orderTotal)
-            Exceptions.badRequest({ code: 'ORDER_OFFER_PRICE_EXCEEDS_COMPENSATION', message: 'O valor da proposta excede a compensação prevista da florista após descontos.' });
+            Exceptions.badRequest(ERROR_MESSAGES.ORDER_OFFER_PRICE_EXCEEDS_ORDER);
 
         const existingOffer = await this.prisma.orderOffer.findFirst({
             where: {

@@ -4,60 +4,34 @@ import ProductCard from "./ProductCard";
 import { publicProductsApi } from "@/lib/api/products/public-products";
 import type { PublicProductList } from "@/types/products/public/public-product-list";
 
-const noAddons: PublicProductList[] = [];
-
 export default function ProductRecommendations({
   productId,
   categoryId,
-  configuredAddons = noAddons,
 }: {
   productId: number;
   categoryId?: number;
-  configuredAddons?: PublicProductList[];
 }) {
   const [related, setRelated] = useState<PublicProductList[]>([]);
-  const [extras, setExtras] = useState<PublicProductList[]>(configuredAddons);
   useEffect(() => {
     let cancelled = false;
     void Promise.allSettled([
       publicProductsApi.getAll({ categoryId, pageSize: 8 }),
-      configuredAddons.length > 0
-        ? Promise.resolve({ items: configuredAddons })
-        : publicProductsApi.getAll({
-            search: "chocolate",
-            type: "SALE",
-            pageSize: 4,
-          }),
-    ]).then(([suggestions, complements]) => {
+    ]).then(([suggestions]) => {
       if (cancelled) return;
-      const additions =
-        complements.status === "fulfilled"
-          ? complements.value.items.filter((item) => item.id !== productId)
-          : [];
-      setExtras(additions);
       if (suggestions.status === "fulfilled")
         setRelated(
           suggestions.value.items
-            .filter(
-              (item) =>
-                item.id !== productId &&
-                !additions.some((extra) => extra.id === item.id),
-            )
+            .filter((item) => item.id !== productId)
             .slice(0, 4),
         );
     });
     return () => {
       cancelled = true;
     };
-  }, [productId, categoryId, configuredAddons]);
+  }, [productId, categoryId]);
   return (
     <>
       {[
-        {
-          title: "O detalhe que completa o gesto.",
-          text: "Descobre os complementos disponíveis e escolhe o que combina com o teu presente.",
-          items: extras,
-        },
         {
           title: "Também podes gostar.",
           text: "Continua a explorar a coleção e encontra a composição certa para este momento.",

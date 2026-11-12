@@ -8,6 +8,7 @@ export type AdminProductDetail = {
     customerPrice: number;
     floristPrice: number;
     featured: boolean;
+    addonOnly: boolean;
     categories: ProductCategory[];
     image: string;
     components: ProductComponent[];

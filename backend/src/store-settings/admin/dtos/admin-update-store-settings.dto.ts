@@ -1,7 +1,36 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsEmail, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class AdminUpdateStoreSettingsDto {
+    @IsString()
+    @MaxLength(120)
+    companyName!: string;
+
+    @IsOptional()
+    @IsEmail()
+    @MaxLength(254)
+    contactEmail?: string | null;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(40)
+    contactPhone?: string | null;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(40)
+    whatsappNumber?: string | null;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(300)
+    companyAddress?: string | null;
+
+    @IsOptional()
+    @IsEmail()
+    @MaxLength(254)
+    partnerEmail?: string | null;
+
     @ApiProperty({
         example: 2.5,
         maxLength: 100,

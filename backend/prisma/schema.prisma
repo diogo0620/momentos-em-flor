@@ -368,6 +368,7 @@ model Product {
   imagePath     String?
   type          ProductType        @default(SALE)
   featured      Boolean            @default(false)
+  addonOnly     Boolean            @default(false)
   rentalDeposit Decimal?           @db.Decimal(10, 2)
   customerPrice Decimal            @db.Decimal(10, 2)
   floristPrice  Decimal            @db.Decimal(10, 2)
@@ -387,6 +388,7 @@ model Product {
   updatedAt DateTime @updatedAt
 
   @@index([active])
+  @@index([addonOnly])
   @@index([taxCodeId])
 }
 
@@ -964,6 +966,12 @@ model OrderReviewRating {
 
 model StoreSettings {
   id                      Int      @id @default(1)
+  companyName             String   @default("Momentos em Flor")
+  contactEmail            String?
+  contactPhone            String?
+  whatsappNumber          String?
+  companyAddress          String?
+  partnerEmail            String?
   deliveryFee             Decimal  @db.Decimal(10, 2)
   deliveryTaxCodeId       Int?
   deliveryMoloniProductId String?

@@ -36,6 +36,7 @@ export class PublicProductsService {
                 ],
             }),
             active: true,
+            addonOnly: false,
             ...(type !== undefined && { type }),
             ...(featured !== undefined && { featured }),
             ...(categoryId !== undefined && { categories: { some: { id: categoryId, } } }),
@@ -62,7 +63,7 @@ export class PublicProductsService {
 
     async findOne(slug: string): Promise<PublicProductResponseDto> {
         const product = await this.prisma.product.findUnique({
-            where: { slug, active: true },
+            where: { slug, active: true, addonOnly: false },
             include: {
                 categories: { select: { id: true, name: true }, where: { active: true } },
                 components: { where: { active: true }, orderBy: { sortOrder: 'asc' } },

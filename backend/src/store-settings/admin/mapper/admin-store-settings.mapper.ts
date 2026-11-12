@@ -10,6 +10,12 @@ export class AdminStoreSettingsMapper{
   toDetailResponse(storeSettings: Prisma.StoreSettingsGetPayload<{ include: { deliveryTaxCode: true } }>): AdminStoreSettingsResponseDto {
     return {
       id: storeSettings.id,
+      companyName: storeSettings.companyName,
+      contactEmail: storeSettings.contactEmail,
+      contactPhone: storeSettings.contactPhone,
+      whatsappNumber: storeSettings.whatsappNumber,
+      companyAddress: storeSettings.companyAddress,
+      partnerEmail: storeSettings.partnerEmail,
       deliveryFee: storeSettings.deliveryFee.toNumber(),
       deliveryTaxCodeId: storeSettings.deliveryTaxCodeId,
       deliveryMoloniProductId: storeSettings.deliveryMoloniProductId,

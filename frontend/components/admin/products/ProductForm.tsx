@@ -15,14 +15,12 @@ import {
 import { adminProductsApi } from "@/lib/api/products/admin-products";
 import { adminTaxCodesApi } from "@/lib/api/tax-codes/admin-tax-codes";
 import { publicCategoriesApi } from "@/lib/api/categories/public-categories";
-import { publicProductsApi } from "@/lib/api/products/public-products";
 
 import type { AdminProductDetail } from "@/types/products/admin/admin-product-detail";
 import type { AdminCreateProduct } from "@/types/products/admin/admin-create-product";
 import type { AdminUpdateProduct } from "@/types/products/admin/admin-update-product";
-import type { ProductType } from "@/types/products/admin/admin-product-list";
+import type { AdminProductList, ProductType } from "@/types/products/admin/admin-product-list";
 import type { PublicCategoryList } from "@/types/categories/public/public-category-list";
-import type { PublicProductList } from "@/types/products/public/public-product-list";
 import type { AdminTaxCodeList } from "@/types/tax-codes/admin/admin-tax-code-list";
 import { adminUploadsApi } from "@/lib/api/uploads/admin-uploads";
 import MoloniIntegrationActions from "@/components/admin/moloni/MoloniIntegrationActions";
@@ -179,6 +177,7 @@ export default function ProductForm({ product }: ProductFormProps) {
   );
 
   const [featured, setFeatured] = useState(product?.featured ?? false);
+  const [addonOnly, setAddonOnly] = useState(product?.addonOnly ?? false);
   const [active, setActive] = useState(product?.active ?? true);
 
   const [categories, setCategories] = useState<PublicCategoryList[]>([]);
@@ -187,7 +186,7 @@ export default function ProductForm({ product }: ProductFormProps) {
   );
 
   const [taxCodes, setTaxCodes] = useState<AdminTaxCodeList[]>([]);
-  const [productOptions, setProductOptions] = useState<PublicProductList[]>([]);
+  const [productOptions, setProductOptions] = useState<AdminProductList[]>([]);
   const [addonProductIds, setAddonProductIds] = useState<number[]>(
     product?.addonProducts?.map((addon) => addon.id) ?? [],
   );
@@ -252,7 +251,7 @@ export default function ProductForm({ product }: ProductFormProps) {
               order: "asc",
               active: true,
             }),
-            publicProductsApi.getAll({ page: 1, pageSize: 100, active: true }),
+            adminProductsApi.getAll({ page: 1, pageSize: 100, active: true }),
           ]);
 
         if (!cancelled) {
@@ -493,6 +492,7 @@ export default function ProductForm({ product }: ProductFormProps) {
         customerPrice: toNumber(customerPrice),
         floristPrice: toNumber(floristPrice),
         featured,
+        addonOnly,
         categoryIds: selectedCategoryIds,
         taxCodeId: Number(taxCodeId),
         components: components.map((component) => ({
@@ -877,7 +877,7 @@ export default function ProductForm({ product }: ProductFormProps) {
                     {option.name}
                   </span>
                   <span className="mt-1 block text-xs text-[#7A8474]">
-                    {formatPrice(option.price)}
+                    {formatPrice(option.customerPrice)}
                   </span>
                 </span>
                 <span
@@ -1406,6 +1406,24 @@ export default function ProductForm({ product }: ProductFormProps) {
               </span>
               <span className="mt-1 block text-xs text-[#7A8474]">
                 Permite destacar o produto nas áreas relevantes da loja.
+              </span>
+            </span>
+          </label>
+
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={addonOnly}
+              onChange={(event) => setAddonOnly(event.target.checked)}
+              className="mt-1 h-4 w-4 accent-[#55624A]"
+              disabled={saving}
+            />
+            <span>
+              <span className="block text-sm font-medium text-[#374132]">
+                Apenas add-on
+              </span>
+              <span className="mt-1 block text-xs text-[#7A8474]">
+                Não aparece no catálogo nem pode ser comprado isoladamente; fica disponível nos produtos onde for associado.
               </span>
             </span>
           </label>

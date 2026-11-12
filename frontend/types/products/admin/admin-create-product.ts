@@ -6,6 +6,7 @@ export type AdminCreateProduct = {
     customerPrice: number;
     floristPrice: number;
     featured: boolean;
+    addonOnly: boolean;
     categoryIds: number[];
     taxCodeId: number;
     components: ProductComponent[];

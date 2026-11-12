@@ -17,6 +17,7 @@ export type PaginationParams = {
     addressDistrict?: string;
     status?: string;
     role?: string;
+    floristId?: number;
 };
 
 export type PaginatedResponse<T> = {
@@ -113,6 +114,10 @@ export abstract class BaseApi<
 
         if(params.role !== undefined){
             searchParams.set("role", String(params.role));
+        }
+
+        if (params.floristId !== undefined) {
+            searchParams.set("floristId", String(params.floristId));
         }
 
 

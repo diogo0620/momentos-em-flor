@@ -97,7 +97,7 @@ export class OrderPaymentEmailService {
             style: 'currency',
             currency: 'EUR',
           }).format(Number(order.total)),
-          ITEMS_HTML: this.buildItemsHtml(order.items, frontendUrl),
+          ITEMS_HTML: this.buildItemsHtml(order.items),
           ORDER_URL: `${frontendUrl}/account/orders/${encodeURIComponent(order.orderNumber)}`,
         },
       });
@@ -147,14 +147,11 @@ export class OrderPaymentEmailService {
       imagePath: string | null;
       components: Array<{ componentName: string; quantity: number }>;
     }>,
-    frontendUrl: string,
   ): string {
-    return items.map((item) => {
-      const imageUrl = item.type === OrderItemType.DELIVERY_FEE
-        ? `${frontendUrl}/images/delivery-fee.svg`
-        : item.imagePath
-          ? this.storageService.getPublicUrl(item.imagePath)
-          : null;
+    return items.filter((item) => item.type !== OrderItemType.DELIVERY_FEE).map((item) => {
+      const imageUrl = item.imagePath
+        ? this.storageService.getPublicUrl(item.imagePath)
+        : null;
       const image = imageUrl
         ? `<img src="${this.escapeHtml(imageUrl)}" alt="" width="72" height="72" style="display:block;width:72px;height:72px;object-fit:cover;border-radius:12px;" />`
         : '';
