@@ -18,6 +18,9 @@ type FloristWithUsers = Prisma.FloristGetPayload<{
                 active: true;
             };
         };
+        subscriptions: {
+            include: { plan: true };
+        };
     };
 }>;
 
@@ -57,6 +60,15 @@ export class AdminFloristsMapper extends BaseMapper<
                 email: user.email,
                 active: user.active,
             })),
+            currentSubscription: florist.subscriptions[0]
+                ? {
+                    id: florist.subscriptions[0].id,
+                    status: florist.subscriptions[0].status,
+                    planId: florist.subscriptions[0].planId,
+                    planName: florist.subscriptions[0].plan.name,
+                    free: florist.subscriptions[0].plan.free,
+                }
+                : null,
             active: florist.active,
             createdAt: florist.createdAt,
             updatedAt: florist.updatedAt,

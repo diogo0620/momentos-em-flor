@@ -18,6 +18,14 @@ class AdminFloristAdminResponseDto {
   active!: boolean;
 }
 
+class AdminFloristSubscriptionResponseDto {
+  @ApiProperty() id!: number;
+  @ApiProperty() status!: string;
+  @ApiProperty() planId!: number;
+  @ApiProperty() planName!: string;
+  @ApiProperty() free!: boolean;
+}
+
 export class AdminFloristResponseDto {
   @ApiProperty()
   id!: number;
@@ -86,6 +94,9 @@ export class AdminFloristResponseDto {
     type: [AdminFloristAdminResponseDto],
   })
   admins!: AdminFloristAdminResponseDto[];
+
+  @ApiPropertyOptional({ type: AdminFloristSubscriptionResponseDto, nullable: true })
+  currentSubscription!: AdminFloristSubscriptionResponseDto | null;
 
   @ApiProperty()
   createdAt!: Date;

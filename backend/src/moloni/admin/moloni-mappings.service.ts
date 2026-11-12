@@ -61,6 +61,11 @@ export class MoloniMappingsService {
       include: { moloniSync: true },
     });
     if (!user) throw new BadRequestException('O cliente local não existe.');
+    if (!this.normalizeVat(user.taxNumber)) {
+      throw new BadRequestException(
+        'Não é possível sincronizar um cliente sem NIF com a Moloni.',
+      );
+    }
 
     const currentId = this.positiveId(user.moloniSync?.moloniId);
     try {

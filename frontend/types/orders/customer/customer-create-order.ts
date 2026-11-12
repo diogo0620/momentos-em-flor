@@ -87,6 +87,15 @@ export type CustomerCreateOrder = {
     /** Código do país. */
     deliveryCountryCode: string;
 
+    billingSameAsDelivery: boolean;
+    billingStreet?: string;
+    billingStreetNumber?: string;
+    billingStreet2?: string;
+    billingPostalCode?: string;
+    billingCity?: string;
+    billingDistrict?: string;
+    billingCountryCode?: string;
+
     /** Mensagem que acompanha as flores. */
     cardMessage?: string;
 

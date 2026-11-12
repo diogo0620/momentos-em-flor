@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { DiscountType, Prisma } from '@prisma/client';
+import { CouponDiscountApplication, DiscountType, Prisma } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { UpsertCouponDto } from './dtos/upsert-coupon.dto';
 
@@ -23,7 +23,7 @@ export class CouponsService {
     await this.prisma.coupon.update({ where: { id }, data: { active: false } });
   }
 
-  async validate(code: string, customerId: number, orderAmount: number) {
+  async validate(code: string, customerId: number, subtotal: number, deliveryFee: number) {
     const normalizedCode = code.trim().toUpperCase();
     const now = new Date();
     const coupon = await this.prisma.coupon.findUnique({
@@ -34,6 +34,7 @@ export class CouponsService {
     if (!coupon || !coupon.active) throw new NotFoundException('Cupão inválido.');
     if (coupon.startsAt && coupon.startsAt > now) throw new BadRequestException('Este cupão ainda não está disponível.');
     if (coupon.expiresAt && coupon.expiresAt <= now) throw new BadRequestException('Este cupão já expirou.');
+    const orderAmount = Number((subtotal + deliveryFee).toFixed(2));
     if (coupon.minimumOrderAmount && orderAmount < Number(coupon.minimumOrderAmount)) {
       throw new BadRequestException(`Este cupão requer um valor mínimo de ${Number(coupon.minimumOrderAmount).toFixed(2)} EUR.`);
     }
@@ -45,13 +46,18 @@ export class CouponsService {
       throw new BadRequestException('Já utilizou este cupão o número máximo de vezes permitido.');
     }
 
+    const eligibleAmount = coupon.discountApplication === CouponDiscountApplication.PRODUCT_LINES
+      ? subtotal
+      : coupon.discountApplication === CouponDiscountApplication.DELIVERY_FEE
+        ? deliveryFee
+        : orderAmount;
     const rawDiscount = coupon.type === DiscountType.PERCENTAGE
-      ? orderAmount * Number(coupon.value) / 100
+      ? eligibleAmount * Number(coupon.value) / 100
       : Number(coupon.value);
     const cappedDiscount = coupon.maximumDiscountAmount
       ? Math.min(rawDiscount, Number(coupon.maximumDiscountAmount))
       : rawDiscount;
-    const discount = Number(Math.min(cappedDiscount, orderAmount).toFixed(2));
+    const discount = Number(Math.min(cappedDiscount, eligibleAmount).toFixed(2));
 
     return { coupon, code: normalizedCode, discount, total: Number((orderAmount - discount).toFixed(2)) };
   }
@@ -62,6 +68,8 @@ export class CouponsService {
       name: dto.name.trim(),
       description: dto.description?.trim() || null,
       type: dto.type,
+      discountApplication:
+        dto.discountApplication ?? CouponDiscountApplication.PRODUCT_LINES,
       value: dto.value,
       minimumOrderAmount: dto.minimumOrderAmount ?? null,
       maximumDiscountAmount: dto.maximumDiscountAmount ?? null,

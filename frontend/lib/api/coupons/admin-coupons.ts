@@ -1,6 +1,7 @@
 import { apiFetch } from "@/lib/api/common/client";
 
-export type AdminCoupon = { id: number; code: string; name: string; description: string | null; type: "PERCENTAGE" | "FIXED_AMOUNT"; value: number | string; minimumOrderAmount: number | string | null; maximumDiscountAmount: number | string | null; startsAt: string | null; expiresAt: string | null; maximumRedemptions: number | null; maximumRedemptionsPerCustomer: number; active: boolean };
+export type CouponDiscountApplication = "PRODUCT_LINES" | "ALL_LINES" | "DELIVERY_FEE";
+export type AdminCoupon = { id: number; code: string; name: string; description: string | null; type: "PERCENTAGE" | "FIXED_AMOUNT"; discountApplication: CouponDiscountApplication; value: number | string; minimumOrderAmount: number | string | null; maximumDiscountAmount: number | string | null; startsAt: string | null; expiresAt: string | null; maximumRedemptions: number | null; maximumRedemptionsPerCustomer: number; active: boolean };
 export type CouponInput = Omit<AdminCoupon, "id">;
 
 export const adminCouponsApi = {

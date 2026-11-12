@@ -16,6 +16,7 @@ import {
 
 import { adminFloristsApi } from "@/lib/api/florists/admin-florists";
 import { adminUsersApi } from "@/lib/api/users/admin-users";
+import { adminSubscriptionsApi, type AdminSubscriptionPlan } from "@/lib/api/subscriptions/admin-subscriptions";
 
 import FloristForm from "@/components/admin/florists/FloristForm";
 import PhoneInput from "@/components/forms/PhoneInput";
@@ -65,6 +66,9 @@ export default function EditFloristPage() {
     const [creatingAdmin, setCreatingAdmin] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const [subscriptionPlans, setSubscriptionPlans] = useState<AdminSubscriptionPlan[]>([]);
+    const [selectedPlanId, setSelectedPlanId] = useState("");
+    const [savingSubscription, setSavingSubscription] = useState(false);
 
     const [showDeleteConfirmation, setShowDeleteConfirmation] =
         useState(false);
@@ -88,10 +92,19 @@ export default function EditFloristPage() {
         setError(null);
 
         try {
-            const response = await adminFloristsApi.getById(id);
+            const [response, plans] = await Promise.all([
+                adminFloristsApi.getById(id),
+                adminSubscriptionsApi.list(),
+            ]);
 
             if (response) {
                 setFlorist(response);
+                setSubscriptionPlans(plans);
+                setSelectedPlanId(
+                    response.currentSubscription
+                        ? String(response.currentSubscription.planId)
+                        : String(plans.find((plan) => plan.free)?.id ?? ""),
+                );
             } else {
                 setError("Não foi possível encontrar esta florista.");
             }
@@ -105,6 +118,21 @@ export default function EditFloristPage() {
             setLoading(false);
         }
     }, [id]);
+
+    async function assignSubscription() {
+        if (!florist || !selectedPlanId) return;
+        try {
+            setSavingSubscription(true);
+            setError(null);
+            await adminFloristsApi.assignSubscription(florist.id, Number(selectedPlanId));
+            await loadFlorist();
+            setSuccess("Subscrição gratuita associada à florista.");
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Não foi possível associar a subscrição.");
+        } finally {
+            setSavingSubscription(false);
+        }
+    }
 
     useEffect(() => {
         void loadFlorist();
@@ -297,6 +325,19 @@ export default function EditFloristPage() {
                                 
 
                                 <div>
+                                    <div className="mb-7 border-b border-[#EEF0EA] pb-7">
+                                        <h3 className="text-lg font-semibold text-[#2F3B2A]">Subscrição</h3>
+                                        <p className="mt-1 text-sm text-[#7A8474]">Plano atual: <strong>{florist.currentSubscription?.planName ?? "Sem plano"}</strong> · {florist.currentSubscription?.status ?? "não associado"}</p>
+                                        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                                            <select value={selectedPlanId} onChange={(event) => setSelectedPlanId(event.target.value)} className={inputClassName}>
+                                                <option value="">Selecionar plano gratuito</option>
+                                                {subscriptionPlans.map((plan) => <option key={plan.id} value={plan.id} disabled={!plan.free}>{plan.name}{plan.free ? " · gratuito" : " · adesão pela florista"}</option>)}
+                                            </select>
+                                            <button type="button" onClick={() => void assignSubscription()} disabled={!selectedPlanId || savingSubscription || !subscriptionPlans.find((plan) => plan.id === Number(selectedPlanId))?.free} className="shrink-0 rounded-xl bg-[#55624A] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{savingSubscription ? "A associar..." : "Associar plano"}</button>
+                                        </div>
+                                        <p className="mt-2 text-xs text-[#7A8474]">Os planos pagos são escolhidos no portal da florista para que a subscrição Stripe seja criada corretamente.</p>
+                                    </div>
+
                                     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                                         <div>
                                             <h3 className="text-lg font-semibold text-[#2F3B2A]">

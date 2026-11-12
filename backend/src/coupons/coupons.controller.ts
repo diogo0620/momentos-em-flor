@@ -14,9 +14,9 @@ export class CouponsController {
 
   @Get('customer/coupons/:code/validate')
   @UseGuards(JwtAuthGuard, RolesGuard) @Roles(UserRole.CUSTOMER)
-  async validate(@CurrentUser() user: AuthenticatedUser, @Param('code') code: string, @Query('amount', ParseFloatPipe) amount: number) {
-    const result = await this.coupons.validate(code, user.id, amount);
-    return { code: result.code, discount: result.discount, total: result.total };
+  async validate(@CurrentUser() user: AuthenticatedUser, @Param('code') code: string, @Query('subtotal', ParseFloatPipe) subtotal: number, @Query('deliveryFee', ParseFloatPipe) deliveryFee: number) {
+    const result = await this.coupons.validate(code, user.id, subtotal, deliveryFee);
+    return { code: result.code, discount: result.discount, total: result.total, discountApplication: result.coupon.discountApplication };
   }
 
   @Get('admin/coupons') @UseGuards(JwtAuthGuard, RolesGuard) @Roles(UserRole.SYSTEM_ADMIN)

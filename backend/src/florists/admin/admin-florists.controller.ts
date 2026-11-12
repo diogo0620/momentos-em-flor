@@ -64,6 +64,15 @@ export class AdminFloristsController {
         return await this.service.update(id, dto);
     }
 
+    @Post(':id/subscription')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async assignSubscription(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() body: { planId: number },
+    ) {
+        await this.service.assignFreeSubscription(id, Number(body.planId));
+    }
+
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     async delete(

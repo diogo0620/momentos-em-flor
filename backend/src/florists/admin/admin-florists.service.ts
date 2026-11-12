@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 
 import { AdminCreateFloristDto } from './dtos/admin-create-florist.dto';
 import { AdminUpdateFloristDto } from './dtos/admin-update-florist.dto';
@@ -77,7 +77,12 @@ export class AdminFloristsService {
                         email: true,
                         active: true
                     }
-                }
+                },
+                subscriptions: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1,
+                    include: { plan: true },
+                },
             }
         });
 
@@ -88,6 +93,31 @@ export class AdminFloristsService {
         return ApiResponse.success(
             this.mapper.toDetailResponse(florist),
         );
+    }
+
+    async assignFreeSubscription(id: number, planId: number): Promise<void> {
+        const [florist, plan] = await Promise.all([
+            this.prisma.florist.findUnique({ where: { id }, select: { id: true } }),
+            this.prisma.floristSubscriptionPlan.findFirst({
+                where: { id: planId, active: true },
+            }),
+        ]);
+        if (!florist) Exceptions.notFound(ERROR_MESSAGES.FLORIST_NOT_FOUND);
+        if (!plan) throw new BadRequestException('O plano selecionado não existe ou está inativo.');
+        if (!plan.free) {
+            throw new BadRequestException(
+                'Os planos pagos devem ser subscritos pela florista para criar a cobrança Stripe.',
+            );
+        }
+        await this.prisma.$transaction(async (tx) => {
+            await tx.floristSubscription.updateMany({
+                where: { floristId: id, endedAt: null },
+                data: { status: 'CANCELLED', endedAt: new Date() },
+            });
+            await tx.floristSubscription.create({
+                data: { floristId: id, planId, status: 'FREE' },
+            });
+        });
     }
 
     async create(

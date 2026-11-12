@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  CouponDiscountApplication,
   MoloniDocumentStatus,
   OrderItemType,
   PaymentStatus,
@@ -85,7 +86,14 @@ const fiscalDocumentInclude = {
       deliveryPostalCode: true,
       deliveryCity: true,
       deliveryCountryCode: true,
+      billingStreet: true,
+      billingStreetNumber: true,
+      billingStreet2: true,
+      billingPostalCode: true,
+      billingCity: true,
+      billingCountryCode: true,
       discount: true,
+      couponDiscountApplication: true,
       subtotal: true,
       deliveryFee: true,
       total: true,
@@ -295,10 +303,6 @@ export class AdminMoloniFiscalDocumentsService {
             customer_id: Number(customerId),
             our_reference: String(record.order.id),
             your_reference: record.order.orderNumber,
-            special_discount: this.toMoloniDiscountPercentage(
-              Number(record.order.discount),
-              Number(record.order.subtotal) + Number(record.order.deliveryFee),
-            ),
             products,
             notes: `Encomenda ${record.order.orderNumber}`,
             status: 1,
@@ -662,9 +666,9 @@ export class AdminMoloniFiscalDocumentsService {
     paymentMethodId: string | null,
   ): Promise<string> {
     const address = [
-      record.order.deliveryStreet,
-      record.order.deliveryStreetNumber,
-      record.order.deliveryStreet2,
+      record.order.billingStreet,
+      record.order.billingStreetNumber,
+      record.order.billingStreet2,
     ]
       .filter(Boolean)
       .join(', ');
@@ -683,9 +687,9 @@ export class AdminMoloniFiscalDocumentsService {
       phone: record.order.customerPhone,
       taxNumber: record.order.customerTaxNumber,
       address,
-      postalCode: record.order.deliveryPostalCode,
-      city: record.order.deliveryCity,
-      countryCode: record.order.deliveryCountryCode,
+      postalCode: record.order.billingPostalCode,
+      city: record.order.billingCity,
+      countryCode: record.order.billingCountryCode,
       configuredPaymentMethodId: paymentMethodId,
     });
     return String(customerId);
@@ -704,6 +708,12 @@ export class AdminMoloniFiscalDocumentsService {
         (item) => item.type === OrderItemType.DELIVERY_FEE,
       ),
     ];
+    const lineDiscounts = this.allocateDiscount(
+      orderedItems,
+      Number(record.order.discount),
+      record.order.couponDiscountApplication ??
+        CouponDiscountApplication.PRODUCT_LINES,
+    );
     const taxIds = new Map<number, number>();
 
     for (const item of orderedItems) {
@@ -757,6 +767,11 @@ export class AdminMoloniFiscalDocumentsService {
         summary: formatOrderItemConfiguration(item) || undefined,
         qty: item.quantity,
         price: Number(unitNetPrice.toFixed(8)),
+        discount: lineDiscounts.get(item.id)
+          ? Number(
+              ((lineDiscounts.get(item.id)! / Number(item.grossAmount)) * 100).toFixed(8),
+            )
+          : undefined,
         order: index + 1,
         taxes: [
           {
@@ -769,6 +784,52 @@ export class AdminMoloniFiscalDocumentsService {
       });
     }
     return products;
+  }
+
+  private allocateDiscount(
+    items: FiscalDocumentRecord['order']['items'],
+    discount: number,
+    application: CouponDiscountApplication,
+  ): Map<number, number> {
+    const eligibleItems = items.filter((item) => {
+      if (application === CouponDiscountApplication.ALL_LINES) return true;
+      if (application === CouponDiscountApplication.DELIVERY_FEE) {
+        return item.type === OrderItemType.DELIVERY_FEE;
+      }
+      return item.type !== OrderItemType.DELIVERY_FEE;
+    }).filter((item) => Number(item.grossAmount) > 0);
+    const grossCents = new Map(
+      eligibleItems.map((item) => [
+        item.id,
+        Math.round(Number(item.grossAmount) * 100),
+      ]),
+    );
+    const eligibleTotalCents = [...grossCents.values()].reduce(
+      (sum, value) => sum + value,
+      0,
+    );
+    const result = new Map<number, number>();
+    if (discount <= 0 || eligibleTotalCents <= 0) return result;
+
+    const discountCents = Math.min(
+      Math.round(discount * 100),
+      eligibleTotalCents,
+    );
+    let remainingCents = discountCents;
+    eligibleItems.forEach((item, index) => {
+      const itemGrossCents = grossCents.get(item.id)!;
+      const allocatedCents = index === eligibleItems.length - 1
+        ? remainingCents
+        : Math.floor(discountCents * itemGrossCents / eligibleTotalCents);
+      const normalizedCents = Math.min(
+        itemGrossCents,
+        remainingCents,
+        allocatedCents,
+      );
+      if (normalizedCents > 0) result.set(item.id, normalizedCents / 100);
+      remainingCents -= normalizedCents;
+    });
+    return result;
   }
 
   private async resolveDeliveryMoloniProductId(input: {
@@ -824,14 +885,6 @@ export class AdminMoloniFiscalDocumentsService {
     throw new BadRequestException(
       `O código de IVA de ${rate}% não tem Moloni ID configurado. Abre o código de IVA no admin, associa o ID da Moloni e repete a emissão.`,
     );
-  }
-
-  private toMoloniDiscountPercentage(
-    discount: number,
-    grossBeforeDiscount: number,
-  ): number {
-    if (discount <= 0 || grossBeforeDiscount <= 0) return 0;
-    return Number(((discount / grossBeforeDiscount) * 100).toFixed(8));
   }
 
   private async sendInvoiceEmailIfNeeded(

@@ -363,25 +363,17 @@ export default function FiscalDocumentDetailPage() {
           >
             Ver encomenda <ExternalLink size={15} />
           </Link>
-          <button
-            type="button"
-            onClick={() => void issue()}
-            disabled={
-              action !== null || document.invoiceStatus === "PROCESSING"
-            }
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#40513C] px-5 text-sm font-semibold text-white disabled:opacity-50"
-          >
-            {action === "issue" ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <RefreshCw size={16} />
-            )}
-            {failed
-              ? "Tentar integração novamente"
-              : document.invoiceStatus === "ISSUED"
-                ? "Processar pendentes"
-                : "Emitir na Moloni"}
-          </button>
+          {document.invoiceStatus !== "ISSUED" && (
+            <button
+              type="button"
+              onClick={() => void issue()}
+              disabled={action !== null || document.invoiceStatus === "PROCESSING"}
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#40513C] px-5 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {action === "issue" ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+              {failed ? "Tentar integração novamente" : "Emitir na Moloni"}
+            </button>
+          )}
         </div>
       </header>
 
@@ -534,16 +526,6 @@ export default function FiscalDocumentDetailPage() {
               >
                 <FileText size={16} /> Emitir e obter fatura
               </button>
-            )}
-            {document.invoicePdfUrl && (
-              <a
-                href={document.invoicePdfUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#CBD3C3] px-4 text-sm font-semibold text-[#40513C]"
-              >
-                <ExternalLink size={16} /> Abrir ligação guardada
-              </a>
             )}
             {document.receiptId && (
               <button

@@ -69,6 +69,12 @@ enum DiscountType {
   FIXED_AMOUNT
 }
 
+enum CouponDiscountApplication {
+  PRODUCT_LINES
+  ALL_LINES
+  DELIVERY_FEE
+}
+
 enum FloristSubscriptionStatus {
   FREE
   TRIALING
@@ -553,6 +559,15 @@ model Order {
   deliveryLatitude  Decimal? @db.Decimal(9, 6)
   deliveryLongitude Decimal? @db.Decimal(9, 6)
 
+  billingSameAsDelivery Boolean @default(true)
+  billingStreet         String
+  billingStreetNumber   String
+  billingStreet2        String?
+  billingPostalCode     String
+  billingCity           String
+  billingDistrict       String
+  billingCountryCode    String @db.Char(2)
+
   //
   // Card
   //
@@ -574,6 +589,7 @@ model Order {
   couponId             Int?
   coupon               Coupon? @relation(fields: [couponId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   couponCode           String?
+  couponDiscountApplication CouponDiscountApplication?
   total                Decimal @db.Decimal(10, 2)
   expectedFloristTotal Decimal @default(0) @db.Decimal(10, 2)
 
@@ -616,6 +632,7 @@ model Coupon {
   name                          String
   description                   String?
   type                          DiscountType
+  discountApplication           CouponDiscountApplication @default(PRODUCT_LINES)
   value                         Decimal            @db.Decimal(10, 2)
   minimumOrderAmount            Decimal?           @db.Decimal(10, 2)
   maximumDiscountAmount         Decimal?           @db.Decimal(10, 2)

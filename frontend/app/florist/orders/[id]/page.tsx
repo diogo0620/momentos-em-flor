@@ -322,16 +322,16 @@ export default function FloristOrderDetailPage() {
                                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]"><Package size={19} /></div>
                                 <div>
                                     <h2 className="font-semibold text-[#2F3B2A]">Produtos da encomenda</h2>
-                                    <p className="mt-0.5 text-sm text-[#7A8474]">{order.items.length} {order.items.length === 1 ? "artigo" : "artigos"}</p>
+                                    <p className="mt-0.5 text-sm text-[#7A8474]">{order.items.filter((item) => item.type !== "DELIVERY_FEE").length} {order.items.filter((item) => item.type !== "DELIVERY_FEE").length === 1 ? "artigo" : "artigos"}</p>
                                 </div>
                             </div>
                         </div>
 
-                        {order.items.length === 0 ? (
+                        {order.items.filter((item) => item.type !== "DELIVERY_FEE").length === 0 ? (
                             <p className="p-8 text-sm text-[#7A8474]">Não existem artigos associados a esta encomenda.</p>
                         ) : (
                             <div className="divide-y divide-[#EEF0EA]">
-                                {order.items.map((item) => <OrderItemCard key={item.id} item={item} />)}
+                                {order.items.filter((item) => item.type !== "DELIVERY_FEE").map((item) => <OrderItemCard key={item.id} item={item} />)}
                             </div>
                         )}
                         <div className="flex items-center justify-between gap-4 bg-[#FAFBF8] px-6 py-5 sm:px-8">

@@ -5,6 +5,7 @@ import {
     ArrayMaxSize,
     ArrayMinSize,
     IsArray,
+    IsBoolean,
     IsDateString,
     IsEnum,
     IsOptional,
@@ -140,6 +141,32 @@ export class CustomerCreateOrderDto {
     @IsString()
     @MaxLength(2)
     deliveryCountryCode!: string;
+
+    @ApiPropertyOptional({ default: true })
+    @IsOptional()
+    @IsBoolean()
+    billingSameAsDelivery?: boolean;
+
+    @IsOptional() @IsString() @MaxLength(255)
+    billingStreet?: string;
+
+    @IsOptional() @IsString() @MaxLength(255)
+    billingStreetNumber?: string;
+
+    @IsOptional() @IsString() @MaxLength(255)
+    billingStreet2?: string;
+
+    @IsOptional() @IsString() @MaxLength(20)
+    billingPostalCode?: string;
+
+    @IsOptional() @IsString() @MaxLength(100)
+    billingCity?: string;
+
+    @IsOptional() @IsString() @MaxLength(100)
+    billingDistrict?: string;
+
+    @IsOptional() @IsString() @MaxLength(2)
+    billingCountryCode?: string;
 
     @ApiPropertyOptional({
         example:

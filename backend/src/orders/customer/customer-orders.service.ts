@@ -277,6 +277,21 @@ export class CustomerOrdersService {
             Exceptions.badRequest(ERROR_MESSAGES.DELIVERY_DATE_IN_PAST);
         }
 
+        const billingSameAsDelivery = dto.billingSameAsDelivery !== false;
+        if (
+            !billingSameAsDelivery &&
+            (!dto.billingStreet?.trim() ||
+                !dto.billingStreetNumber?.trim() ||
+                !dto.billingPostalCode?.trim() ||
+                !dto.billingCity?.trim() ||
+                !dto.billingDistrict?.trim() ||
+                !dto.billingCountryCode?.trim())
+        ) {
+            throw new BadRequestException(
+                'Preenche todos os campos obrigatórios da morada de faturação.',
+            );
+        }
+
         /*
          * 1. Load store settings and products
          */
@@ -606,7 +621,12 @@ export class CustomerOrdersService {
             subtotal + deliveryGrossAmount,
         );
         const couponResult = dto.couponCode
-            ? await this.coupons.validate(dto.couponCode, user.id, amountBeforeDiscount)
+            ? await this.coupons.validate(
+                dto.couponCode,
+                user.id,
+                subtotal,
+                deliveryGrossAmount,
+            )
             : null;
         const discount = couponResult?.discount ?? 0;
 
@@ -680,6 +700,30 @@ export class CustomerOrdersService {
                     deliveryLatitude: deliveryCoordinates.latitude,
                     deliveryLongitude: deliveryCoordinates.longitude,
 
+                    billingSameAsDelivery,
+                    billingStreet: billingSameAsDelivery
+                        ? dto.deliveryStreet
+                        : dto.billingStreet!.trim(),
+                    billingStreetNumber: billingSameAsDelivery
+                        ? dto.deliveryStreetNumber
+                        : dto.billingStreetNumber!.trim(),
+                    billingStreet2: billingSameAsDelivery
+                        ? dto.deliveryStreet2
+                        : dto.billingStreet2?.trim() || null,
+                    billingPostalCode: billingSameAsDelivery
+                        ? dto.deliveryPostalCode
+                        : dto.billingPostalCode!.trim(),
+                    billingCity: billingSameAsDelivery
+                        ? dto.deliveryCity
+                        : dto.billingCity!.trim(),
+                    billingDistrict: billingSameAsDelivery
+                        ? dto.deliveryDistrict
+                        : dto.billingDistrict!.trim(),
+                    billingCountryCode: (billingSameAsDelivery
+                        ? dto.deliveryCountryCode
+                        : dto.billingCountryCode!
+                    ).toUpperCase(),
+
                     cardMessage: dto.cardMessage,
 
                     subtotal,
@@ -687,6 +731,8 @@ export class CustomerOrdersService {
                     deliveryFee,
                     discount,
                     couponCode: couponResult?.code ?? null,
+                    couponDiscountApplication:
+                        couponResult?.coupon.discountApplication ?? null,
                     ...(couponResult && {
                         coupon: { connect: { id: couponResult.coupon.id } },
                         couponRedemption: {

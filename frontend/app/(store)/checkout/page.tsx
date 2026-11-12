@@ -110,6 +110,14 @@ export default function CheckoutPage() {
     const [deliveryDistrict, setDeliveryDistrict] =
         useState("");
 
+    const [billingSameAsDelivery, setBillingSameAsDelivery] = useState(true);
+    const [billingStreet, setBillingStreet] = useState("");
+    const [billingStreetNumber, setBillingStreetNumber] = useState("");
+    const [billingStreet2, setBillingStreet2] = useState("");
+    const [billingPostalCode, setBillingPostalCode] = useState("");
+    const [billingCity, setBillingCity] = useState("");
+    const [billingDistrict, setBillingDistrict] = useState("");
+
     const deliveryCountryCode = "PT";
 
     const [cardMessage, setCardMessage] =
@@ -246,7 +254,7 @@ export default function CheckoutPage() {
         try {
             setIsApplyingCoupon(true);
             setCouponError(null);
-            const result = await customerCouponsApi.validate(couponInput.trim(), total + deliveryFee);
+            const result = await customerCouponsApi.validate(couponInput.trim(), total, deliveryFee);
             setAppliedCoupon({ code: result.code, discount: result.discount });
             setCouponInput(result.code);
         } catch (err) {
@@ -317,6 +325,18 @@ export default function CheckoutPage() {
 
             return;
 
+        }
+
+        if (
+            !billingSameAsDelivery &&
+            (!billingStreet.trim() ||
+                !billingStreetNumber.trim() ||
+                !billingPostalCode.trim() ||
+                !billingCity.trim() ||
+                !billingDistrict.trim())
+        ) {
+            setError("Preencha a morada de faturação completa.");
+            return;
         }
 
         if (isCheckingDeliveryArea) {
@@ -440,6 +460,19 @@ export default function CheckoutPage() {
                 deliveryDistrict,
 
                 deliveryCountryCode,
+
+                billingSameAsDelivery,
+                ...(!billingSameAsDelivery
+                    ? {
+                        billingStreet: billingStreet.trim(),
+                        billingStreetNumber: billingStreetNumber.trim(),
+                        billingStreet2: billingStreet2.trim() || undefined,
+                        billingPostalCode: billingPostalCode.trim(),
+                        billingCity: billingCity.trim(),
+                        billingDistrict: billingDistrict.trim(),
+                        billingCountryCode: "PT",
+                    }
+                    : {}),
 
                 // CARD
 
@@ -617,6 +650,19 @@ export default function CheckoutPage() {
 
     }
 
+    if (isLoadingDeliveryFee) {
+        return (
+            <div className="min-h-screen bg-[#F7F8F4] px-4 py-16">
+                <div className="mx-auto flex max-w-7xl items-center justify-center">
+                    <div className="rounded-3xl bg-white px-8 py-10 text-center shadow-sm">
+                        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#D6DEC8] border-t-[#55624A]" />
+                        <p className="mt-4 text-sm text-gray-500">A preparar o checkout...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     const fieldClass =
         "w-full rounded-xl border border-[#E3E7DE] bg-white px-4 py-3 text-sm text-[#2F3B2A] outline-none transition placeholder:text-gray-400 focus:border-[#8C997E] focus:ring-4 focus:ring-[#D6DEC8]/50";
 
@@ -733,6 +779,37 @@ export default function CheckoutPage() {
 
                                 </div>
 
+                            </div>
+
+                            <div className="mt-5 rounded-2xl border border-[#DDE5D5] bg-white p-5">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p className="text-sm font-bold text-[#2F3B2A]">Morada de faturação</p>
+                                        <p className="mt-1 text-xs text-gray-500">Esta morada será utilizada na emissão da fatura.</p>
+                                    </div>
+                                    <label className="flex items-center gap-2 text-xs font-semibold text-[#55624A]">
+                                        <input type="checkbox" checked={billingSameAsDelivery} onChange={(event) => setBillingSameAsDelivery(event.target.checked)} className="h-4 w-4 accent-[#55624A]" />
+                                        Igual à entrega
+                                    </label>
+                                </div>
+
+                                {!billingSameAsDelivery && (
+                                    <div className="mt-5 grid gap-4">
+                                        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_130px]">
+                                            <div><label className={labelClass}>Rua *</label><input required value={billingStreet} onChange={(event) => setBillingStreet(event.target.value)} autoComplete="billing address-line1" className={fieldClass} /></div>
+                                            <div><label className={labelClass}>Número *</label><input required value={billingStreetNumber} onChange={(event) => setBillingStreetNumber(event.target.value)} className={fieldClass} /></div>
+                                        </div>
+                                        <div><label className={labelClass}>Complemento</label><input value={billingStreet2} onChange={(event) => setBillingStreet2(event.target.value)} autoComplete="billing address-line2" className={fieldClass} /></div>
+                                        <div className="grid gap-4 sm:grid-cols-2">
+                                            <div><label className={labelClass}>Código postal *</label><input required value={billingPostalCode} onChange={(event) => setBillingPostalCode(event.target.value)} placeholder="0000-000" pattern="[0-9]{4}-[0-9]{3}" maxLength={8} autoComplete="billing postal-code" className={fieldClass} /></div>
+                                            <div><label className={labelClass}>Cidade / localidade *</label><input required value={billingCity} onChange={(event) => setBillingCity(event.target.value)} autoComplete="billing address-level2" className={fieldClass} /></div>
+                                        </div>
+                                        <div className="grid gap-4 sm:grid-cols-2">
+                                            <div><label className={labelClass}>Distrito *</label><select required value={billingDistrict} onChange={(event) => setBillingDistrict(event.target.value)} autoComplete="billing address-level1" className={fieldClass}><option value="">Selecione o distrito</option>{PORTUGAL_DISTRICTS.map((district) => <option key={district} value={district}>{district}</option>)}</select></div>
+                                            <div><label className={labelClass}>País *</label><div className="flex min-h-[48px] items-center gap-3 rounded-xl border border-[#E3E7DE] bg-[#F3F5EF] px-4 text-sm text-[#596151]"><span>🇵🇹</span><span className="font-medium">Portugal</span></div></div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="mt-5">

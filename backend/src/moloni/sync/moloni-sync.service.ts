@@ -65,6 +65,11 @@ export class MoloniSyncService {
   ) {}
 
   async resolveCustomer(input: MoloniCustomerSyncInput): Promise<number> {
+    if (!this.normalizeVat(input.taxNumber)) {
+      throw new BadRequestException(
+        'O cliente não tem NIF. As faturas sem NIF devem usar o consumidor final e não sincronizar o cliente.',
+      );
+    }
     const key = input.userId ? `user:${input.userId}` : `order:${input.orderId}`;
     const pending = this.pendingCustomers.get(key);
     if (pending) return pending;

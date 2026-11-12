@@ -20,6 +20,13 @@ export type AdminFloristDetail = {
     acceptingOrders: boolean;
     active: boolean;
     admins: FloristAdmin[];
+    currentSubscription: {
+        id: number;
+        status: string;
+        planId: number;
+        planName: string;
+        free: boolean;
+    } | null;
     createdAt: Date;
     updatedAt: Date;
 }

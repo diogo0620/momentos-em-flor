@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { OrderItemType, Prisma } from '@prisma/client';
 import { FloristOrderOfferListResponseDto } from '../dtos/florist-order-offer-list-response.dto';
 import { FloristOrderOfferResponseDto } from '../dtos/florist-order-offer-response.dto';
 import { formatOrderItemConfiguration } from '@/orders/order-item-configuration';
@@ -49,13 +49,15 @@ export class FloristOrderOffersMapper {
                     cardMessage: offer.order.cardMessage,
                 }),
 
-                items: offer.order.items.map((item) => ({
+                items: offer.order.items
+                  .filter((item) => item.type !== OrderItemType.DELIVERY_FEE)
+                  .map((item) => ({
                     id: item.id,
                     name: item.name,
                     description: formatOrderItemConfiguration(item),
                     variantName: item.variantName,
                     quantity: item.quantity,
-                })),
+                  })),
             },
 
             status: offer.status,

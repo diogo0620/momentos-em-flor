@@ -8,7 +8,7 @@ import PageHeader from "@/components/admin/common/PageHeader";
 import { adminCouponsApi, type AdminCoupon, type CouponInput } from "@/lib/api/coupons/admin-coupons";
 
 const emptyForm: CouponInput = {
-    code: "", name: "", description: null, type: "PERCENTAGE", value: 10,
+    code: "", name: "", description: null, type: "PERCENTAGE", discountApplication: "PRODUCT_LINES", value: 10,
     minimumOrderAmount: null, maximumDiscountAmount: null, startsAt: null,
     expiresAt: null, maximumRedemptions: null, maximumRedemptionsPerCustomer: 1, active: true,
 };
@@ -58,6 +58,7 @@ export default function AdminCouponsPage() {
             name: item.name,
             description: item.description,
             type: item.type,
+            discountApplication: item.discountApplication,
             value: Number(item.value),
             minimumOrderAmount: item.minimumOrderAmount === null ? null : Number(item.minimumOrderAmount),
             maximumDiscountAmount: item.maximumDiscountAmount === null ? null : Number(item.maximumDiscountAmount),
@@ -107,6 +108,7 @@ export default function AdminCouponsPage() {
                         <Field label="Nome"><input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></Field>
                         <Field label="Tipo"><select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as CouponInput["type"] })}><option value="PERCENTAGE">Percentagem</option><option value="FIXED_AMOUNT">Valor fixo</option></select></Field>
                         <Field label={form.type === "PERCENTAGE" ? "Desconto (%)" : "Desconto (€)"}><input required type="number" min="0.01" step="0.01" value={form.value} onChange={(event) => setForm({ ...form, value: Number(event.target.value) })} /></Field>
+                        <Field label="Aplicar desconto em"><select value={form.discountApplication} onChange={(event) => setForm({ ...form, discountApplication: event.target.value as CouponInput["discountApplication"] })}><option value="PRODUCT_LINES">Artigos, repartido proporcionalmente</option><option value="ALL_LINES">Artigos e envio, repartido proporcionalmente</option><option value="DELIVERY_FEE">Apenas no envio</option></select></Field>
                         <Field label="Encomenda mínima (€)"><input type="number" min="0" step="0.01" value={form.minimumOrderAmount ?? ""} onChange={(event) => setForm({ ...form, minimumOrderAmount: event.target.value ? Number(event.target.value) : null })} /></Field>
                         <Field label="Desconto máximo (€)"><input type="number" min="0" step="0.01" value={form.maximumDiscountAmount ?? ""} onChange={(event) => setForm({ ...form, maximumDiscountAmount: event.target.value ? Number(event.target.value) : null })} /></Field>
                         <Field label="Início"><input type="date" value={form.startsAt ?? ""} onChange={(event) => setForm({ ...form, startsAt: event.target.value || null })} /></Field>
