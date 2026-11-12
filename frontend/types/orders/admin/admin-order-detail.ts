@@ -135,6 +135,7 @@ export type AdminOrder = {
         } | null;
     } | null;
     moloniFiscalDocument: {
+        id: number;
         invoiceId: string | null;
         invoiceStatus: "QUEUED" | "PROCESSING" | "ISSUED" | "FAILED" | "NOT_REQUIRED";
         creditNoteRequiredAt: string | null;

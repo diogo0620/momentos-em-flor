@@ -123,7 +123,7 @@ export class MoloniDocumentPdfService {
         documentId,
         signed,
       );
-      const url = this.parsePdfUrl(pdf.url);
+      const url = this.buildDownloadUrl(pdf.url, signed);
       if (onLink) await onLink(url);
 
       try {
@@ -182,7 +182,7 @@ export class MoloniDocumentPdfService {
     };
   }
 
-  private parsePdfUrl(value?: string): string {
+  private buildDownloadUrl(value: string | undefined, signed: boolean): string {
     if (!value) {
       throw new ServiceUnavailableException(
         'A Moloni não devolveu a ligação do documento PDF.',
@@ -191,6 +191,13 @@ export class MoloniDocumentPdfService {
     try {
       const url = new URL(value.trim());
       if (url.protocol !== 'https:') throw new Error('Invalid protocol');
+      url.searchParams.set('action', 'getDownload');
+      url.searchParams.set('i', '1');
+      if (signed) {
+        url.searchParams.delete('unsigned');
+      } else {
+        url.searchParams.set('unsigned', '1');
+      }
       return url.toString();
     } catch {
       throw new ServiceUnavailableException(

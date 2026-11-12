@@ -912,6 +912,9 @@ export default function EditOrderPage() {
         }
     };
 
+    const visibleOrderItems =
+        order?.items.filter((item) => item.type !== "DELIVERY_FEE") ?? [];
+
     return (
         <div className="mx-auto w-full max-w-5xl space-y-8 pb-10">
             {/* Header: mesmo padrão das páginas de detalhe */}
@@ -942,17 +945,34 @@ export default function EditOrderPage() {
                     </div>
                     </div>
 
-                    {order?.moloniFiscalDocument?.invoiceId && (
-                        <button
-                            type="button"
-                            onClick={() => void openInvoicePdf()}
-                            disabled={invoiceLoading}
-                            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#CBD3C3] bg-white px-5 py-3 text-sm font-semibold text-[#55624A] transition hover:bg-[#F3F5EE] disabled:opacity-50"
-                        >
-                            {invoiceLoading ? <LoaderCircle size={17} className="animate-spin" /> : <FileDown size={17} />}
-                            Ver fatura
-                        </button>
-                    )}
+                    <div className="flex flex-wrap gap-2">
+                        {order?.moloniFiscalDocument ? (
+                            <Link
+                                href={`/admin/fiscal-documents/${order.moloniFiscalDocument.id}`}
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#55624A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#46523C]"
+                            >
+                                <FileText size={17} /> Ver faturação
+                            </Link>
+                        ) : (
+                            <Link
+                                href="/admin/fiscal-documents"
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#CBD3C3] bg-white px-5 py-3 text-sm font-semibold text-[#55624A] transition hover:bg-[#F3F5EE]"
+                            >
+                                <FileText size={17} /> Abrir faturação
+                            </Link>
+                        )}
+                        {order?.moloniFiscalDocument?.invoiceId && (
+                            <button
+                                type="button"
+                                onClick={() => void openInvoicePdf()}
+                                disabled={invoiceLoading}
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#CBD3C3] bg-white px-5 py-3 text-sm font-semibold text-[#55624A] transition hover:bg-[#F3F5EE] disabled:opacity-50"
+                            >
+                                {invoiceLoading ? <LoaderCircle size={17} className="animate-spin" /> : <FileDown size={17} />}
+                                Ver fatura
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -1281,12 +1301,12 @@ export default function EditOrderPage() {
 
                     <Section
                         title="Artigos da encomenda"
-                        description={`${order.items.length} ${order.items.length === 1 ? "artigo" : "artigos"} na encomenda.`}
+                        description={`${visibleOrderItems.length} ${visibleOrderItems.length === 1 ? "artigo" : "artigos"} na encomenda.`}
                         icon={Package}
                     >
-                        {order.items.length > 0 ? (
+                        {visibleOrderItems.length > 0 ? (
                             <div className="space-y-4">
-                                {order.items.map((item) => (
+                                {visibleOrderItems.map((item) => (
                                     <OrderItemCard key={item.id} item={item} />
                                 ))}
                             </div>

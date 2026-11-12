@@ -100,6 +100,7 @@ export class AdminOrdersService {
                 },
                 moloniFiscalDocument: {
                     select: {
+                        id: true,
                         invoiceId: true,
                         invoiceStatus: true,
                         creditNoteRequiredAt: true,

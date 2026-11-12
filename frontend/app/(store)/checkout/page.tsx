@@ -119,7 +119,7 @@ export default function CheckoutPage() {
         useState<number | null>(null);
 
     const [isLoadingDeliveryFee, setIsLoadingDeliveryFee] =
-        useState(false);
+        useState(true);
 
     const [deliveryAreaName, setDeliveryAreaName] =
         useState("Santa Maria da Feira e arredores");
@@ -1483,7 +1483,7 @@ export default function CheckoutPage() {
                                     <div className="flex justify-between text-gray-500">
                                         <span>Envio</span>
                                         <span>
-                                            {!hasCompleteDeliveryAddress || isLoadingDeliveryFee
+                                            {isLoadingDeliveryFee
                                                 ? "A calcular..."
                                                 : deliveryFee !== null
                                                     ? formatPrice(deliveryFee)

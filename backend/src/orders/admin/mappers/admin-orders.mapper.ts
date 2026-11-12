@@ -43,6 +43,7 @@ type AdminOrderWithRelations = Prisma.OrderGetPayload<{
         };
         moloniFiscalDocument: {
             select: {
+                id: true;
                 invoiceId: true;
                 invoiceStatus: true;
                 creditNoteRequiredAt: true;

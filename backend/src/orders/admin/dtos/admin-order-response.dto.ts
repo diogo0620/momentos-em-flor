@@ -259,6 +259,9 @@ export class AdminOrderPaymentResponseDto {
 }
 
 export class AdminOrderMoloniFiscalResponseDto {
+    @ApiProperty()
+    id!: number;
+
     @ApiPropertyOptional({ nullable: true })
     invoiceId!: string | null;
 
