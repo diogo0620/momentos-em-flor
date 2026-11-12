@@ -67,6 +67,7 @@ export class CustomerOrdersMapper extends BaseMapper<
             taxAmount: Number(order.taxAmount),
             deliveryFee: Number(order.deliveryFee),
             discount: Number(order.discount),
+            couponCode: order.couponCode,
             total: Number(order.total),
             status: toCustomerOrderStatus(order.status),
             invoiceAvailable: Boolean(order.moloniFiscalDocument?.invoiceId),

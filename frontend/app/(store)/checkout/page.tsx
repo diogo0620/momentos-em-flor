@@ -15,6 +15,7 @@ import { storeSettingsApi } from "@/lib/api/store-settings/store-settings";
 import PhoneInput from "@/components/forms/PhoneInput";
 import { isValidPhone } from "@/lib/validation/auth";
 import { customerCouponsApi } from "@/lib/api/coupons/customer-coupons";
+import { customerUsersApi } from "@/lib/api/users/customer-users";
 
 
 const PORTUGAL_DISTRICTS = [
@@ -198,6 +199,32 @@ export default function CheckoutPage() {
         loadDeliveryFee();
 
     }, []);
+
+    useEffect(() => {
+        if (!isAuthenticated || !user) return;
+        let cancelled = false;
+        void customerUsersApi.getMe().then((profile) => {
+            if (cancelled) return;
+            setCustomerTaxNumber(profile.taxNumber ?? "");
+            const hasBillingAddress = Boolean(
+                profile.billingStreet &&
+                profile.billingStreetNumber &&
+                profile.billingPostalCode &&
+                profile.billingCity &&
+                profile.billingDistrict,
+            );
+            if (hasBillingAddress) {
+                setBillingSameAsDelivery(false);
+                setBillingStreet(profile.billingStreet ?? "");
+                setBillingStreetNumber(profile.billingStreetNumber ?? "");
+                setBillingStreet2(profile.billingStreet2 ?? "");
+                setBillingPostalCode(profile.billingPostalCode ?? "");
+                setBillingCity(profile.billingCity ?? "");
+                setBillingDistrict(profile.billingDistrict ?? "");
+            }
+        }).catch(() => undefined);
+        return () => { cancelled = true; };
+    }, [isAuthenticated, user]);
 
     useEffect(() => {
         if (!hasCompleteDeliveryAddress) {
@@ -781,75 +808,6 @@ export default function CheckoutPage() {
 
                             </div>
 
-                            <div className="mt-5 rounded-2xl border border-[#DDE5D5] bg-white p-5">
-                                <div className="flex items-start justify-between gap-4">
-                                    <div>
-                                        <p className="text-sm font-bold text-[#2F3B2A]">Morada de faturação</p>
-                                        <p className="mt-1 text-xs text-gray-500">Esta morada será utilizada na emissão da fatura.</p>
-                                    </div>
-                                    <label className="flex items-center gap-2 text-xs font-semibold text-[#55624A]">
-                                        <input type="checkbox" checked={billingSameAsDelivery} onChange={(event) => setBillingSameAsDelivery(event.target.checked)} className="h-4 w-4 accent-[#55624A]" />
-                                        Igual à entrega
-                                    </label>
-                                </div>
-
-                                {!billingSameAsDelivery && (
-                                    <div className="mt-5 grid gap-4">
-                                        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_130px]">
-                                            <div><label className={labelClass}>Rua *</label><input required value={billingStreet} onChange={(event) => setBillingStreet(event.target.value)} autoComplete="billing address-line1" className={fieldClass} /></div>
-                                            <div><label className={labelClass}>Número *</label><input required value={billingStreetNumber} onChange={(event) => setBillingStreetNumber(event.target.value)} className={fieldClass} /></div>
-                                        </div>
-                                        <div><label className={labelClass}>Complemento</label><input value={billingStreet2} onChange={(event) => setBillingStreet2(event.target.value)} autoComplete="billing address-line2" className={fieldClass} /></div>
-                                        <div className="grid gap-4 sm:grid-cols-2">
-                                            <div><label className={labelClass}>Código postal *</label><input required value={billingPostalCode} onChange={(event) => setBillingPostalCode(event.target.value)} placeholder="0000-000" pattern="[0-9]{4}-[0-9]{3}" maxLength={8} autoComplete="billing postal-code" className={fieldClass} /></div>
-                                            <div><label className={labelClass}>Cidade / localidade *</label><input required value={billingCity} onChange={(event) => setBillingCity(event.target.value)} autoComplete="billing address-level2" className={fieldClass} /></div>
-                                        </div>
-                                        <div className="grid gap-4 sm:grid-cols-2">
-                                            <div><label className={labelClass}>Distrito *</label><select required value={billingDistrict} onChange={(event) => setBillingDistrict(event.target.value)} autoComplete="billing address-level1" className={fieldClass}><option value="">Selecione o distrito</option>{PORTUGAL_DISTRICTS.map((district) => <option key={district} value={district}>{district}</option>)}</select></div>
-                                            <div><label className={labelClass}>País *</label><div className="flex min-h-[48px] items-center gap-3 rounded-xl border border-[#E3E7DE] bg-[#F3F5EF] px-4 text-sm text-[#596151]"><span>🇵🇹</span><span className="font-medium">Portugal</span></div></div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="mt-5">
-
-                                <label className={labelClass}>
-                                    NIF
-                                </label>
-
-                                <div className="mt-2 max-w-md">
-
-                                    <input
-                                        value={customerTaxNumber}
-                                        onChange={(e) =>
-                                            setCustomerTaxNumber(
-                                                e.target.value
-                                                    .replace(
-                                                        /\D/g,
-                                                        "",
-                                                    )
-                                                    .slice(
-                                                        0,
-                                                        9,
-                                                    ),
-                                            )
-                                        }
-                                        placeholder="Ex.: 123456789"
-                                        inputMode="numeric"
-                                        maxLength={9}
-                                        autoComplete="off"
-                                        className={fieldClass}
-                                    />
-
-                                </div>
-
-                                <p className="mt-2 text-xs leading-5 text-gray-400">
-                                    Opcional. Introduza o NIF caso pretenda associá-lo à encomenda.
-                                </p>
-
-                            </div>
-
                         </section>
 
                         {/* DESTINATÁRIO */}
@@ -1392,6 +1350,43 @@ export default function CheckoutPage() {
 
                             </div>
 
+                        </section>
+
+                        <section className={sectionClass}>
+                            <div className="flex items-start gap-4">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#E8EDDF] text-[#55624A]"><span className="text-lg">05</span></div>
+                                <div><h2 className="text-lg font-bold text-[#2F3B2A]">Faturação</h2><p className="mt-1 text-sm text-gray-500">Dados que serão guardados no seu perfil e utilizados na fatura.</p></div>
+                            </div>
+
+                            <div className="mt-6">
+                                <label className={labelClass}>NIF</label>
+                                <input value={customerTaxNumber} onChange={(event) => setCustomerTaxNumber(event.target.value.replace(/\D/g, "").slice(0, 9))} placeholder="Ex.: 123456789" inputMode="numeric" maxLength={9} className={`${fieldClass} max-w-md`} />
+                                <p className="mt-2 text-xs text-gray-400">Sem NIF, a fatura será emitida a consumidor final.</p>
+                            </div>
+
+                            <div className="mt-5 rounded-2xl border border-[#DDE5D5] bg-white p-5">
+                                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                                    <div><p className="text-sm font-bold text-[#2F3B2A]">Morada de faturação</p><p className="mt-1 text-xs text-gray-500">Pode utilizar a mesma morada indicada para a entrega.</p></div>
+                                    <label className="flex items-center gap-2 text-xs font-semibold text-[#55624A]"><input type="checkbox" checked={billingSameAsDelivery} onChange={(event) => setBillingSameAsDelivery(event.target.checked)} className="h-4 w-4 accent-[#55624A]" /> Igual à entrega</label>
+                                </div>
+                                {!billingSameAsDelivery && (
+                                    <div className="mt-5 grid gap-4">
+                                        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_130px]">
+                                            <div><label className={labelClass}>Rua *</label><input required value={billingStreet} onChange={(event) => setBillingStreet(event.target.value)} autoComplete="billing address-line1" className={fieldClass} /></div>
+                                            <div><label className={labelClass}>Número *</label><input required value={billingStreetNumber} onChange={(event) => setBillingStreetNumber(event.target.value)} className={fieldClass} /></div>
+                                        </div>
+                                        <div><label className={labelClass}>Complemento</label><input value={billingStreet2} onChange={(event) => setBillingStreet2(event.target.value)} autoComplete="billing address-line2" className={fieldClass} /></div>
+                                        <div className="grid gap-4 sm:grid-cols-2">
+                                            <div><label className={labelClass}>Código postal *</label><input required value={billingPostalCode} onChange={(event) => setBillingPostalCode(event.target.value)} placeholder="0000-000" pattern="[0-9]{4}-[0-9]{3}" maxLength={8} autoComplete="billing postal-code" className={fieldClass} /></div>
+                                            <div><label className={labelClass}>Cidade / localidade *</label><input required value={billingCity} onChange={(event) => setBillingCity(event.target.value)} autoComplete="billing address-level2" className={fieldClass} /></div>
+                                        </div>
+                                        <div className="grid gap-4 sm:grid-cols-2">
+                                            <div><label className={labelClass}>Distrito *</label><select required value={billingDistrict} onChange={(event) => setBillingDistrict(event.target.value)} autoComplete="billing address-level1" className={fieldClass}><option value="">Selecione o distrito</option>{PORTUGAL_DISTRICTS.map((district) => <option key={district} value={district}>{district}</option>)}</select></div>
+                                            <div><label className={labelClass}>País *</label><div className="flex min-h-[48px] items-center gap-3 rounded-xl border border-[#E3E7DE] bg-[#F3F5EF] px-4 text-sm text-[#596151]"><span>🇵🇹</span><span className="font-medium">Portugal</span></div></div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </section>
 
                         {error && (

@@ -281,6 +281,13 @@ model User {
   passwordHash            String
   phone                   String
   taxNumber               String?
+  billingStreet           String?
+  billingStreetNumber     String?
+  billingStreet2          String?
+  billingPostalCode       String?
+  billingCity             String?
+  billingDistrict         String?
+  billingCountryCode      String?                  @db.Char(2)
   role                    UserRole
   emailVerified           Boolean                  @default(false)
   lastLoginAt             DateTime?

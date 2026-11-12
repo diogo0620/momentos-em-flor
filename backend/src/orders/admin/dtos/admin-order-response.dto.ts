@@ -377,6 +377,9 @@ export class AdminOrderResponseDto {
     @ApiProperty({ type: Number })
     discount!: number;
 
+    @ApiPropertyOptional({ nullable: true })
+    couponCode!: string | null;
+
     @ApiProperty({ type: Number })
     total!: number;
 

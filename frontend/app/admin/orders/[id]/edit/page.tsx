@@ -1365,6 +1365,12 @@ export default function EditOrderPage() {
                                 label="Desconto"
                                 value={order.discount}
                             />
+                            {order.couponCode && (
+                                <div className="flex items-center justify-between gap-4 text-sm">
+                                    <span className="text-[#7A8474]">Cupão aplicado</span>
+                                    <span className="rounded-lg bg-[#F3F5EE] px-2.5 py-1 font-mono font-semibold text-[#55624A]">{order.couponCode}</span>
+                                </div>
+                            )}
 
                             <div className="border-t border-[#E8EBE4] pt-4">
                                 <FinancialRow

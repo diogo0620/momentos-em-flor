@@ -105,6 +105,7 @@ export type AdminOrder = {
     taxAmount: number;
     deliveryFee: number;
     discount: number;
+    couponCode: string | null;
     total: number;
     expectedFloristTotal: number;
 

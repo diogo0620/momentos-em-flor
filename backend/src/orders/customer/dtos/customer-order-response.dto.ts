@@ -155,6 +155,9 @@ export class CustomerOrderResponseDto {
     @ApiProperty()
     discount!: number;
 
+    @ApiPropertyOptional({ nullable: true })
+    couponCode!: string | null;
+
     @ApiProperty()
     total!: number;
 

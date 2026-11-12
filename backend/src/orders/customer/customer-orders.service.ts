@@ -658,12 +658,34 @@ export class CustomerOrdersService {
             countryCode: dto.deliveryCountryCode,
         });
         const deliveryCoordinates = deliveryArea.coordinates;
+        const billingAddress = {
+            street: billingSameAsDelivery ? dto.deliveryStreet : dto.billingStreet!.trim(),
+            streetNumber: billingSameAsDelivery ? dto.deliveryStreetNumber : dto.billingStreetNumber!.trim(),
+            street2: billingSameAsDelivery ? dto.deliveryStreet2 : dto.billingStreet2?.trim() || null,
+            postalCode: billingSameAsDelivery ? dto.deliveryPostalCode : dto.billingPostalCode!.trim(),
+            city: billingSameAsDelivery ? dto.deliveryCity : dto.billingCity!.trim(),
+            district: billingSameAsDelivery ? dto.deliveryDistrict : dto.billingDistrict!.trim(),
+            countryCode: (billingSameAsDelivery ? dto.deliveryCountryCode : dto.billingCountryCode!).toUpperCase(),
+        };
 
         /*
          * 11. Create the order and item snapshots atomically
          */
 
         const order = await this.prisma.$transaction(async (tx) => {
+            await tx.user.update({
+                where: { id: user.id },
+                data: {
+                    taxNumber: dto.customerTaxNumber?.trim() || null,
+                    billingStreet: billingAddress.street,
+                    billingStreetNumber: billingAddress.streetNumber,
+                    billingStreet2: billingAddress.street2,
+                    billingPostalCode: billingAddress.postalCode,
+                    billingCity: billingAddress.city,
+                    billingDistrict: billingAddress.district,
+                    billingCountryCode: billingAddress.countryCode,
+                },
+            });
             return tx.order.create({
                 data: {
                     orderNumber,
@@ -701,28 +723,13 @@ export class CustomerOrdersService {
                     deliveryLongitude: deliveryCoordinates.longitude,
 
                     billingSameAsDelivery,
-                    billingStreet: billingSameAsDelivery
-                        ? dto.deliveryStreet
-                        : dto.billingStreet!.trim(),
-                    billingStreetNumber: billingSameAsDelivery
-                        ? dto.deliveryStreetNumber
-                        : dto.billingStreetNumber!.trim(),
-                    billingStreet2: billingSameAsDelivery
-                        ? dto.deliveryStreet2
-                        : dto.billingStreet2?.trim() || null,
-                    billingPostalCode: billingSameAsDelivery
-                        ? dto.deliveryPostalCode
-                        : dto.billingPostalCode!.trim(),
-                    billingCity: billingSameAsDelivery
-                        ? dto.deliveryCity
-                        : dto.billingCity!.trim(),
-                    billingDistrict: billingSameAsDelivery
-                        ? dto.deliveryDistrict
-                        : dto.billingDistrict!.trim(),
-                    billingCountryCode: (billingSameAsDelivery
-                        ? dto.deliveryCountryCode
-                        : dto.billingCountryCode!
-                    ).toUpperCase(),
+                    billingStreet: billingAddress.street,
+                    billingStreetNumber: billingAddress.streetNumber,
+                    billingStreet2: billingAddress.street2,
+                    billingPostalCode: billingAddress.postalCode,
+                    billingCity: billingAddress.city,
+                    billingDistrict: billingAddress.district,
+                    billingCountryCode: billingAddress.countryCode,
 
                     cardMessage: dto.cardMessage,
 

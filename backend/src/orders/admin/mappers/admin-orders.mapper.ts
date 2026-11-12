@@ -103,6 +103,7 @@ export class AdminOrdersMapper extends BaseMapper<
             taxAmount: Number(order.taxAmount),
             deliveryFee: Number(order.deliveryFee),
             discount: Number(order.discount),
+            couponCode: order.couponCode,
             total: Number(order.total),
             expectedFloristTotal: Number(order.expectedFloristTotal),
 

@@ -58,6 +58,7 @@ export type CustomerOrderDetail = {
     taxAmount: number;
     deliveryFee: number;
     discount: number;
+    couponCode: string | null;
     total: number;
 
     status: CustomerOrderStatus;

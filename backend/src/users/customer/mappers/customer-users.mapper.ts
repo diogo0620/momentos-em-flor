@@ -14,6 +14,14 @@ export class CustomerUsersMapper{
       lastName: user.lastName,
       email: user.email,
       phone: user.phone,
+      taxNumber: user.taxNumber,
+      billingStreet: user.billingStreet,
+      billingStreetNumber: user.billingStreetNumber,
+      billingStreet2: user.billingStreet2,
+      billingPostalCode: user.billingPostalCode,
+      billingCity: user.billingCity,
+      billingDistrict: user.billingDistrict,
+      billingCountryCode: user.billingCountryCode,
       emailVerified: user.emailVerified
     };
   }

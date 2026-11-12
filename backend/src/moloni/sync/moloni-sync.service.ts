@@ -9,6 +9,15 @@ type MoloniCustomer = {
   customer_id?: number;
   name?: string;
   number?: string;
+  vat?: string;
+  language_id?: number;
+  address?: string;
+  zip_code?: string;
+  city?: string;
+  country_id?: number;
+  maturity_date_id?: number;
+  payment_method_id?: number;
+  copies?: Array<{ document_type_id: number; copies: number }>;
 };
 type MoloniProduct = { product_id?: number; reference?: string };
 type MoloniInsertResult = {
@@ -144,7 +153,9 @@ export class MoloniSyncService {
           select: { moloniId: true },
         })
       : null;
-    if (current?.moloniId) return Number(current.moloniId);
+    if (current?.moloniId) {
+      return this.updateExistingCustomer(Number(current.moloniId), input);
+    }
 
     if (input.userId) await this.markCustomerPending(input.userId);
 
@@ -314,6 +325,44 @@ export class MoloniSyncService {
       paymentMethodId: paymentMethod.payment_method_id,
       documentTypeId: documentType.document_type_id,
     };
+  }
+
+  private async updateExistingCustomer(
+    customerId: number,
+    input: MoloniCustomerSyncInput,
+  ): Promise<number> {
+    const remote = await this.moloniApi.getCustomer<MoloniCustomer>(
+      String(customerId),
+    );
+    if (Number(remote.customer_id) !== customerId) {
+      throw new BadRequestException(
+        'O cliente associado já não existe na Moloni.',
+      );
+    }
+    const defaults = await this.resolveCustomerDefaults(
+      input.countryCode,
+      input.configuredPaymentMethodId,
+    );
+    await this.moloniApi.updateCustomer(String(customerId), {
+      vat: this.normalizeVat(input.taxNumber),
+      number: remote.number || `MEF-${input.userId ?? input.orderId}`,
+      name: `${input.firstName} ${input.lastName}`.trim(),
+      language_id: remote.language_id || defaults.languageId,
+      address: input.address,
+      zip_code: input.postalCode,
+      city: input.city,
+      country_id: remote.country_id || defaults.countryId,
+      email: input.email,
+      phone: input.phone,
+      maturity_date_id: remote.maturity_date_id || defaults.maturityDateId,
+      payment_method_id:
+        remote.payment_method_id || defaults.paymentMethodId,
+      copies: remote.copies?.length
+        ? remote.copies
+        : [{ document_type_id: defaults.documentTypeId, copies: 1 }],
+    });
+    if (input.userId) await this.markCustomerSynced(input.userId, customerId);
+    return customerId;
   }
 
   private async resolveProductCategoryId(): Promise<number> {

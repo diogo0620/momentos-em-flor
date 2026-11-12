@@ -478,6 +478,12 @@ export default function AccountOrderDetailPage() {
             label="Desconto"
             value={order.discount > 0 ? `− ${money(order.discount)}` : money(0)}
           />
+          {order.couponCode && (
+            <div className="flex items-center justify-between gap-4 py-1 text-sm">
+              <span className="text-[#7A8373]">Cupão aplicado</span>
+              <span className="rounded-lg bg-[#F3F5EE] px-2.5 py-1 font-mono font-semibold text-[#55624A]">{order.couponCode}</span>
+            </div>
+          )}
 
           <div className="mt-3 flex items-center justify-between border-t border-[#EEF0EA] pt-4">
             <span className="font-semibold text-[#2F3B2A]">
