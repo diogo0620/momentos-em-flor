@@ -14,8 +14,8 @@ import {
   Users,
   CreditCard,
   TicketPercent,
-  Clapperboard,
   Percent,
+  LifeBuoy,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -57,6 +57,7 @@ export const adminNavigationGroups: NavigationGroup[] = [
       { href: "/admin/orders", label: "Encomendas", icon: ShoppingBag },
       { href: "/admin/order-offers", label: "Propostas", icon: ClipboardList },
       { href: "/admin/florists", label: "Floristas", icon: Flower2 },
+      { href: "/admin/support", label: "Suporte", icon: LifeBuoy },
     ],
   },
   {
@@ -66,11 +67,6 @@ export const adminNavigationGroups: NavigationGroup[] = [
       { href: "/admin/products", label: "Produtos", icon: Package },
       { href: "/admin/categories", label: "Categorias", icon: Tags },
       { href: "/admin/coupons", label: "Cupões", icon: TicketPercent },
-      {
-        href: "/admin/home-videos",
-        label: "Vídeos da loja",
-        icon: Clapperboard,
-      },
     ],
   },
   {
@@ -128,6 +124,7 @@ export const accountNavigation: NavigationItem[] = [
   { href: "/account/orders", label: "Encomendas", icon: Package },
   { href: "/account/profile", label: "Dados pessoais", icon: UserRound },
   { href: "/account/security", label: "Segurança", icon: LockKeyhole },
+  { href: "/account/support", label: "Suporte", icon: LifeBuoy },
   { href: "/favorites", label: "Favoritos", icon: Heart },
 ];
 

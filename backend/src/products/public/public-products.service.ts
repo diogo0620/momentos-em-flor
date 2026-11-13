@@ -80,9 +80,33 @@ export class PublicProductsService {
             Exceptions.notFound(ERROR_MESSAGES.PRODUCT_NOT_FOUND);
         }
 
-        return ApiResponse.success(
-            this.mapper.toDetailResponse(product),
-        );
+        const reviews = await this.prisma.orderReview.findMany({
+            where: { order: { items: { some: { productId: product.id } } } },
+            include: {
+                customer: { select: { firstName: true } },
+                ratings: { select: { rating: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+        const mappedReviews = reviews.map((review) => ({
+            id: review.id,
+            customerFirstName: review.customer.firstName,
+            comment: review.comment,
+            averageRating: review.ratings.length
+                ? review.ratings.reduce((sum, rating) => sum + rating.rating, 0) / review.ratings.length
+                : 0,
+            createdAt: review.createdAt,
+        }));
+        const detail = this.mapper.toDetailResponse(product);
+        detail.reviews = mappedReviews;
+        detail.reviewSummary = {
+            reviewCount: mappedReviews.length,
+            averageRating: mappedReviews.length
+                ? mappedReviews.reduce((sum, review) => sum + review.averageRating, 0) / mappedReviews.length
+                : 0,
+        };
+
+        return ApiResponse.success(detail);
     }
 
 

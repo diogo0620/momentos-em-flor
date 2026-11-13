@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { StorageModule } from '@/storage/storage.module';
-import { HomeVideosController } from './home-videos.controller';
 
 import { PrismaModule } from '@/prisma/prisma.module';
 import { AdminStoreSettingsController } from './admin/admin-store-settings.controller';
@@ -19,7 +18,6 @@ import { DeliveryAreaService } from './delivery-area.service';
     GeocodingModule,
   ],
   controllers: [
-    HomeVideosController,
     AdminStoreSettingsController,
     PublicStoreSettingsController,
   ],

@@ -74,6 +74,8 @@ export class PublicProductsMapper extends BaseMapper<
 
             type: product.type,
             rentalDeposit: product.rentalDeposit === null ? undefined : Number(product.rentalDeposit),
+            reviews: [],
+            reviewSummary: { averageRating: 0, reviewCount: 0 },
         };
     }
 

@@ -84,6 +84,23 @@ enum FloristSubscriptionStatus {
   INCOMPLETE
 }
 
+enum SupportTicketStatus {
+  OPEN
+  WAITING_FOR_SUPPORT
+  WAITING_FOR_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketCategory {
+  ORDER
+  PAYMENT
+  DELIVERY
+  PRODUCT
+  ACCOUNT
+  OTHER
+}
+
 //
 // PRODUCT VARIANT TYPE
 //
@@ -299,6 +316,8 @@ model User {
   orderReviews            OrderReview[]
   orders                  Order[]
   couponRedemptions       CouponRedemption[]
+  supportTickets          SupportTicket[] @relation("SupportTicketCustomer")
+  supportMessages         SupportMessage[]
 
   moloniSync MoloniSync?
 
@@ -615,6 +634,7 @@ model Order {
   items            OrderItem[]
   offers           OrderOffer[]
   couponRedemption CouponRedemption?
+  supportTickets   SupportTicket[]
 
   createdAt          DateTime  @default(now())
   paidAt             DateTime?
@@ -962,6 +982,40 @@ model OrderReviewRating {
   createdAt DateTime @default(now())
 
   @@unique([reviewId, category])
+}
+
+model SupportTicket {
+  id         Int                   @id @default(autoincrement())
+  reference  String                @unique
+  subject    String
+  category   SupportTicketCategory
+  status     SupportTicketStatus   @default(OPEN)
+  customerId Int
+  customer   User                  @relation("SupportTicketCustomer", fields: [customerId], references: [id], onDelete: Restrict)
+  orderId    Int?
+  order      Order?                @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  messages   SupportMessage[]
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+  resolvedAt DateTime?
+  closedAt   DateTime?
+
+  @@index([customerId, updatedAt])
+  @@index([status, updatedAt])
+  @@index([orderId])
+}
+
+model SupportMessage {
+  id        Int           @id @default(autoincrement())
+  ticketId  Int
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  Int
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  message   String
+  createdAt DateTime      @default(now())
+
+  @@index([ticketId, createdAt])
+  @@index([authorId])
 }
 
 model StoreSettings {

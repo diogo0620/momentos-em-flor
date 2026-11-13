@@ -34,12 +34,6 @@ export class SupabaseStorageService {
         return this.uploadFile(path, buffer, contentType);
     }
 
-    async listHomeVideos() {
-        const { data, error } = await this.client.storage.from(this.bucket).list('home-videos', { limit: 100, sortBy: { column: 'name', order: 'asc' } });
-        if (error) throw new ServiceUnavailableException('Não foi possível carregar os vídeos.');
-        return (data ?? []).filter(file => file.id && /\.(mp4|webm)$/i.test(file.name)).map(file => ({ name: file.name, url: this.getPublicUrl(`home-videos/${file.name}`) }));
-    }
-
     private async uploadFile(
         path: string,
         buffer: Buffer,

@@ -3,23 +3,54 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUpRight, Flower2, Camera } from "lucide-react";
+import { ArrowDown, ArrowUpRight, Flower2, Camera, Quote } from "lucide-react";
 import type { PublicCategoryList } from "@/types/categories/public/public-category-list";
 import type { PublicProductList } from "@/types/products/public/public-product-list";
 import { publicCategoriesApi } from "@/lib/api/categories/public-categories";
 import { publicProductsApi } from "@/lib/api/products/public-products";
-import { apiFetch } from "@/lib/api/common/client";
 import ProductCard from "@/components/store/products/ProductCard";
-import SocialVideoCarousel from "@/components/store/home/SocialVideoCarousel";
+import SocialVideoCarousel, { type HomeMedia } from "@/components/store/home/SocialVideoCarousel";
 
 const container = "mx-auto w-full max-w-[1440px] px-5 sm:px-10 lg:px-16";
+const mediaItems = (kind: HomeMedia["kind"], values: Array<string | undefined>): HomeMedia[] =>
+  values
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value))
+    .map((src) => ({ kind, src }));
+const configuredMedia: HomeMedia[] = [
+  ...mediaItems("video", [
+    process.env.NEXT_PUBLIC_SOCIAL_VIDEO_1,
+    process.env.NEXT_PUBLIC_SOCIAL_VIDEO_2,
+    process.env.NEXT_PUBLIC_SOCIAL_VIDEO_3,
+    process.env.NEXT_PUBLIC_SOCIAL_VIDEO_4,
+    process.env.NEXT_PUBLIC_SOCIAL_VIDEO_5,
+    process.env.NEXT_PUBLIC_SOCIAL_VIDEO_6,
+    process.env.NEXT_PUBLIC_SOCIAL_VIDEO_7,
+    process.env.NEXT_PUBLIC_SOCIAL_VIDEO_8,
+  ]),
+  ...mediaItems("image", [
+    process.env.NEXT_PUBLIC_SOCIAL_IMAGE_1,
+    process.env.NEXT_PUBLIC_SOCIAL_IMAGE_2,
+    process.env.NEXT_PUBLIC_SOCIAL_IMAGE_3,
+    process.env.NEXT_PUBLIC_SOCIAL_IMAGE_4,
+    process.env.NEXT_PUBLIC_SOCIAL_IMAGE_5,
+    process.env.NEXT_PUBLIC_SOCIAL_IMAGE_6,
+    process.env.NEXT_PUBLIC_SOCIAL_IMAGE_7,
+    process.env.NEXT_PUBLIC_SOCIAL_IMAGE_8,
+  ]),
+];
+const editorialMoments = [
+  { number: "01", title: "Escolher com intenção", text: "Cada flor deve dizer alguma coisa — mesmo quando faltam as palavras." },
+  { number: "02", title: "Preparar com cuidado", text: "Do primeiro detalhe ao laço final, tudo contribui para tornar o gesto memorável." },
+  { number: "03", title: "Entregar emoção", text: "Mais do que uma encomenda, queremos que chegue um momento bonito." },
+];
 
 export default function HomePage() {
   const [collections, setCollections] = useState<PublicCategoryList[]>([]);
   const [products, setProducts] = useState<PublicProductList[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
-  const [videos, setVideos] = useState<{ kind: "video"; src: string }[]>([]);
+  const videos = configuredMedia;
   const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL;
 
   useEffect(() => {
@@ -35,16 +66,6 @@ export default function HomePage() {
       else setFailed(true);
       setLoading(false);
     });
-    void apiFetch<{ data: { url: string }[] }>("/home-videos")
-      .then((result) => {
-        if (!cancelled)
-          setVideos(
-            result.data.map((video) => ({ kind: "video", src: video.url })),
-          );
-      })
-      .catch(() => {
-        /* A galeria é opcional. */
-      });
     return () => {
       cancelled = true;
     };
@@ -54,7 +75,7 @@ export default function HomePage() {
     <div className="bg-[#f8f6f1] text-[#293e32]">
       <section className="relative isolate overflow-hidden bg-[#253c31] text-white">
         <Image
-          src="/hero.png"
+          src={process.env.NEXT_PUBLIC_HOME_HERO || "/hero.png"}
           alt="Ramo de rosas em tons suaves, envolvido em papel kraft"
           fill
           preload
@@ -263,6 +284,12 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
+      <section className="overflow-hidden bg-[#f4ede5] py-16 sm:py-24" aria-labelledby="editorial-reviews-title">
+        <div className={container}>
+          <div className="grid gap-10 lg:grid-cols-[.8fr_1.2fr] lg:items-end"><div><Quote size={34} strokeWidth={1} className="text-[#8a5751]" /><p className="editorial-kicker mt-6">A experiência Momentos em Flor</p><h2 id="editorial-reviews-title" className="mt-3 text-4xl leading-tight tracking-[-.045em] sm:text-6xl">Um gesto bonito.<br /><em className="font-normal text-[#8a5751]">Do início ao fim.</em></h2><p className="mt-5 max-w-md text-sm leading-7 text-[#68665f]">Esta é a experiência que orienta cada escolha da marca — sem avaliações inventadas nem promessas vazias.</p></div><div className="grid gap-4 md:grid-cols-3">{editorialMoments.map((moment, index) => <article key={moment.number} className={`min-h-64 border border-[#d9cec0] p-6 ${index === 1 ? "bg-[#293e32] text-white md:-translate-y-8" : "bg-white/70"}`}><p className={`text-xs font-semibold tracking-[.18em] ${index === 1 ? "text-[#cbd5c2]" : "text-[#8a5751]"}`}>{moment.number}</p><h3 className="mt-16 text-2xl leading-tight">{moment.title}</h3><p className={`mt-4 text-sm leading-7 ${index === 1 ? "text-white/70" : "text-[#68665f]"}`}>{moment.text}</p></article>)}</div></div>
+        </div>
+      </section>
 
       {(instagramUrl || videos.length > 0) && (
         <section

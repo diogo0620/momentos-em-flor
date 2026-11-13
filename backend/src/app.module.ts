@@ -25,6 +25,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CouponsModule } from './coupons/coupons.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { SupportModule } from './support/support.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
     FloristCompensationsModule,
     CouponsModule,
     SubscriptionsModule,
+    SupportModule,
     LoggerModule
   ],
   controllers: [AppController],

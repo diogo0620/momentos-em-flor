@@ -14,6 +14,7 @@ import {
   ShoppingBag,
   Sparkles,
   Truck,
+  Star,
 } from "lucide-react";
 
 import { publicProductsApi } from "@/lib/api/products/public-products";
@@ -670,6 +671,13 @@ function ProductDetail({ slug }: { slug: string }) {
             </Link>
           </div>
         </div>
+        {product.reviews.length > 0 && (
+          <section className="mt-20 border-t border-[#d8ddcf] pt-12 sm:mt-28" aria-labelledby="product-reviews-title">
+            <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="editorial-kicker">Opiniões verificadas</p><h2 id="product-reviews-title" className="mt-3 text-3xl tracking-tight sm:text-5xl">O que dizem sobre este produto</h2></div><div className="flex items-center gap-3"><span className="text-3xl font-semibold">{product.reviewSummary.averageRating.toFixed(1)}</span><div><div className="flex text-[#D6A84B]">{[1,2,3,4,5].map((value) => <Star key={value} size={17} className={value <= Math.round(product.reviewSummary.averageRating) ? "fill-current" : "text-gray-300"} />)}</div><p className="mt-1 text-xs text-[#687363]">{product.reviewSummary.reviewCount} {product.reviewSummary.reviewCount === 1 ? "avaliação" : "avaliações"}</p></div></div></div>
+            <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">{product.reviews.map((review) => <article key={review.id} className="rounded-3xl bg-white p-6 shadow-sm"><div className="flex text-[#D6A84B]">{[1,2,3,4,5].map((value) => <Star key={value} size={15} className={value <= Math.round(review.averageRating) ? "fill-current" : "text-gray-300"} />)}</div>{review.comment && <p className="mt-4 text-sm leading-7 text-[#4f5c50]">“{review.comment}”</p>}<p className="mt-5 text-xs font-semibold uppercase tracking-wider text-[#7a8577]">{review.customerFirstName} · {new Date(review.createdAt).toLocaleDateString("pt-PT")}</p></article>)}</div>
+          </section>
+        )}
+
         <ProductRecommendations
           productId={product.id}
           categoryId={product.categories[0]?.id}

@@ -181,4 +181,10 @@ export class PublicProductResponseDto {
 
     @ApiProperty({ isArray: true })
     addons!: Array<{ id: number; name: string; slug: string; price: number; image?: string; type: ProductType; featured: boolean }>;
+
+    @ApiProperty({ isArray: true })
+    reviews!: Array<{ id: number; customerFirstName: string; comment: string | null; averageRating: number; createdAt: Date }>;
+
+    @ApiProperty()
+    reviewSummary!: { averageRating: number; reviewCount: number };
 }

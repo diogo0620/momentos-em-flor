@@ -12,6 +12,8 @@ export type PublicProductDetail = {
     featured: boolean;
     rentalDeposit?: number | null;
     addons: Array<{ id: number; name: string; slug: string; price: number; image: string; type: ProductType; featured: boolean }>;
+    reviews: Array<{ id: number; customerFirstName: string; comment: string | null; averageRating: number; createdAt: string }>;
+    reviewSummary: { averageRating: number; reviewCount: number };
 }
 
 export type PublicProductCategory = {

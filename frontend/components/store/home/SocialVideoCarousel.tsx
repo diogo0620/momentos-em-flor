@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Play, Film } from "lucide-react";
+import Image from "next/image";
 
-type Video = { kind: "video" | "iframe"; src: string };
+export type HomeMedia = { kind: "video" | "iframe" | "image"; src: string };
 
 function Reel({
   video,
@@ -11,7 +12,7 @@ function Reel({
   index,
   select,
 }: {
-  video: Video;
+  video: HomeMedia;
   active: boolean;
   index: number;
   select: () => void;
@@ -62,6 +63,8 @@ function Reel({
           <Film size={28} strokeWidth={1} />
           <p>Este vídeo não está disponível neste momento.</p>
         </div>
+      ) : video.kind === "image" ? (
+        <Image src={video.src} alt={`Inspiração floral ${index + 1}`} fill sizes="(max-width: 640px) 78vw, 360px" className="object-cover" />
       ) : video.kind === "video" ? (
         <video
           ref={ref}
@@ -89,7 +92,7 @@ function Reel({
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white/50"
         />
       )}
-      {!active && (
+      {!active && video.kind !== "image" && (
         <button
           type="button"
           onClick={select}
@@ -109,7 +112,7 @@ function Reel({
   );
 }
 
-export default function SocialVideoCarousel({ videos }: { videos: Video[] }) {
+export default function SocialVideoCarousel({ videos }: { videos: HomeMedia[] }) {
   const [active, setActive] = useState(0);
   const track = useRef<HTMLDivElement>(null);
   const manualScroll = useRef(false);
@@ -135,7 +138,7 @@ export default function SocialVideoCarousel({ videos }: { videos: Video[] }) {
     <div
       className="mt-9 sm:mt-12"
       role="region"
-      aria-label="Galeria de vídeos Momentos em Flor"
+      aria-label="Galeria Momentos em Flor"
       aria-roledescription="carrossel"
     >
       <div

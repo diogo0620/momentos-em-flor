@@ -8,7 +8,7 @@ export class CouponsService {
   constructor(private readonly prisma: PrismaService) {}
 
   findAll() {
-    return this.prisma.coupon.findMany({ orderBy: [{ active: 'desc' }, { createdAt: 'desc' }] });
+    return this.prisma.coupon.findMany({ include: { _count: { select: { redemptions: true } } }, orderBy: [{ active: 'desc' }, { createdAt: 'desc' }] });
   }
 
   async create(dto: UpsertCouponDto) {
@@ -20,7 +20,10 @@ export class CouponsService {
   }
 
   async remove(id: number) {
-    await this.prisma.coupon.update({ where: { id }, data: { active: false } });
+    const coupon = await this.prisma.coupon.findUnique({ where: { id }, include: { _count: { select: { redemptions: true } } } });
+    if (!coupon) throw new NotFoundException('Cupão não encontrado.');
+    if (coupon._count.redemptions > 0) throw new BadRequestException('Não é possível eliminar um cupão que já foi utilizado. Pode desativá-lo na edição.');
+    await this.prisma.coupon.delete({ where: { id } });
   }
 
   async validate(code: string, customerId: number, subtotal: number, deliveryFee: number) {

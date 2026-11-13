@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { Pencil, Plus, Search, SlidersHorizontal, TicketPercent, X } from "lucide-react";
+import { Pencil, Plus, Search, SlidersHorizontal, TicketPercent, Trash2, X } from "lucide-react";
 
 import DataTable from "@/components/admin/DataTable";
 import PageHeader from "@/components/admin/common/PageHeader";
@@ -88,6 +88,20 @@ export default function AdminCouponsPage() {
         }
     }
 
+    async function removeCoupon(item: AdminCoupon) {
+        if ((item._count?.redemptions ?? 0) > 0 || !window.confirm(`Eliminar definitivamente o cupão ${item.code}?`)) return;
+        try {
+            setIsSaving(true);
+            setError(null);
+            await adminCouponsApi.delete(item.id);
+            await load();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Não foi possível eliminar o cupão.");
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
     return (
         <div className="space-y-6 pb-10">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -138,7 +152,7 @@ export default function AdminCouponsPage() {
                     <thead><tr className="border-b border-gray-100 bg-[#FAFBF8] text-[#2F3B2A]"><th className="px-5 py-4 font-semibold">Código</th><th className="px-5 py-4 font-semibold">Nome</th><th className="px-5 py-4 font-semibold">Desconto</th><th className="px-5 py-4 font-semibold">Validade</th><th className="px-5 py-4 font-semibold">Estado</th><th className="px-5 py-4 text-right font-semibold">Ações</th></tr></thead>
                     <tbody>
                         {isLoading ? <LoadingRows /> : filteredItems.length === 0 ? <tr><td colSpan={6} className="px-6 py-20 text-center"><TicketPercent size={30} className="mx-auto text-[#71805F]" /><p className="mt-4 font-semibold text-[#2F3B2A]">Nenhum cupão encontrado</p><p className="mt-1 text-sm text-gray-400">Cria um cupão ou altera os filtros.</p></td></tr> : filteredItems.map((item) => (
-                            <tr key={item.id} className="border-b border-[#EEF0EB] transition hover:bg-[#FAFBF8]"><td className="px-5 py-4 font-bold text-[#35412F]">{item.code}</td><td className="px-5 py-4"><p className="font-medium text-[#35412F]">{item.name}</p>{item.description && <p className="mt-1 max-w-xs truncate text-xs text-gray-400">{item.description}</p>}</td><td className="px-5 py-4 font-medium">{formatDiscount(item)}</td><td className="px-5 py-4 text-gray-500">{formatValidity(item)}</td><td className="px-5 py-4"><StatusBadge active={item.active} /></td><td className="px-5 py-4 text-right"><button type="button" onClick={() => startEdit(item)} className="inline-flex items-center gap-2 rounded-xl px-3 py-2 font-semibold text-[#55624A] hover:bg-[#F3F5EE]"><Pencil size={15} /> Editar</button></td></tr>
+                            <tr key={item.id} className="border-b border-[#EEF0EB] transition hover:bg-[#FAFBF8]"><td className="px-5 py-4 font-bold text-[#35412F]">{item.code}</td><td className="px-5 py-4"><p className="font-medium text-[#35412F]">{item.name}</p>{item.description && <p className="mt-1 max-w-xs truncate text-xs text-gray-400">{item.description}</p>}</td><td className="px-5 py-4 font-medium">{formatDiscount(item)}</td><td className="px-5 py-4 text-gray-500">{formatValidity(item)}</td><td className="px-5 py-4"><StatusBadge active={item.active} /></td><td className="px-5 py-4 text-right"><div className="flex justify-end gap-1"><button type="button" onClick={() => startEdit(item)} className="inline-flex items-center gap-2 rounded-xl px-3 py-2 font-semibold text-[#55624A] hover:bg-[#F3F5EE]"><Pencil size={15} /> Editar</button>{(item._count?.redemptions ?? 0) === 0 && <button type="button" disabled={isSaving} onClick={() => void removeCoupon(item)} aria-label={`Eliminar cupão ${item.code}`} className="rounded-xl p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"><Trash2 size={16} /></button>}</div></td></tr>
                         ))}
                     </tbody>
                 </table>
