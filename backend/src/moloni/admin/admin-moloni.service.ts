@@ -1,4 +1,3 @@
-
 import { BadRequestException, Injectable } from '@nestjs/common';
 
 import { PrismaService } from '@/prisma/prisma.service';
@@ -48,11 +47,14 @@ export class AdminMoloniService {
       },
     });
 
-    if ((!current && (!dto.clientSecret || !dto.password))) {
-      throw new BadRequestException('O secret e a password são obrigatórios na configuração inicial.');
+    if (!current && (!dto.clientSecret || !dto.password)) {
+      throw new BadRequestException(
+        'O secret e a password são obrigatórios na configuração inicial.',
+      );
     }
 
-    const credentialsChanged = !current ||
+    const credentialsChanged =
+      !current ||
       current.companyId !== dto.companyId ||
       current.clientId !== dto.clientId ||
       current.username !== dto.username ||
@@ -80,11 +82,10 @@ export class AdminMoloniService {
         }),
         invoiceDocumentSetId: dto.invoiceDocumentSetId || null,
         creditNoteDocumentSetId: dto.creditNoteDocumentSetId || null,
-        receiptDocumentSetId: dto.receiptDocumentSetId || null,
         paymentMethodId: dto.paymentMethodId || null,
         defaultCustomerId: dto.defaultCustomerId || null,
         defaultProductId: dto.defaultProductId || null,
-        issueReceiptAfterPayment: dto.issueReceiptAfterPayment,
+        createDocumentsAsDraft: dto.createDocumentsAsDraft,
         signedPdf: dto.signedPdf ?? true,
       },
       update: {
@@ -107,11 +108,10 @@ export class AdminMoloniService {
         }),
         invoiceDocumentSetId: dto.invoiceDocumentSetId || null,
         creditNoteDocumentSetId: dto.creditNoteDocumentSetId || null,
-        receiptDocumentSetId: dto.receiptDocumentSetId || null,
         paymentMethodId: dto.paymentMethodId || null,
         defaultCustomerId: dto.defaultCustomerId || null,
         defaultProductId: dto.defaultProductId || null,
-        issueReceiptAfterPayment: dto.issueReceiptAfterPayment,
+        createDocumentsAsDraft: dto.createDocumentsAsDraft,
         signedPdf: dto.signedPdf ?? current?.signedPdf ?? true,
       },
     });

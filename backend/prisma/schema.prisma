@@ -37,6 +37,7 @@ enum MoloniSyncStatus {
 enum MoloniDocumentStatus {
   QUEUED
   PROCESSING
+  DRAFT
   ISSUED
   FAILED
   NOT_REQUIRED
@@ -1061,11 +1062,10 @@ model MoloniSettings {
 
   invoiceDocumentSetId     String?
   creditNoteDocumentSetId  String?
-  receiptDocumentSetId     String?
   paymentMethodId          String?
   defaultCustomerId        String?
   defaultProductId         String?
-  issueReceiptAfterPayment Boolean @default(false)
+  createDocumentsAsDraft   Boolean @default(true)
   signedPdf                Boolean @default(true)
 
   createdAt DateTime @default(now())
@@ -1089,14 +1089,15 @@ model MoloniFiscalDocument {
   invoiceEmailSentAt    DateTime?
   invoiceEmailLastError String?
 
-  receiptStatus   MoloniDocumentStatus @default(NOT_REQUIRED)
-  receiptId       String?              @unique
-  receiptIssuedAt DateTime?
-
   creditNoteRequiredAt DateTime?
   creditNoteStatus     MoloniDocumentStatus @default(NOT_REQUIRED)
   creditNoteId         String?              @unique
   creditNoteRecordedAt DateTime?
+  creditNotePdfUrl         String?
+  creditNotePdfUrlUpdatedAt DateTime?
+  creditNoteEmailId        String?
+  creditNoteEmailSentAt    DateTime?
+  creditNoteEmailLastError String?
 
   attempts      Int       @default(0)
   lastAttemptAt DateTime?
@@ -1107,8 +1108,8 @@ model MoloniFiscalDocument {
 
   @@index([invoiceStatus])
   @@index([invoiceEmailSentAt])
-  @@index([receiptStatus])
   @@index([creditNoteStatus])
+  @@index([creditNoteEmailSentAt])
 }
 
 model MoloniSync {

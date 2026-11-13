@@ -12,11 +12,10 @@ export type AdminMoloniSettings = {
     updatedAt?: string;
     invoiceDocumentSetId?: string | null;
     creditNoteDocumentSetId?: string | null;
-    receiptDocumentSetId?: string | null;
     paymentMethodId?: string | null;
     defaultCustomerId?: string | null;
     defaultProductId?: string | null;
-    issueReceiptAfterPayment: boolean;
+    createDocumentsAsDraft: boolean;
     signedPdf: boolean;
     fiscalConfigurationComplete: boolean;
 }

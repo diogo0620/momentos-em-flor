@@ -6,6 +6,7 @@ export type CouponInput = Omit<AdminCoupon, "id" | "_count">;
 
 export const adminCouponsApi = {
     list: (): Promise<AdminCoupon[]> => apiFetch("/admin/coupons"),
+    get: (id: number): Promise<AdminCoupon> => apiFetch(`/admin/coupons/${id}`),
     create: (data: CouponInput): Promise<AdminCoupon> => apiFetch("/admin/coupons", { method: "POST", body: JSON.stringify(data) }),
     update: (id: number, data: CouponInput): Promise<AdminCoupon> => apiFetch(`/admin/coupons/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (id: number): Promise<void> => apiFetch(`/admin/coupons/${id}`, { method: "DELETE" }),

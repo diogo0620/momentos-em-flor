@@ -1,8 +1,4 @@
-
-import {
-  ApiProperty,
-  ApiPropertyOptional,
-} from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class AdminMoloniResponseDto {
   @ApiProperty({
@@ -51,7 +47,8 @@ export class AdminMoloniResponseDto {
   @ApiPropertyOptional({
     example: null,
     nullable: true,
-    description: 'Mensagem da última verificação de ligação, caso tenha falhado.',
+    description:
+      'Mensagem da última verificação de ligação, caso tenha falhado.',
   })
   lastConnectionError?: string | null;
 
@@ -69,11 +66,10 @@ export class AdminMoloniResponseDto {
 
   invoiceDocumentSetId?: string | null;
   creditNoteDocumentSetId?: string | null;
-  receiptDocumentSetId?: string | null;
   paymentMethodId?: string | null;
   defaultCustomerId?: string | null;
   defaultProductId?: string | null;
-  issueReceiptAfterPayment!: boolean;
+  createDocumentsAsDraft!: boolean;
   signedPdf!: boolean;
   fiscalConfigurationComplete!: boolean;
 }

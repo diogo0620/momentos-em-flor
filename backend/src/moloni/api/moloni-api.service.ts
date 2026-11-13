@@ -1,4 +1,3 @@
-
 import {
   Injectable,
   InternalServerErrorException,
@@ -17,10 +16,10 @@ export class MoloniApiService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: MoloniAuthService,
-  ) { }
+  ) {}
 
   async getCompany(): Promise<unknown> {
-    return this.post("companies/getOne/");
+    return this.post('companies/getOne/');
   }
 
   // ============================================================
@@ -69,10 +68,7 @@ export class MoloniApiService {
     });
   }
 
-  async updateTax<T>(
-    taxId: string,
-    params: MoloniRequestParams,
-  ): Promise<T> {
+  async updateTax<T>(taxId: string, params: MoloniRequestParams): Promise<T> {
     return this.post<T>('taxes/update/', {
       ...params,
       tax_id: taxId,
@@ -132,9 +128,13 @@ export class MoloniApiService {
   }
 
   async getDocumentTypes<T>(languageId: number): Promise<T> {
-    return this.post<T>('documents/getAllDocumentTypes/', {
-      language_id: languageId,
-    }, false);
+    return this.post<T>(
+      'documents/getAllDocumentTypes/',
+      {
+        language_id: languageId,
+      },
+      false,
+    );
   }
 
   async getMeasurementUnits<T>(): Promise<T> {
@@ -157,6 +157,10 @@ export class MoloniApiService {
     return this.post<T>('invoices/insert/', params);
   }
 
+  async updateInvoice<T>(params: MoloniRequestParams): Promise<T> {
+    return this.post<T>('invoices/update/', params);
+  }
+
   async getInvoiceByReference<T>(reference: string): Promise<T> {
     return this.post<T>('invoices/getOne/', {
       our_reference: reference,
@@ -176,10 +180,6 @@ export class MoloniApiService {
     });
   }
 
-  async insertReceipt<T>(params: MoloniRequestParams): Promise<T> {
-    return this.post<T>('receipts/insert/', params);
-  }
-
   async getCreditNote<T>(creditNoteId: string): Promise<T> {
     return this.post<T>('creditNotes/getOne/', {
       document_id: creditNoteId,
@@ -196,6 +196,10 @@ export class MoloniApiService {
     return this.post<T>('creditNotes/insert/', params);
   }
 
+  async updateCreditNote<T>(params: MoloniRequestParams): Promise<T> {
+    return this.post<T>('creditNotes/update/', params);
+  }
+
   // ============================================================
   // INTERNAL HTTP
   // ============================================================
@@ -205,8 +209,7 @@ export class MoloniApiService {
     params: MoloniRequestParams = {},
     includeCompanyId = true,
   ): Promise<T> {
-    const accessToken =
-      await this.authService.getValidAccessToken();
+    const accessToken = await this.authService.getValidAccessToken();
 
     const companyId = includeCompanyId ? await this.getCompanyId() : undefined;
 
@@ -256,11 +259,14 @@ export class MoloniApiService {
 
     if (Array.isArray(result)) {
       const validationErrors = result
-        .filter((item): item is { code: string; description: string } =>
-          Boolean(item) && typeof item === 'object' &&
-          'code' in item && 'description' in item &&
-          typeof item.code === 'string' && typeof item.description === 'string',
-        )
+        .filter((item): item is { code: string; description: string } => {
+          if (!item || typeof item !== 'object') return false;
+          const candidate = item as Record<string, unknown>;
+          return (
+            typeof candidate.code === 'string' &&
+            typeof candidate.description === 'string'
+          );
+        })
         .map((item) => item.description || item.code)
         .filter((message): message is string => Boolean(message));
 
@@ -271,11 +277,7 @@ export class MoloniApiService {
       }
     }
 
-    if (
-      result &&
-      typeof result === 'object' &&
-      !Array.isArray(result)
-    ) {
+    if (result && typeof result === 'object' && !Array.isArray(result)) {
       const error = result as {
         error?: string;
         error_description?: string;
@@ -284,9 +286,7 @@ export class MoloniApiService {
 
       if (error.error || error.error_description) {
         throw new ServiceUnavailableException(
-          error.error_description ||
-          error.message ||
-          error.error,
+          error.error_description || error.message || error.error,
         );
       }
     }

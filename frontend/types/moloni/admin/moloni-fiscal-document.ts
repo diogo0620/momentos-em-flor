@@ -1,6 +1,7 @@
 export type MoloniDocumentStatus =
     | "QUEUED"
     | "PROCESSING"
+    | "DRAFT"
     | "ISSUED"
     | "FAILED"
     | "NOT_REQUIRED";
@@ -23,13 +24,15 @@ export type MoloniFiscalDocument = {
     invoiceEmailId: string | null;
     invoiceEmailSentAt: string | null;
     invoiceEmailLastError: string | null;
-    receiptStatus: MoloniDocumentStatus;
-    receiptId: string | null;
-    receiptIssuedAt: string | null;
     creditNoteRequiredAt: string | null;
     creditNoteStatus: MoloniDocumentStatus;
     creditNoteId: string | null;
     creditNoteRecordedAt: string | null;
+    creditNotePdfUrl: string | null;
+    creditNotePdfUrlUpdatedAt: string | null;
+    creditNoteEmailId: string | null;
+    creditNoteEmailSentAt: string | null;
+    creditNoteEmailLastError: string | null;
     attempts: number;
     lastAttemptAt: string | null;
     lastError: string | null;

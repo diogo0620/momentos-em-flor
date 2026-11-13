@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '@/prisma/prisma.service';
 import { MoloniApiService } from '../api/moloni-api.service';
 
-export type MoloniPdfDocumentKind = 'invoice' | 'receipt' | 'credit-note';
+export type MoloniPdfDocumentKind = 'invoice' | 'credit-note';
 
 export type MoloniPdfDocument = {
   buffer: Buffer;
@@ -33,7 +33,6 @@ export class MoloniDocumentPdfService {
       select: {
         id: true,
         invoiceId: true,
-        receiptId: true,
         creditNoteId: true,
         order: { select: { orderNumber: true } },
       },
@@ -43,20 +42,21 @@ export class MoloniDocumentPdfService {
       throw new BadRequestException('Documento fiscal não encontrado.');
     }
 
-    const documentId = kind === 'invoice'
-      ? record.invoiceId
-      : kind === 'receipt'
-        ? record.receiptId
-        : record.creditNoteId;
+    const documentId =
+      kind === 'invoice' ? record.invoiceId : record.creditNoteId;
 
     if (!documentId) {
-      throw new BadRequestException('O documento ainda não foi emitido na Moloni.');
+      throw new BadRequestException(
+        'O documento ainda não foi emitido na Moloni.',
+      );
     }
 
     return this.download(
       documentId,
       this.buildFilename(record.order.orderNumber, kind),
-      kind === 'invoice' ? this.invoiceLinkObserver(record.id) : undefined,
+      kind === 'invoice'
+        ? this.invoiceLinkObserver(record.id)
+        : this.creditNoteLinkObserver(record.id),
     );
   }
 
@@ -71,7 +71,9 @@ export class MoloniDocumentPdfService {
     });
 
     if (!record?.invoiceId) {
-      throw new BadRequestException('A fatura desta encomenda ainda não está disponível.');
+      throw new BadRequestException(
+        'A fatura desta encomenda ainda não está disponível.',
+      );
     }
 
     return this.download(
@@ -97,7 +99,9 @@ export class MoloniDocumentPdfService {
       throw new BadRequestException('Encomenda não encontrada.');
     }
     if (!order.moloniFiscalDocument?.invoiceId) {
-      throw new BadRequestException('A fatura desta encomenda ainda não está disponível.');
+      throw new BadRequestException(
+        'A fatura desta encomenda ainda não está disponível.',
+      );
     }
 
     return this.download(
@@ -135,7 +139,9 @@ export class MoloniDocumentPdfService {
           redirect: 'follow',
           signal: AbortSignal.timeout(30_000),
         });
-        const declaredLength = Number(response.headers.get('content-length') ?? 0);
+        const declaredLength = Number(
+          response.headers.get('content-length') ?? 0,
+        );
         if (response.ok && declaredLength <= MAX_PDF_BYTES) {
           const received = Buffer.from(await response.arrayBuffer());
           const headerIndex = received.subarray(0, 1024).indexOf('%PDF-');
@@ -182,6 +188,18 @@ export class MoloniDocumentPdfService {
     };
   }
 
+  private creditNoteLinkObserver(fiscalDocumentId: number): PdfLinkObserver {
+    return async (url) => {
+      await this.prisma.moloniFiscalDocument.update({
+        where: { id: fiscalDocumentId },
+        data: {
+          creditNotePdfUrl: url,
+          creditNotePdfUrlUpdatedAt: new Date(),
+        },
+      });
+    };
+  }
+
   private buildDownloadUrl(value: string | undefined, signed: boolean): string {
     if (!value) {
       throw new ServiceUnavailableException(
@@ -206,13 +224,12 @@ export class MoloniDocumentPdfService {
     }
   }
 
-  private buildFilename(orderNumber: string, kind: MoloniPdfDocumentKind): string {
+  private buildFilename(
+    orderNumber: string,
+    kind: MoloniPdfDocumentKind,
+  ): string {
     const safeOrderNumber = orderNumber.replace(/[^a-zA-Z0-9_-]/g, '-');
-    const prefix = kind === 'invoice'
-      ? 'fatura'
-      : kind === 'receipt'
-        ? 'recibo'
-        : 'nota-de-credito';
+    const prefix = kind === 'invoice' ? 'fatura' : 'nota-de-credito';
     return `${prefix}-${safeOrderNumber}.pdf`;
   }
 }

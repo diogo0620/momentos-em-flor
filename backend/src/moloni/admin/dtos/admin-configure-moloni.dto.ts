@@ -1,4 +1,3 @@
-
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import {
@@ -59,32 +58,38 @@ export class AdminConfigureMoloniDto {
   @MaxLength(2048)
   password?: string;
 
-  @ValidateIf((_object, value) => value !== '' && value !== undefined && value !== null)
+  @ValidateIf(
+    (_object, value) => value !== '' && value !== undefined && value !== null,
+  )
   @IsNumberString()
   invoiceDocumentSetId?: string;
 
-  @ValidateIf((_object, value) => value !== '' && value !== undefined && value !== null)
+  @ValidateIf(
+    (_object, value) => value !== '' && value !== undefined && value !== null,
+  )
   @IsNumberString()
   creditNoteDocumentSetId?: string;
 
-  @ValidateIf((_object, value) => value !== '' && value !== undefined && value !== null)
-  @IsNumberString()
-  receiptDocumentSetId?: string;
-
-  @ValidateIf((_object, value) => value !== '' && value !== undefined && value !== null)
+  @ValidateIf(
+    (_object, value) => value !== '' && value !== undefined && value !== null,
+  )
   @IsNumberString()
   paymentMethodId?: string;
 
-  @ValidateIf((_object, value) => value !== '' && value !== undefined && value !== null)
+  @ValidateIf(
+    (_object, value) => value !== '' && value !== undefined && value !== null,
+  )
   @IsNumberString()
   defaultCustomerId?: string;
 
-  @ValidateIf((_object, value) => value !== '' && value !== undefined && value !== null)
+  @ValidateIf(
+    (_object, value) => value !== '' && value !== undefined && value !== null,
+  )
   @IsNumberString()
   defaultProductId?: string;
 
   @IsBoolean()
-  issueReceiptAfterPayment!: boolean;
+  createDocumentsAsDraft!: boolean;
 
   @IsBoolean()
   @IsOptional()

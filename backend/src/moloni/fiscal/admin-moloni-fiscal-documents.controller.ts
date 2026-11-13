@@ -56,12 +56,6 @@ export class AdminMoloniFiscalDocumentsController {
     return this.toPdfStream(await this.service.getPdf(id, 'invoice'));
   }
 
-  @Get(':id/receipt-pdf')
-  @Header('Cache-Control', 'private, no-store')
-  async getReceiptPdf(@Param('id', ParseIntPipe) id: number) {
-    return this.toPdfStream(await this.service.getPdf(id, 'receipt'));
-  }
-
   @Get(':id/credit-note-pdf')
   @Header('Cache-Control', 'private, no-store')
   async getCreditNotePdf(@Param('id', ParseIntPipe) id: number) {
@@ -81,6 +75,30 @@ export class AdminMoloniFiscalDocumentsController {
   @HttpCode(HttpStatus.OK)
   issueCreditNote(@Param('id', ParseIntPipe) id: number) {
     return this.service.issueCreditNote(id);
+  }
+
+  @Post(':id/confirm-invoice')
+  @HttpCode(HttpStatus.OK)
+  confirmInvoice(@Param('id', ParseIntPipe) id: number) {
+    return this.service.confirmInvoice(id);
+  }
+
+  @Post(':id/confirm-credit-note')
+  @HttpCode(HttpStatus.OK)
+  confirmCreditNote(@Param('id', ParseIntPipe) id: number) {
+    return this.service.confirmCreditNote(id);
+  }
+
+  @Post(':id/send-invoice-email')
+  @HttpCode(HttpStatus.OK)
+  sendInvoiceEmail(@Param('id', ParseIntPipe) id: number) {
+    return this.service.sendInvoiceEmail(id);
+  }
+
+  @Post(':id/send-credit-note-email')
+  @HttpCode(HttpStatus.OK)
+  sendCreditNoteEmail(@Param('id', ParseIntPipe) id: number) {
+    return this.service.sendCreditNoteEmail(id);
   }
 
   private toPdfStream(file: { buffer: Buffer; filename: string }) {

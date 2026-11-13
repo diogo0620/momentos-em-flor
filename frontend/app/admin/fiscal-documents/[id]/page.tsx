@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -10,6 +10,7 @@ import {
   ExternalLink,
   FileText,
   Loader2,
+  Mail,
   RefreshCw,
   Save,
 } from "lucide-react";
@@ -39,6 +40,7 @@ type IntegrationContext = {
 const statusLabels: Record<MoloniDocumentStatus, string> = {
   QUEUED: "Por emitir",
   PROCESSING: "A processar",
+  DRAFT: "Rascunho",
   ISSUED: "Emitido",
   FAILED: "Falhou",
   NOT_REQUIRED: "Não necessário",
@@ -47,6 +49,7 @@ const statusLabels: Record<MoloniDocumentStatus, string> = {
 const statusStyles: Record<MoloniDocumentStatus, string> = {
   QUEUED: "bg-amber-50 text-amber-800",
   PROCESSING: "bg-blue-50 text-blue-700",
+  DRAFT: "bg-violet-50 text-violet-700",
   ISSUED: "bg-green-50 text-green-700",
   FAILED: "bg-red-50 text-red-700",
   NOT_REQUIRED: "bg-gray-100 text-gray-600",
@@ -60,37 +63,56 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
-function StatusCard({
+function ProcessCard({
   title,
   status,
   moloniId,
   date,
+  pdfUrl,
+  emailSentAt,
+  emailError,
+  actions,
 }: {
   title: string;
   status: MoloniDocumentStatus;
   moloniId: string | null;
   date: string | null;
+  pdfUrl: string | null;
+  emailSentAt: string | null;
+  emailError: string | null;
+  actions: ReactNode;
 }) {
+  const created = Boolean(moloniId);
+  const issued = status === "ISSUED";
+  const pdfReady = Boolean(pdfUrl);
+  const emailSent = Boolean(emailSentAt);
+  const complete = created && issued && pdfReady && emailSent;
+  const steps = [
+    { label: "Documento criado no Moloni", done: created, detail: moloniId ? `ID ${moloniId}` : "Ainda não criado" },
+    { label: "Documento confirmado", done: issued, detail: issued ? formatDate(date) : status === "DRAFT" ? "Aguarda confirmação" : statusLabels[status] },
+    { label: "PDF disponível", done: pdfReady, detail: pdfReady ? "Ligação obtida" : issued ? "Por obter" : "Disponível após confirmação" },
+    { label: "Email enviado ao cliente", done: emailSent, detail: emailSent ? formatDate(emailSentAt) : issued ? "Pendente" : "Disponível após confirmação" },
+  ];
   return (
-    <article className="border border-[#E2E7DF] bg-white p-5">
+    <article className="border border-[#E2E7DF] bg-white p-5 shadow-sm sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <h2 className="font-semibold text-[#26392F]">{title}</h2>
         <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[status]}`}
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${complete ? "bg-green-100 text-green-800" : statusStyles[status]}`}
         >
-          {statusLabels[status]}
+          {complete ? "Processo concluído" : statusLabels[status]}
         </span>
       </div>
-      <dl className="mt-5 grid gap-3 text-sm">
-        <div className="flex justify-between gap-4">
-          <dt className="text-[#778077]">ID Moloni</dt>
-          <dd className="font-semibold text-[#26392F]">{moloniId ?? "—"}</dd>
-        </div>
-        <div className="flex justify-between gap-4">
-          <dt className="text-[#778077]">Data de emissão</dt>
-          <dd className="text-right text-[#26392F]">{formatDate(date)}</dd>
-        </div>
-      </dl>
+      <ol className="mt-6 space-y-4">
+        {steps.map((step, index) => (
+          <li key={step.label} className="flex gap-3">
+            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${step.done ? "bg-[#40513C] text-white" : "bg-[#EEF1EA] text-[#778077]"}`}>{step.done ? "✓" : index + 1}</span>
+            <div><p className="text-sm font-semibold text-[#26392F]">{step.label}</p><p className="mt-0.5 text-xs text-[#778077]">{step.detail}</p></div>
+          </li>
+        ))}
+      </ol>
+      {emailError && <p className="mt-4 border-l-2 border-amber-500 pl-3 text-xs leading-5 text-amber-800">{emailError}</p>}
+      <div className="mt-6 flex flex-wrap gap-2 border-t border-[#E8ECE5] pt-5">{actions}</div>
     </article>
   );
 }
@@ -225,9 +247,7 @@ export default function FiscalDocumentDetailPage() {
   async function issue() {
     if (!document) return;
     const confirmed = window.confirm(
-      document.invoiceStatus === "ISSUED"
-        ? "Confirmas uma nova tentativa de processamento do recibo?"
-        : "Confirmas a emissão da fatura na Moloni? Esta ação pode criar um documento fiscal real.",
+      "Confirmas a criação da fatura no Moloni? O estado inicial respeita a configuração de rascunho.",
     );
     if (!confirmed) return;
     setAction("issue");
@@ -271,7 +291,36 @@ export default function FiscalDocumentDetailPage() {
     }
   }
 
-  async function openPdf(kind: "invoice" | "receipt" | "credit-note") {
+  async function confirmDocument(kind: "invoice" | "credit-note") {
+    if (!window.confirm(`Confirmas o fecho ${kind === "invoice" ? "da fatura" : "da nota de crédito"} no Moloni? Depois desta ação o documento deixa de ser rascunho.`)) return;
+    setAction(`confirm-${kind}`);
+    setError("");
+    try {
+      if (kind === "invoice") await adminMoloniFiscalDocumentsApi.confirmInvoice(id);
+      else await adminMoloniFiscalDocumentsApi.confirmCreditNote(id);
+      setSuccess("Documento confirmado no Moloni. O PDF e o email estão agora a ser processados.");
+      reload();
+    } catch (confirmError) {
+      setError(confirmError instanceof Error ? confirmError.message : "Não foi possível confirmar o documento.");
+      reload();
+    } finally { setAction(null); }
+  }
+
+  async function sendEmail(kind: "invoice" | "credit-note") {
+    setAction(`email-${kind}`);
+    setError("");
+    try {
+      if (kind === "invoice") await adminMoloniFiscalDocumentsApi.sendInvoiceEmail(id);
+      else await adminMoloniFiscalDocumentsApi.sendCreditNoteEmail(id);
+      setSuccess("Email enviado ao cliente.");
+      reload();
+    } catch (emailError) {
+      setError(emailError instanceof Error ? emailError.message : "Não foi possível enviar o email.");
+      reload();
+    } finally { setAction(null); }
+  }
+
+  async function openPdf(kind: "invoice" | "credit-note") {
     const popup = window.open("about:blank", "_blank");
     if (!popup) {
       setError(
@@ -287,15 +336,14 @@ export default function FiscalDocumentDetailPage() {
       popup.location.replace(objectUrl);
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
     } catch (pdfError) {
-      const refreshedDocument =
-        kind === "invoice"
-          ? await adminMoloniFiscalDocumentsApi.getDetail(id).catch(() => null)
-          : null;
+      const refreshedDocument = await adminMoloniFiscalDocumentsApi.getDetail(id).catch(() => null);
       if (refreshedDocument) setDocument(refreshedDocument);
       const fallbackUrl =
-        refreshedDocument?.invoicePdfUrl ?? document?.invoicePdfUrl;
+        kind === "invoice"
+          ? refreshedDocument?.invoicePdfUrl ?? document?.invoicePdfUrl
+          : refreshedDocument?.creditNotePdfUrl ?? document?.creditNotePdfUrl;
 
-      if (kind === "invoice" && fallbackUrl) {
+      if (fallbackUrl) {
         popup.location.replace(fallbackUrl);
         setSuccess(
           "O download pelo servidor falhou; foi aberta a ligação guardada da Moloni.",
@@ -331,7 +379,6 @@ export default function FiscalDocumentDetailPage() {
 
   const failed =
     document.invoiceStatus === "FAILED" ||
-    document.receiptStatus === "FAILED" ||
     document.creditNoteStatus === "FAILED";
 
   return (
@@ -363,7 +410,7 @@ export default function FiscalDocumentDetailPage() {
           >
             Ver encomenda <ExternalLink size={15} />
           </Link>
-          {document.invoiceStatus !== "ISSUED" && (
+          {!["ISSUED", "DRAFT"].includes(document.invoiceStatus) && (
             <button
               type="button"
               onClick={() => void issue()}
@@ -402,24 +449,39 @@ export default function FiscalDocumentDetailPage() {
         </div>
       )}
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <StatusCard
+      <section className="grid gap-5 lg:grid-cols-2">
+        <ProcessCard
           title="Fatura"
           status={document.invoiceStatus}
           moloniId={document.invoiceId}
           date={document.invoiceIssuedAt}
+          pdfUrl={document.invoicePdfUrl}
+          emailSentAt={document.invoiceEmailSentAt}
+          emailError={document.invoiceEmailLastError}
+          actions={<>
+            {!document.invoiceId && <button onClick={() => void issue()} disabled={action !== null} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#40513C] px-4 text-sm font-semibold text-white disabled:opacity-50"><RefreshCw size={15} /> Criar fatura</button>}
+            {document.invoiceStatus === "DRAFT" && <button onClick={() => void confirmDocument("invoice")} disabled={action !== null} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-violet-700 px-4 text-sm font-semibold text-white disabled:opacity-50"><CheckCircle2 size={15} /> Confirmar rascunho</button>}
+            {document.invoiceStatus === "ISSUED" && <button onClick={() => void openPdf("invoice")} disabled={action !== null} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#CBD3C3] px-4 text-sm font-semibold text-[#40513C] disabled:opacity-50"><FileText size={15} /> Abrir PDF</button>}
+            {document.invoiceStatus === "ISSUED" && <button onClick={() => void sendEmail("invoice")} disabled={action !== null} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#CBD3C3] px-4 text-sm font-semibold text-[#40513C] disabled:opacity-50"><Mail size={15} /> {document.invoiceEmailSentAt ? "Reenviar email" : "Enviar email"}</button>}
+            {document.invoiceId && <a href="https://www.moloni.pt/" target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-2 px-2 text-sm font-semibold text-[#40513C]">Abrir Moloni <ExternalLink size={14} /></a>}
+          </>}
         />
-        <StatusCard
-          title="Recibo"
-          status={document.receiptStatus}
-          moloniId={document.receiptId}
-          date={document.receiptIssuedAt}
-        />
-        <StatusCard
+        <ProcessCard
           title="Nota de crédito"
           status={document.creditNoteStatus}
           moloniId={document.creditNoteId}
           date={document.creditNoteRecordedAt}
+          pdfUrl={document.creditNotePdfUrl}
+          emailSentAt={document.creditNoteEmailSentAt}
+          emailError={document.creditNoteEmailLastError}
+          actions={<>
+            {document.creditNoteRequiredAt && !document.creditNoteId && <button onClick={() => void issueCreditNote()} disabled={action !== null} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-amber-700 px-4 text-sm font-semibold text-white disabled:opacity-50"><RefreshCw size={15} /> Criar nota de crédito</button>}
+            {document.creditNoteStatus === "DRAFT" && <button onClick={() => void confirmDocument("credit-note")} disabled={action !== null} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-violet-700 px-4 text-sm font-semibold text-white disabled:opacity-50"><CheckCircle2 size={15} /> Confirmar rascunho</button>}
+            {document.creditNoteStatus === "ISSUED" && <button onClick={() => void openPdf("credit-note")} disabled={action !== null} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#CBD3C3] px-4 text-sm font-semibold text-[#40513C] disabled:opacity-50"><FileText size={15} /> Abrir PDF</button>}
+            {document.creditNoteStatus === "ISSUED" && <button onClick={() => void sendEmail("credit-note")} disabled={action !== null} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#CBD3C3] px-4 text-sm font-semibold text-[#40513C] disabled:opacity-50"><Mail size={15} /> {document.creditNoteEmailSentAt ? "Reenviar email" : "Enviar email"}</button>}
+            {document.creditNoteId && <a href="https://www.moloni.pt/" target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-2 px-2 text-sm font-semibold text-[#40513C]">Abrir Moloni <ExternalLink size={14} /></a>}
+            {!document.creditNoteRequiredAt && <span className="text-sm text-[#778077]">Não é necessária para esta encomenda.</span>}
+          </>}
         />
       </section>
 
@@ -502,64 +564,6 @@ export default function FiscalDocumentDetailPage() {
             </Link>
           )}
         </article>
-      </section>
-
-      <section className="border border-[#E2E7DF] bg-white p-5 sm:p-6">
-          <h2 className="text-lg font-semibold text-[#26392F]">
-            Documentos e ações
-          </h2>
-          <div className="mt-4 flex flex-wrap gap-3">
-            {document.invoiceId ? (
-              <button
-                onClick={() => void openPdf("invoice")}
-                disabled={action !== null}
-                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#CBD3C3] px-4 text-sm font-semibold text-[#40513C] disabled:opacity-50"
-              >
-                <FileText size={16} /> Abrir fatura PDF
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void issue()}
-                disabled={action !== null}
-                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#40513C] px-4 text-sm font-semibold text-white disabled:opacity-50"
-              >
-                <FileText size={16} /> Emitir e obter fatura
-              </button>
-            )}
-            {document.receiptId && (
-              <button
-                onClick={() => void openPdf("receipt")}
-                disabled={action !== null}
-                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#CBD3C3] px-4 text-sm font-semibold text-[#40513C] disabled:opacity-50"
-              >
-                <FileText size={16} /> Abrir recibo PDF
-              </button>
-            )}
-            {document.creditNoteId && (
-              <button
-                onClick={() => void openPdf("credit-note")}
-                disabled={action !== null}
-                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#CBD3C3] px-4 text-sm font-semibold text-[#40513C] disabled:opacity-50"
-              >
-                <FileText size={16} /> Abrir nota de crédito PDF
-              </button>
-            )}
-            {document.creditNoteRequiredAt && !document.creditNoteId && (
-              <button
-                onClick={() => void issueCreditNote()}
-                disabled={action !== null}
-                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-amber-700 px-4 text-sm font-semibold text-white disabled:opacity-50"
-              >
-                {action === "credit-note" ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <RefreshCw size={16} />
-                )}{" "}
-                Emitir nota de crédito
-              </button>
-            )}
-          </div>
       </section>
 
       <section className="border border-[#E2E7DF] bg-white p-5 sm:p-6">

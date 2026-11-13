@@ -7,8 +7,7 @@ export type AdminConfigureMoloni = {
     password: string;
     invoiceDocumentSetId: string;
     creditNoteDocumentSetId: string;
-    receiptDocumentSetId: string;
     paymentMethodId: string;
-    issueReceiptAfterPayment: boolean;
+    createDocumentsAsDraft: boolean;
     signedPdf: boolean;
 }

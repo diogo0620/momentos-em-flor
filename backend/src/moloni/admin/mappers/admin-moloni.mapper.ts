@@ -1,4 +1,3 @@
-
 import { Injectable } from '@nestjs/common';
 import { MoloniSettings } from '@prisma/client';
 
@@ -6,9 +5,7 @@ import { AdminMoloniResponseDto } from '../dtos/admin-moloni-response.dto';
 
 @Injectable()
 export class AdminMoloniMapper {
-  toResponse(
-    settings: MoloniSettings | null,
-  ): AdminMoloniResponseDto {
+  toResponse(settings: MoloniSettings | null): AdminMoloniResponseDto {
     if (!settings) {
       return {
         configured: false,
@@ -16,9 +13,9 @@ export class AdminMoloniMapper {
         connected: false,
         lastConnectionCheckAt: null,
         lastConnectionError: null,
-      issueReceiptAfterPayment: false,
-      signedPdf: true,
-      fiscalConfigurationComplete: false,
+        createDocumentsAsDraft: true,
+        signedPdf: true,
+        fiscalConfigurationComplete: false,
       };
     }
 
@@ -40,17 +37,13 @@ export class AdminMoloniMapper {
       updatedAt: settings.updatedAt,
       invoiceDocumentSetId: settings.invoiceDocumentSetId,
       creditNoteDocumentSetId: settings.creditNoteDocumentSetId,
-      receiptDocumentSetId: settings.receiptDocumentSetId,
       paymentMethodId: settings.paymentMethodId,
       defaultCustomerId: settings.defaultCustomerId,
       defaultProductId: settings.defaultProductId,
-      issueReceiptAfterPayment: settings.issueReceiptAfterPayment,
+      createDocumentsAsDraft: settings.createDocumentsAsDraft,
       signedPdf: settings.signedPdf,
       fiscalConfigurationComplete: Boolean(
-        settings.invoiceDocumentSetId &&
-        settings.creditNoteDocumentSetId &&
-        (!settings.issueReceiptAfterPayment ||
-          (settings.receiptDocumentSetId && settings.paymentMethodId)),
+        settings.invoiceDocumentSetId && settings.creditNoteDocumentSetId,
       ),
     };
   }

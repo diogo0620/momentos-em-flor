@@ -37,9 +37,25 @@ class AdminMoloniFiscalDocumentsApi extends BaseApi<
     });
   }
 
+  async confirmInvoice(id: number): Promise<void> {
+    await apiFetch(`${this.endpoint}/${id}/confirm-invoice`, { method: "POST" });
+  }
+
+  async confirmCreditNote(id: number): Promise<void> {
+    await apiFetch(`${this.endpoint}/${id}/confirm-credit-note`, { method: "POST" });
+  }
+
+  async sendInvoiceEmail(id: number): Promise<void> {
+    await apiFetch(`${this.endpoint}/${id}/send-invoice-email`, { method: "POST" });
+  }
+
+  async sendCreditNoteEmail(id: number): Promise<void> {
+    await apiFetch(`${this.endpoint}/${id}/send-credit-note-email`, { method: "POST" });
+  }
+
   async getPdf(
     id: number,
-    kind: "invoice" | "receipt" | "credit-note",
+    kind: "invoice" | "credit-note",
   ): Promise<Blob> {
     return apiFetchBlob(`${this.endpoint}/${id}/${kind}-pdf`);
   }

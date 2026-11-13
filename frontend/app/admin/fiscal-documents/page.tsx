@@ -23,6 +23,7 @@ const PAGE_SIZE = 15;
 const STATUS_LABELS: Record<MoloniDocumentStatus, string> = {
   QUEUED: "Por emitir",
   PROCESSING: "A processar",
+  DRAFT: "Rascunho",
   ISSUED: "Emitida",
   FAILED: "Falhou",
   NOT_REQUIRED: "Não necessário",
@@ -31,6 +32,7 @@ const STATUS_LABELS: Record<MoloniDocumentStatus, string> = {
 const STATUS_STYLES: Record<MoloniDocumentStatus, string> = {
   QUEUED: "bg-amber-50 text-amber-800",
   PROCESSING: "bg-blue-50 text-blue-700",
+  DRAFT: "bg-violet-50 text-violet-700",
   ISSUED: "bg-green-50 text-green-700",
   FAILED: "bg-red-50 text-red-700",
   NOT_REQUIRED: "bg-gray-100 text-gray-600",
@@ -156,6 +158,7 @@ export default function FiscalDocumentsPage() {
               [
                 "QUEUED",
                 "PROCESSING",
+                "DRAFT",
                 "ISSUED",
                 "FAILED",
               ] as MoloniDocumentStatus[]
@@ -189,7 +192,7 @@ export default function FiscalDocumentsPage() {
                 <th className="px-6 py-4">Cliente</th>
                 <th className="px-6 py-4">Total</th>
                 <th className="px-6 py-4">Fatura</th>
-                <th className="px-6 py-4">Recibo</th>
+                <th className="px-6 py-4">Nota de crédito</th>
                 <th className="px-6 py-4">Último resultado</th>
                 <th className="px-6 py-4 text-right">Ação</th>
               </tr>
@@ -259,13 +262,13 @@ export default function FiscalDocumentsPage() {
                     </td>
                     <td className="px-6 py-5">
                       <span
-                        className={`rounded-full px-3 py-1.5 text-xs font-semibold ${STATUS_STYLES[item.receiptStatus]}`}
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold ${STATUS_STYLES[item.creditNoteStatus]}`}
                       >
-                        {STATUS_LABELS[item.receiptStatus]}
+                        {STATUS_LABELS[item.creditNoteStatus]}
                       </span>
-                      {item.receiptId && (
+                      {item.creditNoteId && (
                         <p className="mt-2 text-xs text-gray-400">
-                          ID {item.receiptId}
+                          ID {item.creditNoteId}
                         </p>
                       )}
                     </td>
@@ -281,10 +284,14 @@ export default function FiscalDocumentsPage() {
                           {item.lastError}
                         </span>
                       ) : item.invoiceEmailSentAt ? (
-                        "Fatura emitida e enviada por email"
+                        item.invoicePdfUrl
+                          ? "Fatura concluída: emitida, PDF obtido e email enviado"
+                          : "Email enviado; falta confirmar a ligação ao PDF"
                       ) : (
                         item.invoiceEmailLastError ||
-                        (item.invoiceStatus === "ISSUED"
+                        (item.invoiceStatus === "DRAFT"
+                          ? "Rascunho criado; aguarda confirmação"
+                          : item.invoiceStatus === "ISSUED"
                           ? "Fatura emitida; envio de email pendente"
                           : "Aguarda emissão")
                       )}

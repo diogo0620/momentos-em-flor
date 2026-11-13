@@ -86,9 +86,8 @@ export default function SettingsPage() {
         password: "",
         invoiceDocumentSetId: "",
         creditNoteDocumentSetId: "",
-        receiptDocumentSetId: "",
         paymentMethodId: "",
-        issueReceiptAfterPayment: false,
+        createDocumentsAsDraft: true,
         signedPdf: true,
     });
 
@@ -159,9 +158,8 @@ export default function SettingsPage() {
                 username: moloniResponse.username ?? "",
                 invoiceDocumentSetId: moloniResponse.invoiceDocumentSetId ?? "",
                 creditNoteDocumentSetId: moloniResponse.creditNoteDocumentSetId ?? "",
-                receiptDocumentSetId: moloniResponse.receiptDocumentSetId ?? "",
                 paymentMethodId: moloniResponse.paymentMethodId ?? "",
-                issueReceiptAfterPayment: moloniResponse.issueReceiptAfterPayment,
+                createDocumentsAsDraft: moloniResponse.createDocumentsAsDraft ?? true,
                 signedPdf: moloniResponse.signedPdf ?? true,
             }));
         } catch (err) {
@@ -278,9 +276,8 @@ export default function SettingsPage() {
             password: moloniForm.password,
             invoiceDocumentSetId: moloniForm.invoiceDocumentSetId.trim(),
             creditNoteDocumentSetId: moloniForm.creditNoteDocumentSetId.trim(),
-            receiptDocumentSetId: moloniForm.receiptDocumentSetId.trim(),
             paymentMethodId: moloniForm.paymentMethodId.trim(),
-            issueReceiptAfterPayment: moloniForm.issueReceiptAfterPayment,
+            createDocumentsAsDraft: moloniForm.createDocumentsAsDraft,
             signedPdf: moloniForm.signedPdf,
         };
 
@@ -290,10 +287,6 @@ export default function SettingsPage() {
             return;
         }
 
-        if (payload.issueReceiptAfterPayment && (!payload.receiptDocumentSetId || !payload.paymentMethodId)) {
-            setMoloniError("Para emitir recibos, configura a série de recibos e o método de pagamento.");
-            return;
-        }
 
         try {
             setIsSavingMoloni(true);
@@ -710,7 +703,7 @@ export default function SettingsPage() {
                     <div className="border-t border-gray-100 pt-5">
                         <div className="mb-4">
                             <h3 className="font-semibold text-[#2F3B2A]">Emissão fiscal</h3>
-                            <p className="mt-1 text-xs leading-5 text-gray-400">A fatura é o documento padrão. Os clientes e artigos são criados e associados automaticamente; o recibo permanece desligado salvo indicação contabilística.</p>
+                            <p className="mt-1 text-xs leading-5 text-gray-400">As faturas e notas de crédito podem ser criadas como rascunho para validação antes de serem fechadas no Moloni.</p>
                         </div>
                         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                             <div>
@@ -724,27 +717,14 @@ export default function SettingsPage() {
                         </div>
 
                         <label className="mt-5 flex items-start gap-3 rounded-2xl border border-gray-200 p-4">
-                            <input type="checkbox" checked={moloniForm.issueReceiptAfterPayment} onChange={(event) => setMoloniForm((current) => ({ ...current, issueReceiptAfterPayment: event.target.checked }))} className="mt-1 h-4 w-4 rounded border-gray-300 text-[#55624A]" />
-                            <span><span className="block text-sm font-semibold text-gray-700">Emitir recibo separado após a fatura</span><span className="mt-1 block text-xs text-gray-400">Ativa apenas quando confirmado como necessário pela contabilidade.</span></span>
+                            <input type="checkbox" checked={moloniForm.createDocumentsAsDraft} onChange={(event) => setMoloniForm((current) => ({ ...current, createDocumentsAsDraft: event.target.checked }))} className="mt-1 h-4 w-4 rounded border-gray-300 text-[#55624A]" />
+                            <span><span className="block text-sm font-semibold text-gray-700">Criar documentos como rascunho</span><span className="mt-1 block text-xs text-gray-400">Exige confirmação manual no detalhe do documento antes de obter o PDF e enviar o email ao cliente.</span></span>
                         </label>
 
                         <label className="mt-3 flex items-start gap-3 rounded-2xl border border-gray-200 p-4">
                             <input type="checkbox" checked={moloniForm.signedPdf} onChange={(event) => setMoloniForm((current) => ({ ...current, signedPdf: event.target.checked }))} className="mt-1 h-4 w-4 rounded border-gray-300 text-[#55624A]" />
                             <span><span className="block text-sm font-semibold text-gray-700">Pedir PDF assinado</span><span className="mt-1 block text-xs text-gray-400">Controla o parâmetro signed enviado à Moloni quando é pedida a ligação do PDF.</span></span>
                         </label>
-
-                        {moloniForm.issueReceiptAfterPayment && (
-                            <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
-                                <div>
-                                    <label htmlFor="moloniReceiptSet" className="mb-2 block text-sm font-semibold text-gray-700">ID da série de recibos</label>
-                                    <input id="moloniReceiptSet" inputMode="numeric" value={moloniForm.receiptDocumentSetId} onChange={(event) => setMoloniForm((current) => ({ ...current, receiptDocumentSetId: event.target.value }))} className={inputClassName} />
-                                </div>
-                                <div>
-                                    <label htmlFor="moloniPaymentMethod" className="mb-2 block text-sm font-semibold text-gray-700">ID do método de pagamento</label>
-                                    <input id="moloniPaymentMethod" inputMode="numeric" value={moloniForm.paymentMethodId} onChange={(event) => setMoloniForm((current) => ({ ...current, paymentMethodId: event.target.value }))} className={inputClassName} />
-                                </div>
-                            </div>
-                        )}
 
                         <p className={`mt-4 text-xs font-semibold ${moloniSettings?.fiscalConfigurationComplete ? "text-green-700" : "text-amber-700"}`}>
                             {moloniSettings?.fiscalConfigurationComplete ? "Configuração fiscal completa." : "A configuração fiscal ainda está incompleta."}
