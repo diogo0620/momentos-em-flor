@@ -15,4 +15,5 @@ export const legalBusiness = {
         "https://www.livroreclamacoes.pt/Inicio/",
 };
 
-export const legalLastUpdated = "5 de novembro de 2026";
+export const legalLastUpdated = "18 de novembro de 2026";
+export const legalTermsVersion = "2026-11-18";

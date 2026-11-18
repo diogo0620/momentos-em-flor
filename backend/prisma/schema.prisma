@@ -571,6 +571,9 @@ model Order {
   deliveryDate         DateTime
   deliveryTimeSlot     DeliveryTimeSlot
   deliveryInstructions String?
+  hidePurchaserIdentity Boolean @default(false)
+  legalTermsVersion String?
+  legalTermsAcceptedAt DateTime?
 
   //
   // Delivery Address Snapshot

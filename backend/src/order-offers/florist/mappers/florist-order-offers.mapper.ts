@@ -46,6 +46,7 @@ export class FloristOrderOffersMapper {
                     deliveryStreet2: offer.order.deliveryStreet2,
                     deliveryPostalCode: offer.order.deliveryPostalCode,
                     deliveryInstructions: offer.order.deliveryInstructions,
+                    hidePurchaserIdentity: offer.order.hidePurchaserIdentity,
                     cardMessage: offer.order.cardMessage,
                 }),
 

@@ -340,6 +340,14 @@ export default function FloristOrderDetailPage() {
                         </div>
                     </section>
 
+                    {order.hidePurchaserIdentity && (
+                        <section role="alert" className="rounded-3xl border border-[#D7C7A3] bg-[#FFF9EA] p-6 shadow-sm sm:p-8">
+                            <p className="text-xs font-bold uppercase tracking-[.14em] text-[#8B6B2F]">Entrega confidencial</p>
+                            <h2 className="mt-2 text-lg font-bold text-[#493B22]">Não revelar quem realizou a compra</h2>
+                            <p className="mt-2 text-sm leading-6 text-[#6F5A34]">Não partilhes com o destinatário o nome, contacto ou qualquer outro dado da pessoa que comprou. A mensagem do cartão é a única identificação autorizada.</p>
+                        </section>
+                    )}
+
                     {(order.deliveryInstructions || order.cardMessage) && (
                         <section className="rounded-3xl border border-[#E8EBE4] bg-white p-6 shadow-sm sm:p-8">
                             <div className="flex items-center gap-3">

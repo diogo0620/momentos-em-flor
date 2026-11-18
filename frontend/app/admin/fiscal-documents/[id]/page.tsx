@@ -63,6 +63,15 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
+function moloniDocumentUrl(
+  companyId: string,
+  documentId: string,
+  kind: "invoice" | "credit-note",
+) {
+  const documentType = kind === "invoice" ? "Faturas" : "NotasCredito";
+  return `https://www.moloni.pt/${encodeURIComponent(companyId)}/${documentType}/showDetail/${encodeURIComponent(documentId)}`;
+}
+
 function ProcessCard({
   title,
   status,
@@ -463,7 +472,7 @@ export default function FiscalDocumentDetailPage() {
             {document.invoiceStatus === "DRAFT" && <button onClick={() => void confirmDocument("invoice")} disabled={action !== null} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-violet-700 px-4 text-sm font-semibold text-white disabled:opacity-50"><CheckCircle2 size={15} /> Confirmar rascunho</button>}
             {document.invoiceStatus === "ISSUED" && <button onClick={() => void openPdf("invoice")} disabled={action !== null} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#CBD3C3] px-4 text-sm font-semibold text-[#40513C] disabled:opacity-50"><FileText size={15} /> Abrir PDF</button>}
             {document.invoiceStatus === "ISSUED" && <button onClick={() => void sendEmail("invoice")} disabled={action !== null} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#CBD3C3] px-4 text-sm font-semibold text-[#40513C] disabled:opacity-50"><Mail size={15} /> {document.invoiceEmailSentAt ? "Reenviar email" : "Enviar email"}</button>}
-            {document.invoiceId && <a href="https://www.moloni.pt/" target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-2 px-2 text-sm font-semibold text-[#40513C]">Abrir Moloni <ExternalLink size={14} /></a>}
+            {document.invoiceId && document.moloniCompanyId && <a href={moloniDocumentUrl(document.moloniCompanyId, document.invoiceId, "invoice")} target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-2 px-2 text-sm font-semibold text-[#40513C]">Abrir no Moloni <ExternalLink size={14} /></a>}
           </>}
         />
         <ProcessCard
@@ -479,7 +488,7 @@ export default function FiscalDocumentDetailPage() {
             {document.creditNoteStatus === "DRAFT" && <button onClick={() => void confirmDocument("credit-note")} disabled={action !== null} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-violet-700 px-4 text-sm font-semibold text-white disabled:opacity-50"><CheckCircle2 size={15} /> Confirmar rascunho</button>}
             {document.creditNoteStatus === "ISSUED" && <button onClick={() => void openPdf("credit-note")} disabled={action !== null} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#CBD3C3] px-4 text-sm font-semibold text-[#40513C] disabled:opacity-50"><FileText size={15} /> Abrir PDF</button>}
             {document.creditNoteStatus === "ISSUED" && <button onClick={() => void sendEmail("credit-note")} disabled={action !== null} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#CBD3C3] px-4 text-sm font-semibold text-[#40513C] disabled:opacity-50"><Mail size={15} /> {document.creditNoteEmailSentAt ? "Reenviar email" : "Enviar email"}</button>}
-            {document.creditNoteId && <a href="https://www.moloni.pt/" target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-2 px-2 text-sm font-semibold text-[#40513C]">Abrir Moloni <ExternalLink size={14} /></a>}
+            {document.creditNoteId && document.moloniCompanyId && <a href={moloniDocumentUrl(document.moloniCompanyId, document.creditNoteId, "credit-note")} target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-2 px-2 text-sm font-semibold text-[#40513C]">Abrir no Moloni <ExternalLink size={14} /></a>}
             {!document.creditNoteRequiredAt && <span className="text-sm text-[#778077]">Não é necessária para esta encomenda.</span>}
           </>}
         />

@@ -26,6 +26,7 @@ export type FloristOrderOfferDetailOrder = {
     deliveryStreet2?: string | null;
     deliveryPostalCode?: string;
     deliveryInstructions?: string | null;
+    hidePurchaserIdentity?: boolean;
     cardMessage?: string | null;
     
     items: FloristOrderOfferItem[];

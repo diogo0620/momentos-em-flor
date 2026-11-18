@@ -22,6 +22,7 @@ export class AdminOrderOfferOrderResponseDto {
     @ApiPropertyOptional({ nullable: true }) deliveryStreet2?: string | null;
     @ApiPropertyOptional({ nullable: true }) deliveryPostalCode?: string;
     @ApiPropertyOptional({ nullable: true }) deliveryInstructions?: string | null;
+    @ApiPropertyOptional() hidePurchaserIdentity?: boolean;
     @ApiPropertyOptional({ nullable: true }) cardMessage?: string | null;
     @ApiProperty({ type: [FloristOrderOfferItemResponseDto] }) items!: FloristOrderOfferItemResponseDto[];
 }

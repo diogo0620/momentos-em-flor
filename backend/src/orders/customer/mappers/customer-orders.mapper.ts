@@ -17,7 +17,13 @@ type OrderWithItems = Prisma.OrderGetPayload<{
             };
         };
         review: { include: { ratings: true } };
-        moloniFiscalDocument: { select: { invoiceId: true } };
+        moloniFiscalDocument: {
+            select: {
+                invoiceId: true;
+                invoiceStatus: true;
+                invoicePdfUrl: true;
+            };
+        };
     };
 }>;
 
@@ -55,6 +61,7 @@ export class CustomerOrdersMapper extends BaseMapper<
             deliveryDate: order.deliveryDate,
             deliveryTimeSlot: order.deliveryTimeSlot,
             deliveryInstructions: order.deliveryInstructions,
+            hidePurchaserIdentity: order.hidePurchaserIdentity,
             deliveryStreet: order.deliveryStreet,
             deliveryStreetNumber: order.deliveryStreetNumber,
             deliveryStreet2: order.deliveryStreet2,
@@ -70,7 +77,11 @@ export class CustomerOrdersMapper extends BaseMapper<
             couponCode: order.couponCode,
             total: Number(order.total),
             status: toCustomerOrderStatus(order.status),
-            invoiceAvailable: Boolean(order.moloniFiscalDocument?.invoiceId),
+            invoiceAvailable: Boolean(
+                order.moloniFiscalDocument?.invoiceId &&
+                order.moloniFiscalDocument.invoiceStatus === 'ISSUED' &&
+                order.moloniFiscalDocument.invoicePdfUrl,
+            ),
             items: order.items.map((item) => ({
                 id: item.id,
                 type: item.type,

@@ -166,7 +166,7 @@ export class AdminMoloniFiscalDocumentsService {
       }),
     };
 
-    const [items, total] = await Promise.all([
+    const [items, total, settings] = await Promise.all([
       this.prisma.moloniFiscalDocument.findMany({
         where,
         include: fiscalDocumentInclude,
@@ -174,16 +174,53 @@ export class AdminMoloniFiscalDocumentsService {
         ...getPagination(query.page, query.pageSize),
       }),
       this.prisma.moloniFiscalDocument.count({ where }),
+      this.prisma.moloniSettings.findUnique({
+        where: { id: 1 },
+        select: { companyId: true },
+      }),
     ]);
 
     return ApiResponse.paginated(
-      items.map((item) => this.toResponse(item)),
+      items.map((item) => this.toResponse(item, settings?.companyId)),
       getPaginationResponse(query.page, query.pageSize, total),
     );
   }
 
   async findOne(id: number) {
-    return ApiResponse.success(this.toResponse(await this.getRecord(id)));
+    const [record, settings] = await Promise.all([
+      this.getRecord(id),
+      this.prisma.moloniSettings.findUnique({
+        where: { id: 1 },
+        select: { companyId: true },
+      }),
+    ]);
+    return ApiResponse.success(this.toResponse(record, settings?.companyId));
+  }
+
+  async findPendingValidation() {
+    const draftWhere: Prisma.MoloniFiscalDocumentWhereInput = {
+      OR: [
+        { invoiceStatus: MoloniDocumentStatus.DRAFT },
+        { creditNoteStatus: MoloniDocumentStatus.DRAFT },
+      ],
+    };
+    const [items, total, settings] = await Promise.all([
+      this.prisma.moloniFiscalDocument.findMany({
+        where: draftWhere,
+        include: fiscalDocumentInclude,
+        orderBy: { updatedAt: 'asc' },
+        take: 8,
+      }),
+      this.prisma.moloniFiscalDocument.count({ where: draftWhere }),
+      this.prisma.moloniSettings.findUnique({
+        where: { id: 1 },
+        select: { companyId: true },
+      }),
+    ]);
+    return ApiResponse.success({
+      items: items.map((item) => this.toResponse(item, settings?.companyId)),
+      total,
+    });
   }
 
   async getRepairContext(id: number) {
@@ -1171,11 +1208,15 @@ export class AdminMoloniFiscalDocumentsService {
     return date.toISOString().slice(0, 10);
   }
 
-  private toResponse(record: FiscalDocumentRecord) {
+  private toResponse(
+    record: FiscalDocumentRecord,
+    moloniCompanyId?: string | null,
+  ) {
     return {
       id: record.id,
       orderId: record.orderId,
       orderNumber: record.order.orderNumber,
+      moloniCompanyId: moloniCompanyId ?? null,
       customerId: record.order.customerId,
       customerName:
         `${record.order.customerFirstName} ${record.order.customerLastName}`.trim(),

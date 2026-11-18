@@ -553,6 +553,13 @@ export default function AccountOrderDetailPage() {
               {order.deliveryInstructions}
             </div>
           )}
+
+          {order.hidePurchaserIdentity && (
+            <div className="mt-4 rounded-2xl border border-[#DCE5D4] bg-[#F6F9F3] p-4 text-sm leading-6 text-[#566449]">
+              <p className="font-semibold text-[#394633]">Surpresa confidencial</p>
+              <p className="mt-1">A florista recebeu instruções para não revelar ao destinatário quem realizou a compra.</p>
+            </div>
+          )}
         </section>
 
         <section className="rounded-3xl border border-[#E8EBE2] bg-white p-5 sm:p-6">

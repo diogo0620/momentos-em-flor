@@ -7,6 +7,7 @@ import {
     ArrowRight,
     ArrowUpRight,
     Flower2,
+    FileCheck2,
     LayoutGrid,
     Package,
     RefreshCw,
@@ -21,6 +22,8 @@ import { adminOrdersApi } from "@/lib/api/orders/admin-orders";
 import { adminProductsApi } from "@/lib/api/products/admin-products";
 import type { AdminOrderList } from "@/types/orders/admin/admin-order-list";
 import type { AdminOrderStatus } from "@/types/orders/admin/admin-order-status";
+import { adminMoloniFiscalDocumentsApi } from "@/lib/api/moloni/admin-moloni-fiscal-documents";
+import type { MoloniFiscalDocument } from "@/types/moloni/admin/moloni-fiscal-document";
 
 type DashboardOrderResponse = {
     items: AdminOrderList[];
@@ -36,6 +39,8 @@ type DashboardState = {
     pendingPayment: number;
     awaitingFlorists: number;
     inProgress: number;
+    fiscalDrafts: MoloniFiscalDocument[];
+    fiscalDraftTotal: number;
 };
 
 const STATUS_CONFIG: Record<AdminOrderStatus, { label: string; className: string; dot: string }> = {
@@ -60,7 +65,7 @@ function formatDate(value: string) {
 }
 
 export default function AdminDashboardPage() {
-    const [data, setData] = useState<DashboardState>({ orders: [], totalOrders: 0, totalProducts: 0, pendingPayment: 0, awaitingFlorists: 0, inProgress: 0 });
+    const [data, setData] = useState<DashboardState>({ orders: [], totalOrders: 0, totalProducts: 0, pendingPayment: 0, awaitingFlorists: 0, inProgress: 0, fiscalDrafts: [], fiscalDraftTotal: 0 });
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -71,7 +76,7 @@ export default function AdminDashboardPage() {
             else setLoading(true);
             setError(null);
 
-            const [ordersResponse, productsResponse, pendingResponse, awaitingResponse, assignedResponse, productionResponse, deliveryResponse] = await Promise.all([
+            const [ordersResponse, productsResponse, pendingResponse, awaitingResponse, assignedResponse, productionResponse, deliveryResponse, fiscalDrafts] = await Promise.all([
                 adminOrdersApi.getAll({ page: 1, pageSize: 8, sort: "createdAt", order: "desc" }),
                 adminProductsApi.getAll({ page: 1, pageSize: 1, sort: "name", order: "asc" }),
                 adminOrdersApi.getAll({ page: 1, pageSize: 1, status: "PENDING_PAYMENT" }),
@@ -79,6 +84,7 @@ export default function AdminDashboardPage() {
                 adminOrdersApi.getAll({ page: 1, pageSize: 1, status: "ASSIGNED" }),
                 adminOrdersApi.getAll({ page: 1, pageSize: 1, status: "IN_PRODUCTION" }),
                 adminOrdersApi.getAll({ page: 1, pageSize: 1, status: "READY_FOR_DELIVERY" }),
+                adminMoloniFiscalDocumentsApi.getPendingValidation(),
             ]);
 
             const orderResult = ordersResponse as DashboardOrderResponse;
@@ -89,6 +95,8 @@ export default function AdminDashboardPage() {
                 pendingPayment: Number(pendingResponse.total ?? 0),
                 awaitingFlorists: Number(awaitingResponse.total ?? 0),
                 inProgress: Number(assignedResponse.total ?? 0) + Number(productionResponse.total ?? 0) + Number(deliveryResponse.total ?? 0),
+                fiscalDrafts: fiscalDrafts.items,
+                fiscalDraftTotal: fiscalDrafts.total,
             });
         } catch (err) {
             setError(err instanceof Error ? err.message : "Não foi possível carregar os dados do dashboard.");
@@ -131,10 +139,11 @@ export default function AdminDashboardPage() {
                     </div>
                     <Link href="/admin/orders" className="inline-flex items-center gap-2 rounded-xl bg-[#D6DEC8] px-4 py-3 text-sm font-semibold text-[#2F3B2A] transition hover:bg-white">Abrir encomendas <ArrowRight size={16} /></Link>
                 </div>
-                <div className="mt-7 grid gap-3 sm:grid-cols-3">
+                <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <PriorityLink href="/admin/orders" label="Pagamentos pendentes" value={data.pendingPayment} loading={loading} />
                     <PriorityLink href="/admin/orders" label="Por atribuir" value={data.awaitingFlorists} loading={loading} />
                     <PriorityLink href="/admin/orders" label="Em curso" value={data.inProgress} loading={loading} />
+                    <PriorityLink href="/admin/fiscal-documents" label="Faturas por validar" value={data.fiscalDraftTotal} loading={loading} />
                 </div>
             </section>
 
@@ -144,6 +153,17 @@ export default function AdminDashboardPage() {
                     <button type="button" onClick={() => void loadDashboard()} className="font-semibold underline underline-offset-4">Tentar novamente</button>
                 </div>
             )}
+
+            <section className="overflow-hidden rounded-[24px] border border-[#E7EAE2] bg-white shadow-[0_4px_24px_rgba(47,59,42,0.035)]">
+                <div className="flex flex-col gap-3 border-b border-[#EEF0EB] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-700"><FileCheck2 size={19} /></div>
+                        <div><h2 className="font-semibold text-[#2F3B2A]">Documentos fiscais por validar</h2><p className="mt-1 text-sm text-[#858D7F]">Faturas e notas de crédito criadas como rascunho no Moloni.</p></div>
+                    </div>
+                    <Link href="/admin/fiscal-documents" className="inline-flex items-center gap-2 text-sm font-semibold text-[#55624A]">Abrir faturação <ArrowRight size={15} /></Link>
+                </div>
+                {loading ? <div className="space-y-3 p-6">{[1,2].map((item)=><div key={item} className="h-14 animate-pulse rounded-xl bg-[#F5F7F2]" />)}</div> : data.fiscalDrafts.length === 0 ? <div className="px-6 py-9 text-center"><p className="font-semibold text-[#35412F]">Não existem documentos por validar</p><p className="mt-1 text-sm text-[#858D7F]">Os próximos rascunhos aparecerão aqui automaticamente.</p></div> : <div className="divide-y divide-[#EEF0EB]">{data.fiscalDrafts.map((document)=><Link key={document.id} href={`/admin/fiscal-documents/${document.id}`} className="flex flex-col gap-3 px-6 py-4 transition hover:bg-[#FAFBF8] sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-[#35412F]">{document.orderNumber}</p><p className="mt-1 text-xs text-[#858D7F]">{document.customerName} · {document.customerEmail}</p></div><div className="flex items-center gap-3"><span className="rounded-full bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700">{document.invoiceStatus === "DRAFT" ? "Fatura por confirmar" : "Nota de crédito por confirmar"}</span><ArrowRight size={16} className="text-[#8B9385]" /></div></Link>)}</div>}
+            </section>
 
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <MetricCard title="Total de encomendas" value={loading ? "—" : data.totalOrders.toLocaleString("pt-PT")} detail="Encomendas registadas" icon={<ShoppingBag size={19} />} accent="sage" href="/admin/orders" loading={loading} />

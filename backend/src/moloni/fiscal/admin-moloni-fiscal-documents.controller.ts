@@ -34,6 +34,11 @@ export class AdminMoloniFiscalDocumentsController {
     return this.service.findAll(query);
   }
 
+  @Get('pending-validation')
+  findPendingValidation() {
+    return this.service.findPendingValidation();
+  }
+
   @Post(':id/issue')
   @HttpCode(HttpStatus.OK)
   issue(@Param('id', ParseIntPipe) id: number) {

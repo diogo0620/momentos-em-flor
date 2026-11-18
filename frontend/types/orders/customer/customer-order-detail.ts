@@ -43,6 +43,7 @@ export type CustomerOrderDetail = {
     deliveryDate: string;
     deliveryTimeSlot: DeliveryTimeSlot;
     deliveryInstructions?: string | null;
+    hidePurchaserIdentity: boolean;
 
     deliveryStreet: string;
     deliveryStreetNumber: string;

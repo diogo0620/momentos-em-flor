@@ -120,6 +120,9 @@ export class CustomerOrderResponseDto {
     deliveryInstructions?: string | null;
 
     @ApiProperty()
+    hidePurchaserIdentity!: boolean;
+
+    @ApiProperty()
     deliveryStreet!: string;
 
     @ApiProperty()

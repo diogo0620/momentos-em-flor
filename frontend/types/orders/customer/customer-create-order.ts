@@ -39,6 +39,10 @@ export type CustomerCreateOrderItem = {
 }
 
 export type CustomerCreateOrder = {
+    /** Aceitação expressa da versão dos termos aplicável à compra. */
+    legalTermsAccepted: true;
+    legalTermsVersion: string;
+
     /** Código promocional opcional. */
     couponCode?: string;
 
@@ -65,6 +69,9 @@ export type CustomerCreateOrder = {
 
     /** Instruções para a entrega. */
     deliveryInstructions?: string;
+
+    /** Não revelar ao destinatário a identidade de quem realizou a compra. */
+    hidePurchaserIdentity?: boolean;
 
     /** Rua da morada de entrega. */
     deliveryStreet: string;

@@ -94,6 +94,7 @@ export class AdminOrdersMapper extends BaseMapper<
             deliveryDate: order.deliveryDate,
             deliveryTimeSlot: order.deliveryTimeSlot,
             deliveryInstructions: order.deliveryInstructions,
+            hidePurchaserIdentity: order.hidePurchaserIdentity,
             deliveryStreet: order.deliveryStreet,
             deliveryStreetNumber: order.deliveryStreetNumber,
             deliveryStreet2: order.deliveryStreet2,

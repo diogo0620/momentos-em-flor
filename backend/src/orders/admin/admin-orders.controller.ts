@@ -24,6 +24,8 @@ import { Roles } from '@/auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { AdminCancelOrderDto } from './dtos/admin-cancel-order.dto';
 import { MoloniDocumentPdfService } from '@/moloni/fiscal/moloni-document-pdf.service';
+import { CurrentUser } from '@/auth/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '@/auth/interfaces/authenticated-user.interface';
 
 
 @ApiTags('Orders (Admin)')
@@ -91,10 +93,11 @@ export class AdminOrdersController {
     @Post(':id/cancel')
     @HttpCode(HttpStatus.NO_CONTENT)
     async cancel(
+        @CurrentUser() user: AuthenticatedUser,
         @Param('id', ParseIntPipe) id: number,
         @Body() dto: AdminCancelOrderDto,
     ): Promise<void> {
-        await this.service.cancel(id, dto);
+        await this.service.cancel(user, id, dto);
     }
 
 

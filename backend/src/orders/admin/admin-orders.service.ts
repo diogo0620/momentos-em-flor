@@ -17,6 +17,7 @@ import { AdminCancelOrderDto } from './dtos/admin-cancel-order.dto';
 import { StripeService } from '@/payments/stripe.service';
 import { FloristCompensationLifecycleService } from '@/florist-compensations/florist-compensation-lifecycle.service';
 import { OrderStatusEmailService } from '../order-status-email.service';
+import { PaymentsService } from '@/payments/payments.service';
 
 
 @Injectable()
@@ -28,6 +29,7 @@ export class AdminOrdersService {
         private readonly stripeService: StripeService,
         private readonly compensationLifecycle: FloristCompensationLifecycleService,
         private readonly orderStatusEmail: OrderStatusEmailService,
+        private readonly paymentsService: PaymentsService,
     ) { }
 
 
@@ -154,6 +156,7 @@ export class AdminOrdersService {
     }
 
     async cancel(
+        user: AuthenticatedUser,
         id: number,
         dto: AdminCancelOrderDto,
     ): Promise<void> {
@@ -167,12 +170,6 @@ export class AdminOrdersService {
                         id: true,
                         status: true,
                         stripePaymentIntentId: true,
-                    },
-                },
-                moloniFiscalDocument: {
-                    select: {
-                        creditNoteRequiredAt: true,
-                        creditNoteId: true,
                     },
                 },
             },
@@ -190,14 +187,11 @@ export class AdminOrdersService {
         }
 
         if (order.payment?.status === PaymentStatus.PAID) {
-            Exceptions.badRequest(ERROR_MESSAGES.PAYMENT_REFUND_REQUIRED);
-        }
-
-        if (
-            order.moloniFiscalDocument?.creditNoteRequiredAt &&
-            !order.moloniFiscalDocument.creditNoteId
-        ) {
-            Exceptions.badRequest(ERROR_MESSAGES.MOLONI_CREDIT_NOTE_REQUIRED);
+            await this.paymentsService.refundOrder(
+                user,
+                order.id,
+                dto.cancellationReasonDetails,
+            );
         }
 
         if (

@@ -10,6 +10,7 @@ export type MoloniFiscalDocument = {
     id: number;
     orderId: number;
     orderNumber: string;
+    moloniCompanyId: string | null;
     customerId: number | null;
     customerName: string;
     customerEmail: string;

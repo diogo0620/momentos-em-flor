@@ -3,13 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUpRight, Flower2, Camera, Quote } from "lucide-react";
+import { ArrowDown, ArrowUpRight, Flower2, Camera, Quote, MapPin } from "lucide-react";
 import type { PublicCategoryList } from "@/types/categories/public/public-category-list";
 import type { PublicProductList } from "@/types/products/public/public-product-list";
 import { publicCategoriesApi } from "@/lib/api/categories/public-categories";
 import { publicProductsApi } from "@/lib/api/products/public-products";
 import ProductCard from "@/components/store/products/ProductCard";
 import SocialVideoCarousel, { type HomeMedia } from "@/components/store/home/SocialVideoCarousel";
+import { storeSettingsApi } from "@/lib/api/store-settings/store-settings";
+import type { StoreSettings } from "@/types/store-settings/store-settings";
+import { blogPosts } from "@/lib/blog/posts";
 
 const container = "mx-auto w-full max-w-[1440px] px-5 sm:px-10 lg:px-16";
 const mediaItems = (kind: HomeMedia["kind"], values: Array<string | undefined>): HomeMedia[] =>
@@ -44,26 +47,38 @@ const editorialMoments = [
   { number: "02", title: "Preparar com cuidado", text: "Do primeiro detalhe ao laço final, tudo contribui para tornar o gesto memorável." },
   { number: "03", title: "Entregar emoção", text: "Mais do que uma encomenda, queremos que chegue um momento bonito." },
 ];
+const shoppingMoments = [
+  { title: "Aniversários", text: "Para celebrar mais um capítulo.", search: "aniversário", aliases: ["aniversario", "aniversarios"], image: process.env.NEXT_PUBLIC_HOME_MOMENT_BIRTHDAY },
+  { title: "Amor e romance", text: "Para dizer o que fica por dizer.", search: "amor", aliases: ["amor", "romance"], image: process.env.NEXT_PUBLIC_HOME_MOMENT_LOVE },
+  { title: "Casamentos", text: "Flores à altura de um dia inesquecível.", search: "casamento", aliases: ["casamento", "casamentos"], image: process.env.NEXT_PUBLIC_HOME_MOMENT_WEDDING },
+  { title: "Nascimentos", text: "Uma receção delicada para um novo começo.", search: "nascimento", aliases: ["nascimento", "nascimentos", "novo bebe", "bebe"], image: process.env.NEXT_PUBLIC_HOME_MOMENT_NEW_BABY },
+  { title: "Agradecer", text: "Um gesto bonito para reconhecer quem importa.", search: "agradecimento", aliases: ["agradecer", "agradecimento", "obrigado"], image: process.env.NEXT_PUBLIC_HOME_MOMENT_THANK_YOU },
+  { title: "Funerais e homenagens", text: "Com respeito, serenidade e significado.", search: "funeral", aliases: ["funeral", "funerais", "homenagem", "homenagens"], image: process.env.NEXT_PUBLIC_HOME_MOMENT_FUNERAL },
+];
+const normalizeMomentName = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 export default function HomePage() {
   const [collections, setCollections] = useState<PublicCategoryList[]>([]);
   const [products, setProducts] = useState<PublicProductList[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
   const videos = configuredMedia;
   const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL;
 
   useEffect(() => {
     let cancelled = false;
     void Promise.allSettled([
-      publicCategoriesApi.getAll({ page: 1, pageSize: 4, featured: true }),
+      publicCategoriesApi.getAll({ page: 1, pageSize: 100 }),
       publicProductsApi.getAll({ page: 1, pageSize: 4, featured: true }),
-    ]).then(([categories, featured]) => {
+      storeSettingsApi.getPublic(),
+    ]).then(([categories, featured, settings]) => {
       if (cancelled) return;
       if (categories.status === "fulfilled")
         setCollections(categories.value.items);
       if (featured.status === "fulfilled") setProducts(featured.value.items);
       else setFailed(true);
+      if (settings.status === "fulfilled") setStoreSettings(settings.value);
       setLoading(false);
     });
     return () => {
@@ -200,94 +215,65 @@ export default function HomePage() {
         )}
       </section>
 
-      {collections.length > 0 && (
-        <section
-          aria-labelledby="collections-title"
-          className="overflow-hidden bg-[#eeeee6] py-14 sm:py-20 lg:py-24"
-        >
-          <div className={container}>
-            <div className="mb-10 grid gap-5 md:grid-cols-2 md:items-end lg:mb-12">
-              <div>
-                <p className="editorial-kicker">Descobre a coleção</p>
-                <h2
-                  id="collections-title"
-                  className="mt-3 text-4xl tracking-[-.04em] sm:text-5xl"
-                >
-                  A cada momento,
-                  <br />
-                  <em className="font-normal">as suas flores.</em>
-                </h2>
-              </div>
-              <p className="max-w-sm text-sm leading-7 text-[#62685c] md:justify-self-end">
-                Há mil razões para oferecer. Encontra a composição que combina
-                com a tua.
-              </p>
-            </div>
-            <div className="-mx-5 flex snap-x snap-mandatory items-start gap-4 overflow-x-auto px-5 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-10 sm:gap-6 sm:px-10 lg:mx-0 lg:grid lg:grid-cols-12 lg:gap-x-7 lg:overflow-visible lg:px-0 lg:pb-0">
-              {collections.map((collection, index) => (
-                <Link
-                  key={collection.id}
-                  href={"/products?categoryId=" + collection.id}
-                  className={
-                    "group w-[72vw] max-w-[310px] shrink-0 snap-start lg:w-auto lg:max-w-none " +
-                    [
-                      "lg:col-span-4",
-                      "mt-16 lg:col-span-3 lg:mt-24",
-                      "mt-5 lg:col-span-2 lg:mt-10",
-                      "mt-24 lg:col-span-3 lg:mt-32",
-                    ][index % 4]
-                  }
-                >
-                  <div
-                    className={
-                      "relative overflow-hidden bg-[#e1e3d8] " +
-                      [
-                        "aspect-[4/5]",
-                        "aspect-[3/4]",
-                        "aspect-[2/3]",
-                        "aspect-[4/5]",
-                      ][index % 4]
-                    }
-                  >
-                    <Image
-                      src={collection.image || "/images/floral-placeholder.svg"}
-                      alt={collection.name}
-                      fill
-                      sizes="(max-width: 1023px) 50vw, 25vw"
-                      className="object-cover transition-transform duration-700 motion-safe:group-hover:scale-105"
-                    />
-                    <span className="absolute left-4 top-4 text-[10px] font-semibold tracking-[.18em] text-white drop-shadow-sm">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                  </div>
-                  <div className="mt-4 flex items-start justify-between gap-3 border-t border-[#bfc5b6] pt-3">
-                    <div className="min-w-0">
-                      <h3 className="font-[family-name:var(--serif)] text-2xl leading-tight sm:text-[1.7rem]">
-                      {collection.name}
-                      </h3>
-                      {collection.description && (
-                        <p className="mt-2 line-clamp-2 text-xs leading-5 text-[#66705f]">
-                          {collection.description}
-                        </p>
-                      )}
-                    </div>
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center border border-[#aeb7a5] transition-colors group-hover:bg-[#293e32] group-hover:text-white">
-                      <ArrowUpRight size={16} aria-hidden="true" />
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-            <p className="mt-5 text-xs text-[#707967] lg:hidden">
-              Desliza para descobrir mais coleções.
-            </p>
+      <section aria-labelledby="moments-title" className="overflow-hidden bg-[#eeeee6] py-14 sm:py-20 lg:py-24">
+        <div className={container}>
+          <div className="mb-10 grid gap-5 md:grid-cols-2 md:items-end lg:mb-12">
+            <div><p className="editorial-kicker">Escolhe pela ocasião</p><h2 id="moments-title" className="mt-3 text-5xl tracking-[-.05em] sm:text-6xl">Momentos</h2></div>
+            <p className="max-w-md text-sm leading-7 text-[#62685c] md:justify-self-end">Há flores para celebrar, agradecer, acolher e recordar. Começa pelo momento que queres tornar especial.</p>
           </div>
-        </section>
-      )}
+          <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-12 lg:auto-rows-[240px]">
+            {shoppingMoments.map((moment, index) => {
+              const category = collections.find((item) => {
+                const name = normalizeMomentName(item.name);
+                return moment.aliases.some((alias) => name.includes(alias) || alias.includes(name));
+              });
+              const href = category ? `/products?categoryId=${category.id}` : `/products?search=${encodeURIComponent(moment.search)}`;
+              const layout = ["lg:col-span-5 lg:row-span-2", "lg:col-span-3", "lg:col-span-4", "lg:col-span-4", "lg:col-span-3", "lg:col-span-7"][index];
+              return <Link key={moment.title} href={href} className={`group relative min-h-[230px] overflow-hidden bg-[#dfe2d7] sm:min-h-[300px] lg:min-h-0 ${layout}`}>
+                <Image src={moment.image || category?.image || process.env.NEXT_PUBLIC_HOME_HERO || "/hero.png"} alt={moment.title} fill sizes="(max-width: 639px) 50vw, (max-width: 1023px) 50vw, 42vw" className="object-cover transition duration-700 motion-safe:group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#15251d]/85 via-[#15251d]/15 to-transparent" />
+                <span className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center border border-white/50 text-white transition group-hover:bg-white group-hover:text-[#293e32]"><ArrowUpRight size={16} /></span>
+                <div className="absolute inset-x-0 bottom-0 p-4 text-white sm:p-6"><p className="text-[9px] font-bold uppercase tracking-[.18em] text-white/70">Momento {String(index + 1).padStart(2, "0")}</p><h3 className="mt-2 text-xl leading-tight sm:text-3xl">{moment.title}</h3><p className="mt-2 hidden max-w-sm text-sm leading-6 text-white/75 sm:block">{moment.text}</p></div>
+              </Link>;
+            })}
+          </div>
+        </div>
+      </section>
 
       <section className="overflow-hidden bg-[#f4ede5] py-16 sm:py-24" aria-labelledby="editorial-reviews-title">
         <div className={container}>
           <div className="grid gap-10 lg:grid-cols-[.8fr_1.2fr] lg:items-end"><div><Quote size={34} strokeWidth={1} className="text-[#8a5751]" /><p className="editorial-kicker mt-6">A experiência Momentos em Flor</p><h2 id="editorial-reviews-title" className="mt-3 text-4xl leading-tight tracking-[-.045em] sm:text-6xl">Um gesto bonito.<br /><em className="font-normal text-[#8a5751]">Do início ao fim.</em></h2><p className="mt-5 max-w-md text-sm leading-7 text-[#68665f]">Esta é a experiência que orienta cada escolha da marca — sem avaliações inventadas nem promessas vazias.</p></div><div className="grid gap-4 md:grid-cols-3">{editorialMoments.map((moment, index) => <article key={moment.number} className={`min-h-64 border border-[#d9cec0] p-6 ${index === 1 ? "bg-[#293e32] text-white md:-translate-y-8" : "bg-white/70"}`}><p className={`text-xs font-semibold tracking-[.18em] ${index === 1 ? "text-[#cbd5c2]" : "text-[#8a5751]"}`}>{moment.number}</p><h3 className="mt-16 text-2xl leading-tight">{moment.title}</h3><p className={`mt-4 text-sm leading-7 ${index === 1 ? "text-white/70" : "text-[#68665f]"}`}>{moment.text}</p></article>)}</div></div>
+        </div>
+      </section>
+
+      <section className="overflow-hidden bg-[#f8f6f1] py-16 sm:py-24" aria-labelledby="store-title">
+        <div className={container}>
+          <div className="grid overflow-hidden bg-[#e9eadf] lg:grid-cols-2 lg:items-stretch">
+            <div className="relative min-h-[360px] bg-[#dfe2d7] sm:min-h-[480px]">
+              {process.env.NEXT_PUBLIC_HOME_STORE_VIDEO ? (
+                <video autoPlay muted loop playsInline preload="metadata" poster={process.env.NEXT_PUBLIC_HOME_STORE_IMAGE} aria-label="Conhece o espaço da Momentos em Flor" className="absolute inset-0 h-full w-full object-cover">
+                  <source src={process.env.NEXT_PUBLIC_HOME_STORE_VIDEO} />
+                </video>
+              ) : (
+                <Image src={process.env.NEXT_PUBLIC_HOME_STORE_IMAGE || process.env.NEXT_PUBLIC_HOME_HERO || "/hero.png"} alt="Espaço Momentos em Flor" fill sizes="(max-width: 1023px) 100vw, 50vw" className="object-cover" />
+              )}
+            </div>
+            <div className="flex flex-col justify-center px-7 py-12 sm:px-12 lg:px-16 lg:py-16">
+              <p className="editorial-kicker">A nossa casa</p>
+              <h2 id="store-title" className="mt-4 text-4xl leading-tight tracking-[-.04em] sm:text-5xl">Onde cada gesto<br /><em className="font-normal text-[#8a5751]">ganha forma.</em></h2>
+              <p className="mt-6 max-w-lg text-sm leading-7 text-[#5f695e]">Conhece o espaço por detrás da Momentos em Flor: o lugar onde se juntam sensibilidade, cuidado e atenção aos detalhes que chegam a cada entrega.</p>
+              {storeSettings?.companyAddress && <div className="mt-7 flex items-start gap-3 border-t border-[#ccd1c4] pt-6"><MapPin size={20} className="mt-0.5 shrink-0 text-[#8a5751]" /><div><p className="text-xs font-bold uppercase tracking-[.12em] text-[#596455]">Localização</p><p className="mt-2 text-sm leading-6 text-[#5f695e]">{storeSettings.companyAddress}</p><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(storeSettings.companyAddress)}`} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm font-semibold underline underline-offset-4">Ver no mapa <ArrowUpRight size={15} /></a></div></div>}
+              <p className="mt-6 text-xs leading-5 text-[#747d70]">Antes de visitar, confirma a disponibilidade através dos nossos contactos.</p>
+              <Link href="/contact" className="mt-6 inline-flex min-h-12 w-fit items-center gap-5 rounded-full bg-[#293e32] px-6 py-3 text-sm font-semibold text-white">Contactar a loja <ArrowUpRight size={17} /></Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white py-16 sm:py-24" aria-labelledby="blog-title">
+        <div className={container}>
+          <div className="flex flex-wrap items-end justify-between gap-5"><div><p className="editorial-kicker">O nosso diário</p><h2 id="blog-title" className="mt-3 text-4xl tracking-[-.04em] sm:text-5xl">Histórias que florescem.</h2></div><Link href="/blog" className="inline-flex items-center gap-2 border-b border-[#aeb7a5] pb-1 text-sm font-semibold">Ver todos os artigos <ArrowUpRight size={16} /></Link></div>
+          <div className="mt-10 grid gap-8 md:grid-cols-3">{blogPosts.map((post) => <article key={post.slug} className="group"><Link href={`/blog/${post.slug}`}><div className="relative aspect-[4/3] overflow-hidden bg-[#e4e5dc]"><Image src={post.image} alt="" fill sizes="(max-width: 767px) 100vw, 33vw" className="object-cover transition duration-700 motion-safe:group-hover:scale-105" /></div><p className="mt-5 text-[10px] font-bold uppercase tracking-[.16em] text-[#8a5751]">{post.category} · {post.readingTime}</p><h3 className="mt-3 text-2xl leading-tight">{post.title}</h3><p className="mt-3 text-sm leading-6 text-[#66705f]">{post.excerpt}</p></Link></article>)}</div>
         </div>
       </section>
 

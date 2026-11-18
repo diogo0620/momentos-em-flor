@@ -34,6 +34,7 @@ export class FloristOrderResponseDto {
     @ApiProperty() deliveryCity!: string;
     @ApiProperty() deliveryDistrict!: string;
     @ApiPropertyOptional({ nullable: true }) deliveryInstructions!: string | null;
+    @ApiProperty() hidePurchaserIdentity!: boolean;
     @ApiPropertyOptional({ nullable: true }) cardMessage!: string | null;
     @ApiProperty() price!: number;
     @ApiProperty({ type: [FloristOrderItemResponseDto] }) items!: FloristOrderItemResponseDto[];

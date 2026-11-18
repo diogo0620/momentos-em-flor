@@ -39,7 +39,11 @@ export default function Footer() {
                         <Link href="/delivery-policy" className="transition hover:text-[#394633]">Entregas</Link>
                         <Link href="/contact" className="transition hover:text-[#394633]">Contactos</Link>
                         <Link href="/partners" className="transition hover:text-[#394633]">Quer ser nossa parceira?</Link>
+                        <Link href="/blog" className="transition hover:text-[#394633]">Diário</Link>
                         <Link href="/terms" className="transition hover:text-[#394633]">Termos e condições</Link>
+                        <Link href="/legal" className="transition hover:text-[#394633]">Centro legal</Link>
+                        <Link href="/returns" className="transition hover:text-[#394633]">Cancelamentos e reembolsos</Link>
+                        <Link href="/disputes" className="transition hover:text-[#394633]">Reclamações e litígios</Link>
                         <Link href="/privacy" className="transition hover:text-[#394633]">Privacidade</Link>
                         <Link href="/cookies" className="transition hover:text-[#394633]">Cookies</Link>
                     </nav>

@@ -39,6 +39,7 @@ export default function PrivacyPage() {
 
             <LegalSection title="7. Dados de terceiros e tecnologias locais">
                 <p>Ao indicar dados do destinatário, o cliente declara que está autorizado a fazê-lo e deve informá-lo de que esses dados serão usados para a entrega. A utilização de cookies e armazenamento local é explicada na <Link href="/cookies" className="font-medium text-[#55624A] underline">Política de Cookies</Link>.</p>
+                <p>Se a entrega confidencial for selecionada, a preferência é comunicada à florista responsável. Os dados do comprador continuam limitados ao uso operacional interno e não devem ser revelados ao destinatário, salvo obrigação legal ou necessidade de proteção de direitos.</p>
             </LegalSection>
         </LegalPage>
     );

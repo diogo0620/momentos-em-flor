@@ -20,6 +20,10 @@ class AdminMoloniFiscalDocumentsApi extends BaseApi<
     return apiFetch<MoloniFiscalDocument>(`${this.endpoint}/${id}`);
   }
 
+  async getPendingValidation(): Promise<{ items: MoloniFiscalDocument[]; total: number }> {
+    return apiFetch<{ items: MoloniFiscalDocument[]; total: number }>(`${this.endpoint}/pending-validation`);
+  }
+
   async getRepairContext<T>(id: number): Promise<T> {
     return apiFetch<T>(`${this.endpoint}/${id}/repair-context`);
   }

@@ -343,6 +343,9 @@ export class AdminOrderResponseDto {
     deliveryInstructions!: string | null;
 
     @ApiProperty()
+    hidePurchaserIdentity!: boolean;
+
+    @ApiProperty()
     deliveryStreet!: string;
 
     @ApiProperty()

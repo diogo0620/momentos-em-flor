@@ -15,6 +15,7 @@ const navigation = [
     { href: "/products?occasion=romance", label: "Romance" },
     { href: "/products?occasion=birthday", label: "Aniversários" },
     { href: "/delivery-policy", label: "Entregas" },
+    { href: "/blog", label: "Diário" },
 ];
 
 function Counter({ value }: { value: number }) {

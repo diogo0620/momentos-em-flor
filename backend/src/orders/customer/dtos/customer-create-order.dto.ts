@@ -8,6 +8,8 @@ import {
     IsBoolean,
     IsDateString,
     IsEnum,
+    Equals,
+    IsIn,
     IsOptional,
     IsString,
     MaxLength,
@@ -17,6 +19,15 @@ import { CustomerCreateOrderItemDto } from './customer-create-order-item.dto';
 import { Type } from 'class-transformer';
 
 export class CustomerCreateOrderDto {
+    @ApiProperty({ example: true, description: 'Confirmação expressa dos termos aplicáveis à encomenda.' })
+    @Equals(true, { message: 'É necessário aceitar os termos e condições.' })
+    legalTermsAccepted!: boolean;
+
+    @ApiProperty({ example: '2026-11-18' })
+    @IsString()
+    @IsIn(['2026-11-18'], { message: 'A versão dos termos já não é válida. Atualiza a página e volta a confirmar.' })
+    legalTermsVersion!: string;
+
     @ApiPropertyOptional({ example: 'BEMVINDO10' })
     @IsOptional()
     @IsString()
@@ -89,6 +100,14 @@ export class CustomerCreateOrderDto {
     @IsString()
     @MaxLength(1000)
     deliveryInstructions?: string;
+
+    @ApiPropertyOptional({
+        default: false,
+        description: 'Não revelar ao destinatário a identidade de quem realizou a compra.',
+    })
+    @IsOptional()
+    @IsBoolean()
+    hidePurchaserIdentity?: boolean;
 
     // Delivery address
 

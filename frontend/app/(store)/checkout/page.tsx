@@ -16,6 +16,7 @@ import PhoneInput from "@/components/forms/PhoneInput";
 import { isValidPhone } from "@/lib/validation/auth";
 import { customerCouponsApi } from "@/lib/api/coupons/customer-coupons";
 import { customerUsersApi } from "@/lib/api/users/customer-users";
+import { legalTermsVersion } from "@/lib/legal/business";
 
 
 const PORTUGAL_DISTRICTS = [
@@ -92,6 +93,9 @@ export default function CheckoutPage() {
 
     const [deliveryInstructions, setDeliveryInstructions] =
         useState("");
+
+    const [hidePurchaserIdentity, setHidePurchaserIdentity] =
+        useState(false);
 
     const [deliveryStreet, setDeliveryStreet] =
         useState("");
@@ -399,6 +403,9 @@ export default function CheckoutPage() {
 
             const data: CustomerCreateOrder = {
 
+                legalTermsAccepted: true,
+                legalTermsVersion,
+
                 ...(appliedCoupon ? { couponCode: appliedCoupon.code } : {}),
 
                 items: items.map(
@@ -471,6 +478,8 @@ export default function CheckoutPage() {
                 deliveryInstructions:
                     deliveryInstructions ||
                     undefined,
+
+                hidePurchaserIdentity,
 
                 deliveryStreet,
 
@@ -1288,6 +1297,19 @@ export default function CheckoutPage() {
                                 />
 
                             </div>
+
+                            <label className="mt-5 flex cursor-pointer items-start gap-4 rounded-2xl border border-[#DDE5D5] bg-[#F8FAF6] p-5 transition hover:border-[#B8C5AE]">
+                                <input
+                                    type="checkbox"
+                                    checked={hidePurchaserIdentity}
+                                    onChange={(event) => setHidePurchaserIdentity(event.target.checked)}
+                                    className="mt-1 h-5 w-5 shrink-0 accent-[#55624A]"
+                                />
+                                <span>
+                                    <span className="block text-sm font-bold text-[#2F3B2A]">Manter em segredo quem enviou</span>
+                                    <span className="mt-1 block text-sm leading-6 text-[#687064]">A florista será instruída a não revelar ao destinatário o teu nome, contacto ou qualquer dado da compra. A mensagem do cartão será a única identificação incluída.</span>
+                                </span>
+                            </label>
 
                         </section>
 

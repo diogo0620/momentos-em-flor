@@ -43,6 +43,7 @@ export type FloristOrderDetail = {
     deliveryDistrict: string;
 
     deliveryInstructions: string | null;
+    hidePurchaserIdentity: boolean;
     cardMessage: string | null;
 
     items: FloristOrderItem[];

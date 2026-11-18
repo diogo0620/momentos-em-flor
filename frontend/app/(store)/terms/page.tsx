@@ -27,6 +27,7 @@ export default function TermsPage() {
                 <p>Nesta fase, as entregas estão limitadas a Santa Maria da Feira e arredores. A morada é validada durante o checkout segundo a área configurada na loja. Uma indicação positiva depende da exatidão da morada fornecida.</p>
                 <p>As datas e períodos escolhidos representam a janela prevista de entrega, podendo existir pequenos ajustamentos por trânsito, condições meteorológicas ou outras circunstâncias operacionais. O cliente deve garantir que existe alguém disponível para receber a encomenda e facultar contactos corretos.</p>
                 <p>Consulta os detalhes na <Link href="/delivery-policy" className="font-medium text-[#55624A] underline">Política de Entregas</Link>.</p>
+                <p>Quando o cliente selecionar a entrega confidencial, a equipa responsável recebe instruções para não revelar ao destinatário a identidade ou os contactos de quem realizou a compra. Esta opção não impede o tratamento interno desses dados quando necessário para executar a encomenda, cumprir obrigações legais ou prestar apoio.</p>
             </LegalSection>
 
             <LegalSection title="5. Alterações e cancelamento">
@@ -37,6 +38,7 @@ export default function TermsPage() {
             <LegalSection title="6. Reclamações, reembolsos e litígios">
                 <p>Qualquer problema deve ser comunicado através dos contactos da loja, indicando o número da encomenda e, quando relevante, fotografias do produto recebido.</p>
                 <p>O consumidor pode usar o <a href={legalBusiness.complaintsUrl} target="_blank" rel="noreferrer" className="font-medium text-[#55624A] underline">Livro de Reclamações Eletrónico</a>.{legalBusiness.ralName && legalBusiness.ralUrl ? <> Pode ainda recorrer a <a href={legalBusiness.ralUrl} target="_blank" rel="noreferrer" className="font-medium text-[#55624A] underline">{legalBusiness.ralName}</a>, entidade de resolução alternativa de litígios competente.</> : " A entidade de resolução alternativa de litígios competente será indicada nos dados legais da loja."}</p>
+                <p>Consulta também a política de <Link href="/returns" className="font-medium text-[#55624A] underline">cancelamentos e reembolsos</Link> e os canais de <Link href="/disputes" className="font-medium text-[#55624A] underline">reclamação e resolução de litígios</Link>.</p>
             </LegalSection>
 
             <LegalSection title="7. Privacidade e alterações">

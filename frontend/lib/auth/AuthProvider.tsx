@@ -8,6 +8,7 @@ import {
     useMemo,
     useState,
 } from "react";
+import { useRouter } from "next/navigation";
 
 import {
     apiFetch,
@@ -48,6 +49,7 @@ export function AuthProvider({
 }: {
     children: React.ReactNode;
 }) {
+    const router = useRouter();
     const [user, setUser] =
         useState<AuthenticatedUser | null>(
             null,
@@ -160,8 +162,10 @@ export function AuthProvider({
             } finally {
                 setAccessToken(null);
                 setUser(null);
+                router.replace("/login");
+                router.refresh();
             }
-        }, []);
+        }, [router]);
 
     /* ====================================================================== */
     /* CONTEXT VALUE                                                           */

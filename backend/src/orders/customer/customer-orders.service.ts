@@ -164,7 +164,11 @@ export class CustomerOrdersService {
                 },
                 review: { include: { ratings: true } },
                 moloniFiscalDocument: {
-                    select: { invoiceId: true },
+                    select: {
+                        invoiceId: true,
+                        invoiceStatus: true,
+                        invoicePdfUrl: true,
+                    },
                 },
             }
         });
@@ -727,6 +731,9 @@ export class CustomerOrdersService {
                     deliveryDate: new Date(dto.deliveryDate),
                     deliveryTimeSlot: dto.deliveryTimeSlot,
                     deliveryInstructions: dto.deliveryInstructions,
+                    hidePurchaserIdentity: dto.hidePurchaserIdentity ?? false,
+                    legalTermsVersion: dto.legalTermsVersion,
+                    legalTermsAcceptedAt: new Date(),
 
                     deliveryStreet: dto.deliveryStreet,
                     deliveryStreetNumber: dto.deliveryStreetNumber,

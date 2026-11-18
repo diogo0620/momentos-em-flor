@@ -92,6 +92,7 @@ export type AdminOrder = {
     deliveryDate: string;
     deliveryTimeSlot: AdminDeliveryTimeSlot;
     deliveryInstructions: string | null;
+    hidePurchaserIdentity: boolean;
     deliveryStreet: string;
     deliveryStreetNumber: string;
     deliveryStreet2: string | null;
@@ -140,7 +141,7 @@ export type AdminOrder = {
     moloniFiscalDocument: {
         id: number;
         invoiceId: string | null;
-        invoiceStatus: "QUEUED" | "PROCESSING" | "ISSUED" | "FAILED" | "NOT_REQUIRED";
+        invoiceStatus: "QUEUED" | "PROCESSING" | "DRAFT" | "ISSUED" | "FAILED" | "NOT_REQUIRED";
         creditNoteRequiredAt: string | null;
         creditNoteId: string | null;
         creditNoteRecordedAt: string | null;

@@ -284,6 +284,12 @@ export default function FloristOfferDetailPage() {
                         <div className="flex items-center gap-3 border-b border-gray-100 p-5 sm:p-6"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F3F5EE] text-[#55624A]"><ShieldCheck size={19} /></div><div><h2 className="font-semibold text-[#2F3B2A]">Informação do destinatário e da entrega</h2><p className="mt-1 text-xs text-gray-400">{isAccepted ? "Dados necessários para preparar e entregar a encomenda." : "Protegida até a proposta ser aceite."}</p></div></div>
                         {isAccepted ? (
                             <div className="grid gap-6 p-5 sm:grid-cols-2 sm:p-6">
+                                {order.hidePurchaserIdentity && (
+                                    <div role="alert" className="rounded-2xl border border-[#D7C7A3] bg-[#FFF9EA] p-4 sm:col-span-2">
+                                        <p className="text-xs font-bold uppercase tracking-[.12em] text-[#8B6B2F]">Entrega confidencial</p>
+                                        <p className="mt-2 text-sm leading-6 text-[#6F5A34]">Não reveles ao destinatário o nome, contacto ou quaisquer dados de quem realizou a compra. A mensagem do cartão é a única identificação autorizada.</p>
+                                    </div>
+                                )}
                                 <DetailRow icon={<UserRound size={18} />} label="Destinatário" value={recipientName} />
                                 <DetailRow icon={<Phone size={18} />} label="Contacto" value={order.recipientPhone || "Não indicado"} />
                                 <div className="sm:col-span-2"><DetailRow icon={<MapPin size={18} />} label="Morada completa" value={deliveryAddress} /></div>
