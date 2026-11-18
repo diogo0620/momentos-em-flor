@@ -4,9 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowDown, ArrowUpRight, Flower2, Camera, Quote, MapPin } from "lucide-react";
-import type { PublicCategoryList } from "@/types/categories/public/public-category-list";
 import type { PublicProductList } from "@/types/products/public/public-product-list";
-import { publicCategoriesApi } from "@/lib/api/categories/public-categories";
 import { publicProductsApi } from "@/lib/api/products/public-products";
 import ProductCard from "@/components/store/products/ProductCard";
 import SocialVideoCarousel, { type HomeMedia } from "@/components/store/home/SocialVideoCarousel";
@@ -48,17 +46,15 @@ const editorialMoments = [
   { number: "03", title: "Entregar emoção", text: "Mais do que uma encomenda, queremos que chegue um momento bonito." },
 ];
 const shoppingMoments = [
-  { title: "Aniversários", text: "Para celebrar mais um capítulo.", search: "aniversário", aliases: ["aniversario", "aniversarios"], image: process.env.NEXT_PUBLIC_HOME_MOMENT_BIRTHDAY },
-  { title: "Amor e romance", text: "Para dizer o que fica por dizer.", search: "amor", aliases: ["amor", "romance"], image: process.env.NEXT_PUBLIC_HOME_MOMENT_LOVE },
-  { title: "Casamentos", text: "Flores à altura de um dia inesquecível.", search: "casamento", aliases: ["casamento", "casamentos"], image: process.env.NEXT_PUBLIC_HOME_MOMENT_WEDDING },
-  { title: "Nascimentos", text: "Uma receção delicada para um novo começo.", search: "nascimento", aliases: ["nascimento", "nascimentos", "novo bebe", "bebe"], image: process.env.NEXT_PUBLIC_HOME_MOMENT_NEW_BABY },
-  { title: "Agradecer", text: "Um gesto bonito para reconhecer quem importa.", search: "agradecimento", aliases: ["agradecer", "agradecimento", "obrigado"], image: process.env.NEXT_PUBLIC_HOME_MOMENT_THANK_YOU },
-  { title: "Funerais e homenagens", text: "Com respeito, serenidade e significado.", search: "funeral", aliases: ["funeral", "funerais", "homenagem", "homenagens"], image: process.env.NEXT_PUBLIC_HOME_MOMENT_FUNERAL },
+  { title: "Aniversários", text: "Para celebrar mais um capítulo.", categoryId: process.env.NEXT_PUBLIC_HOME_MOMENT_BIRTHDAY_CATEGORY_ID, image: process.env.NEXT_PUBLIC_HOME_MOMENT_BIRTHDAY },
+  { title: "Amor e romance", text: "Para dizer o que fica por dizer.", categoryId: process.env.NEXT_PUBLIC_HOME_MOMENT_LOVE_CATEGORY_ID, image: process.env.NEXT_PUBLIC_HOME_MOMENT_LOVE },
+  { title: "Casamentos", text: "Flores à altura de um dia inesquecível.", categoryId: process.env.NEXT_PUBLIC_HOME_MOMENT_WEDDING_CATEGORY_ID, image: process.env.NEXT_PUBLIC_HOME_MOMENT_WEDDING },
+  { title: "Nascimentos", text: "Uma receção delicada para um novo começo.", categoryId: process.env.NEXT_PUBLIC_HOME_MOMENT_NEW_BABY_CATEGORY_ID, image: process.env.NEXT_PUBLIC_HOME_MOMENT_NEW_BABY },
+  { title: "Agradecer", text: "Um gesto bonito para reconhecer quem importa.", categoryId: process.env.NEXT_PUBLIC_HOME_MOMENT_THANK_YOU_CATEGORY_ID, image: process.env.NEXT_PUBLIC_HOME_MOMENT_THANK_YOU },
+  { title: "Funerais e homenagens", text: "Com respeito, serenidade e significado.", categoryId: process.env.NEXT_PUBLIC_HOME_MOMENT_FUNERAL_CATEGORY_ID, image: process.env.NEXT_PUBLIC_HOME_MOMENT_FUNERAL },
 ];
-const normalizeMomentName = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 export default function HomePage() {
-  const [collections, setCollections] = useState<PublicCategoryList[]>([]);
   const [products, setProducts] = useState<PublicProductList[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -69,13 +65,10 @@ export default function HomePage() {
   useEffect(() => {
     let cancelled = false;
     void Promise.allSettled([
-      publicCategoriesApi.getAll({ page: 1, pageSize: 100 }),
       publicProductsApi.getAll({ page: 1, pageSize: 4, featured: true }),
       storeSettingsApi.getPublic(),
-    ]).then(([categories, featured, settings]) => {
+    ]).then(([featured, settings]) => {
       if (cancelled) return;
-      if (categories.status === "fulfilled")
-        setCollections(categories.value.items);
       if (featured.status === "fulfilled") setProducts(featured.value.items);
       else setFailed(true);
       if (settings.status === "fulfilled") setStoreSettings(settings.value);
@@ -223,14 +216,11 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-12 lg:auto-rows-[240px]">
             {shoppingMoments.map((moment, index) => {
-              const category = collections.find((item) => {
-                const name = normalizeMomentName(item.name);
-                return moment.aliases.some((alias) => name.includes(alias) || alias.includes(name));
-              });
-              const href = category ? `/products?categoryId=${category.id}` : `/products?search=${encodeURIComponent(moment.search)}`;
+              const categoryId = moment.categoryId?.trim();
+              const href = categoryId && /^\d+$/.test(categoryId) ? `/products?categoryId=${categoryId}` : "/products";
               const layout = ["lg:col-span-5 lg:row-span-2", "lg:col-span-3", "lg:col-span-4", "lg:col-span-4", "lg:col-span-3", "lg:col-span-7"][index];
               return <Link key={moment.title} href={href} className={`group relative min-h-[230px] overflow-hidden bg-[#dfe2d7] sm:min-h-[300px] lg:min-h-0 ${layout}`}>
-                <Image src={moment.image || category?.image || process.env.NEXT_PUBLIC_HOME_HERO || "/hero.png"} alt={moment.title} fill sizes="(max-width: 639px) 50vw, (max-width: 1023px) 50vw, 42vw" className="object-cover transition duration-700 motion-safe:group-hover:scale-105" />
+                <Image src={moment.image || process.env.NEXT_PUBLIC_HOME_HERO || "/hero.png"} alt={moment.title} fill sizes="(max-width: 639px) 50vw, (max-width: 1023px) 50vw, 42vw" className="object-cover transition duration-700 motion-safe:group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#15251d]/85 via-[#15251d]/15 to-transparent" />
                 <span className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center border border-white/50 text-white transition group-hover:bg-white group-hover:text-[#293e32]"><ArrowUpRight size={16} /></span>
                 <div className="absolute inset-x-0 bottom-0 p-4 text-white sm:p-6"><p className="text-[9px] font-bold uppercase tracking-[.18em] text-white/70">Momento {String(index + 1).padStart(2, "0")}</p><h3 className="mt-2 text-xl leading-tight sm:text-3xl">{moment.title}</h3><p className="mt-2 hidden max-w-sm text-sm leading-6 text-white/75 sm:block">{moment.text}</p></div>
@@ -267,13 +257,6 @@ export default function HomePage() {
               <Link href="/contact" className="mt-6 inline-flex min-h-12 w-fit items-center gap-5 rounded-full bg-[#293e32] px-6 py-3 text-sm font-semibold text-white">Contactar a loja <ArrowUpRight size={17} /></Link>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="bg-white py-16 sm:py-24" aria-labelledby="blog-title">
-        <div className={container}>
-          <div className="flex flex-wrap items-end justify-between gap-5"><div><p className="editorial-kicker">O nosso diário</p><h2 id="blog-title" className="mt-3 text-4xl tracking-[-.04em] sm:text-5xl">Histórias que florescem.</h2></div><Link href="/blog" className="inline-flex items-center gap-2 border-b border-[#aeb7a5] pb-1 text-sm font-semibold">Ver todos os artigos <ArrowUpRight size={16} /></Link></div>
-          <div className="mt-10 grid gap-8 md:grid-cols-3">{blogPosts.map((post) => <article key={post.slug} className="group"><Link href={`/blog/${post.slug}`}><div className="relative aspect-[4/3] overflow-hidden bg-[#e4e5dc]"><Image src={post.image} alt="" fill sizes="(max-width: 767px) 100vw, 33vw" className="object-cover transition duration-700 motion-safe:group-hover:scale-105" /></div><p className="mt-5 text-[10px] font-bold uppercase tracking-[.16em] text-[#8a5751]">{post.category} · {post.readingTime}</p><h3 className="mt-3 text-2xl leading-tight">{post.title}</h3><p className="mt-3 text-sm leading-6 text-[#66705f]">{post.excerpt}</p></Link></article>)}</div>
         </div>
       </section>
 
@@ -339,6 +322,13 @@ export default function HomePage() {
         >
           Escolher um gesto <ArrowUpRight size={18} />
         </Link>
+      </section>
+
+      <section className="bg-white py-16 sm:py-24" aria-labelledby="blog-title">
+        <div className={container}>
+          <div className="flex flex-wrap items-end justify-between gap-5"><div><p className="editorial-kicker">O nosso diário</p><h2 id="blog-title" className="mt-3 text-4xl tracking-[-.04em] sm:text-5xl">Histórias que florescem.</h2></div><Link href="/blog" className="inline-flex items-center gap-2 border-b border-[#aeb7a5] pb-1 text-sm font-semibold">Ver todos os artigos <ArrowUpRight size={16} /></Link></div>
+          <div className="mt-10 grid gap-8 md:grid-cols-3">{blogPosts.map((post) => <article key={post.slug} className="group"><Link href={`/blog/${post.slug}`}><div className="relative aspect-[4/3] overflow-hidden bg-[#e4e5dc]"><Image src={post.image} alt="" fill sizes="(max-width: 767px) 100vw, 33vw" className="object-cover transition duration-700 motion-safe:group-hover:scale-105" /></div><p className="mt-5 text-[10px] font-bold uppercase tracking-[.16em] text-[#8a5751]">{post.category} · {post.readingTime}</p><h3 className="mt-3 text-2xl leading-tight">{post.title}</h3><p className="mt-3 text-sm leading-6 text-[#66705f]">{post.excerpt}</p></Link></article>)}</div>
+        </div>
       </section>
     </div>
   );
